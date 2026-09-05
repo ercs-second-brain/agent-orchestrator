@@ -84,10 +84,10 @@ func (s *Store) conversationReader(ctx context.Context) *gen.Queries {
 // NewStore wraps an opened writer + reader *sql.DB (see Open) as a Store.
 func NewStore(writeDB, readDB *sql.DB) *Store {
 	return &Store{
-		writeDB:                  writeDB,
-		readDB:                   readDB,
-		qw:                       gen.New(writeDB),
-		qr:                       gen.New(readDB),
+		writeDB: writeDB,
+		readDB:  readDB,
+		qw:      gen.New(writeDB),
+		qr:      gen.New(readDB),
 		writeMu: newContextMutex(),
 	}
 }

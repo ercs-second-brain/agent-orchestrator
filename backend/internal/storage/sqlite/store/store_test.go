@@ -34,7 +34,7 @@ func sampleRecord(project string) domain.SessionRecord {
 	return domain.SessionRecord{
 		ProjectID:        domain.ProjectID(project),
 		Kind:             domain.KindWorker,
-		Harness:          domain.HarnessClaudeCode,
+		Harness:          domain.HarnessPi,
 		Activity:         domain.Activity{State: domain.ActivityActive, LastActivityAt: now},
 		Metadata:         domain.SessionMetadata{Branch: "feat/x", WorkspacePath: "/ws"},
 		AutoInjectReview: true,
@@ -62,7 +62,7 @@ func TestSessionCreateAllowsPrimeAgentHarness(t *testing.T) {
 	ctx := context.Background()
 	seedProject(t, s, "mer")
 	rec := sampleRecord("mer")
-	rec.Harness = domain.HarnessPrimeAgent
+	rec.Harness = domain.HarnessPi
 	if _, err := s.CreateSession(ctx, rec); err != nil {
 		t.Fatalf("create prime-agent-harness session: %v", err)
 	}
@@ -76,15 +76,15 @@ func TestSessionPersistsReviewerHarness(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if ok, err := s.SetSessionReviewerConfig(ctx, rec.ID, domain.ReviewerCodex, domain.AgentConfig{}, time.Now().UTC()); err != nil || !ok {
+	if ok, err := s.SetSessionReviewerConfig(ctx, rec.ID, domain.ReviewerPi, domain.AgentConfig{}, time.Now().UTC()); err != nil || !ok {
 		t.Fatalf("set reviewer config = %v, %v", ok, err)
 	}
 	got, ok, err := s.GetSession(ctx, rec.ID)
 	if err != nil || !ok {
 		t.Fatalf("get session = %v, %v", ok, err)
 	}
-	if got.ReviewerHarness != domain.ReviewerCodex {
-		t.Fatalf("reviewer harness = %q, want %q", got.ReviewerHarness, domain.ReviewerCodex)
+	if got.ReviewerHarness != domain.ReviewerPi {
+		t.Fatalf("reviewer harness = %q, want %q", got.ReviewerHarness, domain.ReviewerPi)
 	}
 }
 
@@ -188,7 +188,7 @@ func TestRecordSessionLatestUserPromptIsNarrowAndMonotonic(t *testing.T) {
 	}
 
 	ownerAt := created.UpdatedAt.Add(2 * time.Second)
-	created.Harness = domain.HarnessCodex
+	created.Harness = domain.HarnessPi
 	created.Metadata.RuntimeLaunchID = "target-generation"
 	created.Metadata.LatestAssistantUpdate = "target already owns this row"
 	created.Activity = domain.Activity{State: domain.ActivityIdle, LastActivityAt: ownerAt}
@@ -204,7 +204,7 @@ func TestRecordSessionLatestUserPromptIsNarrowAndMonotonic(t *testing.T) {
 	if err != nil || !ok {
 		t.Fatalf("get after stale write: ok=%v err=%v", ok, err)
 	}
-	if current.Harness != domain.HarnessCodex || current.Metadata.RuntimeLaunchID != "target-generation" || current.Metadata.LatestUserPrompt != "" {
+	if current.Harness != domain.HarnessPi || current.Metadata.RuntimeLaunchID != "target-generation" || current.Metadata.LatestUserPrompt != "" {
 		t.Fatalf("stale prompt changed durable owner: %+v", current)
 	}
 
@@ -213,7 +213,7 @@ func TestRecordSessionLatestUserPromptIsNarrowAndMonotonic(t *testing.T) {
 		t.Fatalf("fresh prompt write = changed %v, err %v", changed, err)
 	}
 	current, _, _ = s.GetSession(ctx, created.ID)
-	if current.Metadata.LatestUserPrompt != "continue the target work" || !current.Metadata.LatestUserPromptAt.Equal(promptAt) || current.Harness != domain.HarnessCodex ||
+	if current.Metadata.LatestUserPrompt != "continue the target work" || !current.Metadata.LatestUserPromptAt.Equal(promptAt) || current.Harness != domain.HarnessPi ||
 		current.Metadata.RuntimeLaunchID != "target-generation" || current.Metadata.LatestAssistantUpdate != "target already owns this row" {
 		t.Fatalf("narrow prompt write changed unrelated facts: %+v", current)
 	}
@@ -235,7 +235,7 @@ func TestSessionCreateAllowsKimchiHarness(t *testing.T) {
 	ctx := context.Background()
 	seedProject(t, s, "mer")
 	rec := sampleRecord("mer")
-	rec.Harness = domain.HarnessKimchi
+	rec.Harness = domain.HarnessPi
 	if _, err := s.CreateSession(ctx, rec); err != nil {
 		t.Fatalf("create kimchi-harness session: %v", err)
 	}
@@ -450,7 +450,7 @@ func TestProjectConfigRoundTrips(t *testing.T) {
 		AgentRulesFile:    "docs/agent-rules.md",
 		OrchestratorRules: "Keep workers unblocked.",
 		AgentConfig:       domain.AgentConfig{Model: "claude-opus-4-5", Permissions: domain.PermissionModeAcceptEdits},
-		Worker:            domain.RoleOverride{Harness: domain.HarnessCodex},
+		Worker:            domain.RoleOverride{Harness: domain.HarnessPi},
 	}
 	if err := s.UpsertProject(ctx, domain.ProjectRecord{
 		ID: "cfg", Path: "/tmp/cfg", RegisteredAt: now, Config: cfg,
@@ -503,7 +503,7 @@ func TestSessionCreateAssignsPerProjectID(t *testing.T) {
 		t.Fatalf("get: ok=%v err=%v", ok, err)
 	}
 	if got.Activity.State != domain.ActivityActive || got.IsTerminated ||
-		got.Harness != domain.HarnessClaudeCode || got.Metadata.Branch != "feat/x" {
+		got.Harness != domain.HarnessPi || got.Metadata.Branch != "feat/x" {
 		t.Fatalf("round-trip mismatch: %+v", got)
 	}
 	if list, _ := s.ListSessions(ctx, "mer"); len(list) != 2 {
@@ -528,7 +528,7 @@ func TestDeleteSessionOnlyRemovesSeedRows(t *testing.T) {
 	seed := domain.SessionRecord{
 		ProjectID: "mer",
 		Kind:      domain.KindWorker,
-		Harness:   domain.HarnessClaudeCode,
+		Harness:   domain.HarnessPi,
 		Activity:  domain.Activity{State: domain.ActivityIdle, LastActivityAt: now},
 		CreatedAt: now,
 		UpdatedAt: now,

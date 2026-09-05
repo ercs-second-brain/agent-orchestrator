@@ -236,18 +236,18 @@ func startSession(ctx context.Context, cfg config.Config, runtime runtimeselect.
 		Projects: store,
 	})
 	mgr := sessionmanager.New(sessionmanager.Deps{
-		Runtime:            runtime,
-		Agents:             agents,
-		Workspace:          ws,
-		Store:              store,
-		DaemonRunID:        cfg.AppRunID,
-		Messenger:          messenger,
-		Lifecycle:          lcm,
-		DataDir:            cfg.DataDir,
-		RunFilePath:        cfg.RunFilePath,
-		BackgroundContext:  ctx,
-		Logger:             log,
-		ReconcileWorkers:   startupReconcileWorkers,
+		Runtime:           runtime,
+		Agents:            agents,
+		Workspace:         ws,
+		Store:             store,
+		DaemonRunID:       cfg.AppRunID,
+		Messenger:         messenger,
+		Lifecycle:         lcm,
+		DataDir:           cfg.DataDir,
+		RunFilePath:       cfg.RunFilePath,
+		BackgroundContext: ctx,
+		Logger:            log,
+		ReconcileWorkers:  startupReconcileWorkers,
 	})
 	mgr.SetAgentReadiness(agentReadiness)
 	scmProvider := newMultiSCMProvider(cfg.GitLab, log)

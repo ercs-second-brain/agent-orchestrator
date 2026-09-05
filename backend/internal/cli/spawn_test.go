@@ -249,7 +249,7 @@ func TestSpawnNoTakeoverRequiresClaimPR(t *testing.T) {
 // TestSpawnCommand_RequiresName asserts `ao spawn` rejects a missing --name
 // without contacting the daemon.
 func TestSpawnCommand_RequiresName(t *testing.T) {
-	_, _, err := executeCLI(t, Deps{}, "spawn", "--project", "demo", )
+	_, _, err := executeCLI(t, Deps{}, "spawn", "--project", "demo")
 	if err == nil || ExitCode(err) != 2 || !strings.Contains(err.Error(), "--name is required") {
 		t.Fatalf("err=%v exit=%d, want --name is required", err, ExitCode(err))
 	}

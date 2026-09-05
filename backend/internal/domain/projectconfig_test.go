@@ -146,7 +146,6 @@ func TestResolveReviewerHarness(t *testing.T) {
 	}
 }
 
-
 func TestProjectConfigIsZero(t *testing.T) {
 	if !(ProjectConfig{}).IsZero() {
 		t.Fatal("empty config should be zero")

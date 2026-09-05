@@ -208,7 +208,7 @@ func TestE2E_SpawnAndProjectAddDTORoundTrip(t *testing.T) {
 		root.SetArgs([]string{
 			"spawn",
 			"--project", "mer",
-						"--branch", "feat/x",
+			"--branch", "feat/x",
 			"--prompt", "hi",
 			"--issue", "ISS-1",
 			"--name", "my worker",

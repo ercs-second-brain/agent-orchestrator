@@ -69,13 +69,13 @@ type Manager interface {
 
 // Service is the API-facing review service. It delegates to the core engine.
 type Service struct {
-	engine             *reviewcore.Engine
-	store              Store
-	requester          ports.SCMReviewRequester
-	resolver           ports.SCMReviewResolver
-	lifecycle          Reducer
-	clock              func() time.Time
-	telemetry          ports.EventSink
+	engine    *reviewcore.Engine
+	store     Store
+	requester ports.SCMReviewRequester
+	resolver  ports.SCMReviewResolver
+	lifecycle Reducer
+	clock     func() time.Time
+	telemetry ports.EventSink
 	// engineTrigger indirects the engine's source-tagged trigger so the
 	// instrumented path can be exercised without standing up a full engine and
 	// its eighteen-method store. Defaulted in New; only tests replace it.

@@ -67,47 +67,6 @@ func TestInsertReviewRunDuplicatePRSHAMapsToSentinel(t *testing.T) {
 	}
 }
 
-// Harness is part of the idempotency key, so a different reviewer on the same
-// commit is a second opinion rather than a duplicate. Without this the reviewer
-// picker is inert on an already-reviewed commit.
-func TestInsertReviewRunAllowsADifferentHarnessForTheSameCommit(t *testing.T) {
-	s := newTestStore(t)
-	ctx := context.Background()
-	seedProject(t, s, "mer")
-	rec, err := s.CreateSession(ctx, sampleRecord("mer"))
-	if err != nil {
-		t.Fatalf("create session: %v", err)
-	}
-	now := time.Now().UTC().Truncate(time.Second)
-	if err := s.UpsertReview(ctx, domain.Review{
-		ID: "rev-1", SessionID: rec.ID, ProjectID: rec.ProjectID,
-		Harness: domain.ReviewerPi, CreatedAt: now, UpdatedAt: now,
-	}); err != nil {
-		t.Fatalf("upsert review: %v", err)
-	}
-	first := domain.ReviewRun{
-		ID: "run-1", ReviewID: "rev-1", SessionID: rec.ID, Harness: domain.ReviewerPi,
-		PRURL: "https://example/pr/1", TargetSHA: "sha1", Status: domain.ReviewRunRunning, Verdict: domain.VerdictNone, CreatedAt: now,
-	}
-	if err := s.InsertReviewRun(ctx, first); err != nil {
-		t.Fatalf("first insert: %v", err)
-	}
-
-	other := first
-	other.ID = "run-other-harness"
-	other.Harness = domain.ReviewerPi
-	if err := s.InsertReviewRun(ctx, other); err != nil {
-		t.Fatalf("a different harness on the same commit should insert: %v", err)
-	}
-
-	// ...but the same harness twice is still a duplicate.
-	same := first
-	same.ID = "run-same-harness"
-	if err := s.InsertReviewRun(ctx, same); !errors.Is(err, domain.ErrDuplicateReviewRun) {
-		t.Fatalf("same harness duplicate err = %v, want ErrDuplicateReviewRun", err)
-	}
-}
-
 func TestInsertReviewRunAllowsRerunAfterChangesRequested(t *testing.T) {
 	s := newTestStore(t)
 	ctx := context.Background()

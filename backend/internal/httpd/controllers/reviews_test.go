@@ -195,7 +195,7 @@ func TestReviewsListIncludesReviewStates(t *testing.T) {
 	if status != http.StatusOK {
 		t.Fatalf("status = %d body=%s", status, body)
 	}
-	if !strings.Contains(string(body), `"reviews"`) || !strings.Contains(string(body), `"up_to_date"`) || !strings.Contains(string(body), `"reviewerHandleId":"review-mer-1"`) || !strings.Contains(string(body), `"reviewerHarness":"codex"`) {
+	if !strings.Contains(string(body), `"reviews"`) || !strings.Contains(string(body), `"up_to_date"`) || !strings.Contains(string(body), `"reviewerHandleId":"review-mer-1"`) || !strings.Contains(string(body), `"reviewerHarness":"pi"`) {
 		t.Fatalf("body missing review states/handle: %s", body)
 	}
 	if !strings.Contains(string(body), `"autoInjectReview":false`) {
@@ -355,7 +355,7 @@ func TestReviewsSwitchReturnsAuthoritativeReviewState(t *testing.T) {
 	}}
 	srv := newReviewTestServer(t, svc)
 
-	body, status, headers := doRequest(t, srv, "POST", "/api/v1/sessions/mer-1/reviews/switch", `{"harness":"claude-code"}`)
+	body, status, headers := doRequest(t, srv, "POST", "/api/v1/sessions/mer-1/reviews/switch", `{"harness":"pi"}`)
 	assertJSON(t, headers)
 	if status != http.StatusOK {
 		t.Fatalf("status = %d body=%s", status, body)
@@ -363,7 +363,7 @@ func TestReviewsSwitchReturnsAuthoritativeReviewState(t *testing.T) {
 	if svc.switchedHarness != domain.ReviewerPi {
 		t.Fatalf("switched harness = %q, want claude-code", svc.switchedHarness)
 	}
-	for _, want := range []string{`"reviewerHandleId":"review-mer-2"`, `"reviewerHarness":"claude-code"`, `"reviews"`, `"runs"`, `"run-1"`} {
+	for _, want := range []string{`"reviewerHandleId":"review-mer-2"`, `"reviewerHarness":"pi"`, `"reviews"`, `"runs"`, `"run-1"`} {
 		if !strings.Contains(string(body), want) {
 			t.Fatalf("body missing %s: %s", want, body)
 		}

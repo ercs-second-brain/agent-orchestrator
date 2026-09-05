@@ -168,7 +168,6 @@ func (f *fakeStore) UpdatePRLastNudgeSignature(_ context.Context, prURL, payload
 	return nil
 }
 
-
 type fakeMessenger struct {
 	msgs []string
 	ids  []domain.SessionID

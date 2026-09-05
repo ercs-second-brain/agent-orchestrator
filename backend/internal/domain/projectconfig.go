@@ -49,9 +49,9 @@ type ProjectConfig struct {
 	Worker       RoleOverride `json:"worker,omitempty"`
 	Orchestrator RoleOverride `json:"orchestrator,omitempty"`
 
-//	// Reviewers names the agent(s) that review a worker's PR when a review is
-//	// triggered. It is configured independently of the Worker override; an empty
-//	// list falls back to pi (see ResolveReviewerHarness).
+	//	// Reviewers names the agent(s) that review a worker's PR when a review is
+	//	// triggered. It is configured independently of the Worker override; an empty
+	//	// list falls back to pi (see ResolveReviewerHarness).
 	Reviewers []ReviewerConfig `json:"reviewers,omitempty"`
 	// TrackerIntake controls issue-driven worker spawning. It is opt-in and
 	// read-only toward the tracker in v1: matching issues spawn sessions, but the

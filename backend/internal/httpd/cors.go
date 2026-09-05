@@ -78,7 +78,6 @@ func corsMiddleware(allowedOrigins []string) func(http.Handler) http.Handler {
 	}
 }
 
-
 func isCodexAccountPath(path string) bool {
 	for _, prefix := range []string{
 		"/api/v1/agents/codex/accounts",
