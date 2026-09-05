@@ -147,6 +147,10 @@ npm run api
 
 ## Frontend
 
+The desktop app and mobile companion app are **English-only**. All UI strings
+are literal English text — there is no i18n layer, no translation catalogs, and
+no language setting to maintain (see issue #15).
+
 ### Install dependencies
 
 ```bash
