@@ -77,7 +77,6 @@ function TopMenu({
       <DropdownMenuContent
         align="start"
         className="window-titlebar__menu"
-        data-browser-native-overlay="true"
         sideOffset={4}
       >
         {children}
@@ -155,14 +154,12 @@ export function WindowTitlebar() {
     };
   }, []);
 
-  // Tell main when a non-browser shell surface is used. BrowserPanel reports
-  // its own interactions separately; the titlebar menu intentionally preserves
-  // the previous target so its actions still apply to the underlying panel.
+  // Tell main when a shell surface is used so the titlebar menu's actions
+  // still apply to the underlying panel.
   useEffect(() => {
     const onShellUse = (event: Event) => {
       const target = event.target as HTMLElement | null;
       if (target?.closest('[class*="window-titlebar"]')) return;
-      if (target?.closest('[data-testid="browser-panel"]')) return;
       void window.ao?.menu?.notifyShellFocus();
     };
     document.addEventListener("focusin", onShellUse);

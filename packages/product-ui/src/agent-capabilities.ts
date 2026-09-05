@@ -1,10 +1,8 @@
 export const AGENT_CAPABILITIES = [
-	"interface.chat",
 	"interface.tui",
 	"model.catalog",
 	"model.custom",
 	"attachments",
-	"browser.preview",
 	"review.execute",
 	"session.resume",
 ] as const;

@@ -15,7 +15,6 @@ import {
 import { createPortal } from "react-dom";
 import type { components } from "../../api/schema";
 import { defaultShortcutBindings, shortcutBindingLabel } from "../../shared/shortcuts";
-import { BrowserPanelView, useBrowserAnnotationQueue } from "./BrowserPanel";
 import { CenterPane } from "./CenterPane";
 import { NotificationCenter } from "./NotificationCenter";
 import { ResizeHandle } from "./ResizeHandle";
@@ -31,7 +30,6 @@ import { TerminalSwitchAgentButton } from "./TerminalSwitchAgentButton";
 import { TopbarButton } from "./TopbarButton";
 import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip";
 import { Button } from "./ui/button";
-import { useBrowserView } from "../hooks/useBrowserView";
 import { useCodexAccountActions } from "../hooks/useCodexAccountActions";
 import { useCodexAccountsQuery } from "../hooks/useCodexAccountsQuery";
 import { codexSwitchDisplay } from "../hooks/codex-accounts-state";
@@ -71,17 +69,7 @@ import { useResolvedTheme, useUiStore, type InspectorView } from "../stores/ui-s
 const WORKSPACE_DEFAULT_PX = 500;
 const WORKSPACE_MIN_PX = 340;
 const WORKSPACE_MAX_PERCENT = 55;
-// Browser is the primary creation surface when selected. Its generous preferred
-// width is progressively capped by the live workspace, so laptop layouts land
-// at the readable-minimum floor while larger windows get a canvas-like split.
-const BROWSER_WORKSPACE_DEFAULT_PX = 900;
-const BROWSER_WORKSPACE_MIN_PX = 460;
-const BROWSER_WORKSPACE_MAX_PERCENT = 68;
 const CHAT_READABLE_MIN_PX = 560;
-// Browser mode keeps the session input column compact, like a canvas workflow.
-// This is still wide enough for the composer, and is separate from the roomier
-// utility-view floor above.
-const BROWSER_CHAT_MIN_PX = 440;
 const WORKSPACE_ABSOLUTE_MIN_PX = 300;
 const INSPECTOR_SEPARATOR_RESERVE_PX = 8;
 const EMPTY_AUXILIARY_TAB_ORDER: string[] = [];
@@ -91,17 +79,13 @@ const EMPTY_AUXILIARY_TAB_ORDER: string[] = [];
 const INSPECTOR_COMPACT_MAX_PX = 325;
 const TOPBAR_SECONDARY_COMPACT_MAX_PX = 759;
 const inspectorWidthStorageKey = "ao.inspector.widthPx";
-// The canvas profile has different constraints from the earlier Browser rail;
-// use a new preference namespace so an old narrow width cannot silently pin it.
-const browserWorkspaceWidthStorageKey = "ao.workspace.browser.canvasWidthPx";
 const inspectorWidthVar = "--ao-inspector-w";
 // Closely matches SHELL_PANEL_SPRING's visual settle time. Keeping the CSS
 // width interpolation on the same clock prevents the sidebar from stopping
-// while the browser rail is still visibly drifting.
+// while the inspector rail is still visibly drifting.
 const INSPECTOR_SPRING_MS = 300;
 const INSPECTOR_SPRING_EASING =
 	"linear(0, 0.333 12.5%, 0.642 25%, 0.813 37.5%, 0.902 50%, 0.949 62.5%, 0.974 75%, 0.986 87.5%, 1)";
-const BROWSER_POPOUT_MOTION_MS = 320;
 const shellTopbarHiddenByPlatform = hidesShellTopbar();
 const isMac = isMacPlatform();
 const noDragStyle = isMac ? ({ WebkitAppRegion: "no-drag" } as CSSProperties) : undefined;
@@ -110,7 +94,7 @@ const newTerminalShortcutLabel = shortcutBindingLabel(defaultShortcutBindings("n
 type ReviewsResponse = components["schemas"]["ListReviewsResponse"];
 type ReviewerTerminalTarget = { handleId: string; harness: string };
 
-type WorkspaceLayoutMode = "utility" | "browser" | "files";
+type WorkspaceLayoutMode = "utility" | "files";
 
 type InspectorSizing = {
 	chatMinWidth: number;
@@ -122,16 +106,6 @@ type InspectorSizing = {
 };
 
 function inspectorSizing(view: InspectorView): InspectorSizing {
-	if (view === "browser") {
-		return {
-			chatMinWidth: BROWSER_CHAT_MIN_PX,
-			defaultWidth: BROWSER_WORKSPACE_DEFAULT_PX,
-			minWidth: BROWSER_WORKSPACE_MIN_PX,
-			maxPercent: BROWSER_WORKSPACE_MAX_PERCENT,
-			mode: "browser",
-			storageKey: browserWorkspaceWidthStorageKey,
-		};
-	}
 	return {
 		chatMinWidth: CHAT_READABLE_MIN_PX,
 		defaultWidth: WORKSPACE_DEFAULT_PX,
@@ -177,34 +151,8 @@ function sizingGeometryEqual(a: InspectorSizing, b: InspectorSizing): boolean {
 	);
 }
 
-type BrowserPopOutPhase = "docked" | "opening" | "open" | "closing";
-type BrowserPopOutRect = { top: number; left: number; width: number; height: number };
-type BrowserPopOutState = {
-	sessionId: string;
-	phase: BrowserPopOutPhase;
-	dockRect?: BrowserPopOutRect;
-};
-
-function browserPopOutRect(rect?: DOMRectReadOnly | null): BrowserPopOutRect | undefined {
-	if (!rect || rect.width <= 0 || rect.height <= 0) return undefined;
-	return { top: rect.top, left: rect.left, width: rect.width, height: rect.height };
-}
-
 function topbarSecondaryLabelMode(width: number): "compact" | "expanded" {
 	return width <= TOPBAR_SECONDARY_COMPACT_MAX_PX ? "compact" : "expanded";
-}
-
-function previewRevealKey(previewUrl?: string, previewRevision?: number): string {
-	const target = previewUrl?.trim();
-	if (!target) return "";
-	if (typeof previewRevision === "number") return `revision:${previewRevision}`;
-	return `url:${target}`;
-}
-
-function browserIsVisible(sessionId: string, browserPoppedOut: boolean): boolean {
-	if (browserPoppedOut) return true;
-	const current = useUiStore.getState().inspectorSessions[sessionId];
-	return (current?.isOpen ?? true) && (current?.view ?? "summary") === "browser";
 }
 
 function reviewerTerminalFromReviews(data?: ReviewsResponse): ReviewerTerminalTarget | undefined {
@@ -227,7 +175,6 @@ function SessionInspectorRail({
 	isOpen,
 	onExpand,
 	onCloseAnimationComplete,
-	restoreMinWidth,
 	sizing,
 	settledClosed,
 	splitRef,
@@ -236,7 +183,6 @@ function SessionInspectorRail({
 	isOpen: boolean;
 	onExpand: () => void;
 	onCloseAnimationComplete?: () => void;
-	restoreMinWidth?: number;
 	sizing: InspectorSizing;
 	settledClosed: boolean;
 	splitRef: RefObject<HTMLDivElement | null>;
@@ -248,7 +194,7 @@ function SessionInspectorRail({
 		rangeModeRef.current = sizing.mode;
 		// The CSS max-width remains the live visual clamp while the shell moves.
 		// Start a new profile with an unconstrained destination; ResizeObserver
-		// updates only the pointer-drag limits without rerendering the browser.
+		// updates only the pointer-drag limits without rerendering the drag target.
 		rangeRef.current = { min: sizing.minWidth, max: sizing.defaultWidth * 2 };
 	}
 	const minWidth = useCallback(() => rangeRef.current.min, []);
@@ -261,7 +207,6 @@ function SessionInspectorRail({
 		max: maxWidth,
 		edge: "left",
 		onExpand,
-		restoreMin: restoreMinWidth,
 	});
 
 	useLayoutEffect(() => {
@@ -349,13 +294,11 @@ function SessionInspectorRail({
 // handle gets a clean xterm/mux binding.
 //
 // The inspector uses the same Motion spring as the left sidebar (gap width +
-// x-transform). Summary/Reviews/Files share a utility width, while Browser
-// automatically grows into a co-work canvas.
+// x-transform). Summary/Reviews/Files share a utility width.
 export function SessionView({ sessionId, projectId }: SessionViewProps) {
 	const queryClient = useQueryClient();
 	const workspaceQuery = useWorkspaceSession(sessionId);
 	const theme = useResolvedTheme();
-	const prefersReducedMotion = useReducedMotion();
 	const isInspectorOpen = useUiStore((state) => state.inspectorSessions[sessionId]?.isOpen ?? true);
 	const inspectorView = useUiStore((state) => state.inspectorSessions[sessionId]?.view ?? "summary");
 	const setInspectorOpenForSession = useUiStore((state) => state.setInspectorOpen);
@@ -363,24 +306,16 @@ export function SessionView({ sessionId, projectId }: SessionViewProps) {
 	const setInspectorViewForSession = useUiStore((state) => state.setInspectorView);
 	const setFilesChangedOnly = useUiStore((state) => state.setFilesChangedOnly);
 	const initializeInspectorSession = useUiStore((state) => state.initializeInspectorSession);
-	const setBrowserContentRevealed = useUiStore((state) => state.setBrowserContentRevealed);
-	const setBrowserUnseen = useUiStore((state) => state.setBrowserUnseen);
 	const { daemonStatus } = useShell();
 	const orchestratorStartupError = useUiStore((state) =>
 		projectId ? (state.orchestratorStartupErrors[projectId] ?? null) : null,
 	);
-	const previewBaselineRef = useRef<{ sessionId: string; key: string } | null>(null);
 	const sessionSplitRef = useRef<HTMLDivElement | null>(null);
 	const terminalLiveResizeTimerRef = useRef<number | null>(null);
 	const workspaceResizeTimerRef = useRef<number | null>(null);
-	const browserPopOutHandoffFrameRef = useRef<number | null>(null);
 	const [inspectorSettledClosed, setInspectorSettledClosed] = useState(!isInspectorOpen);
 	const inspectorPanelVisible = isInspectorOpen || !inspectorSettledClosed;
 	const [terminalTarget, setTerminalTarget] = useState<TerminalTarget>({ kind: "worker" });
-	const [browserPopOutState, setBrowserPopOutState] = useState<BrowserPopOutState>({
-		sessionId,
-		phase: "docked",
-	});
 	const [filesPoppedOut, setFilesPoppedOut] = useState(false);
 	const [filePreviewRequestsBySession, setFilePreviewRequestsBySession] = useState<
 		Record<string, { path: string; key: number }>
@@ -419,8 +354,6 @@ export function SessionView({ sessionId, projectId }: SessionViewProps) {
 		},
 		[sessionId],
 	);
-	const browserPopOutPhase = browserPopOutState.sessionId === sessionId ? browserPopOutState.phase : "docked";
-	const browserPoppedOut = browserPopOutPhase !== "docked";
 	const [handoffDialogOpen, setHandoffDialogOpen] = useState(false);
 	const handoffDialogContainerRef = useRef<HTMLDivElement | null>(null);
 	const [handoffDialogContainer, setHandoffDialogContainer] = useState<HTMLDivElement | null>(null);
@@ -763,11 +696,10 @@ export function SessionView({ sessionId, projectId }: SessionViewProps) {
 	// Orchestrators get the full workspace width; only workers need the inspector rail.
 	const hasInspector = Boolean(session && !isOrchestrator);
 	const sizing = useMemo(() => inspectorSizing(inspectorView), [inspectorView]);
-	const browserEntryWidthFloorRef = useRef<number | null>(null);
 
 	// Arm the shared width transition before the selected inspector surface
-	// changes its CSS variable. Browser becomes a co-work canvas; utility views
-	// return to their stable rail width on the same spring as the shell sidebar.
+	// changes its CSS variable. Utility views return to their stable rail width
+	// on the same spring as the shell sidebar.
 	const armWorkspaceTransition = useCallback(() => {
 		const split = sessionSplitRef.current;
 		if (!split) return;
@@ -805,14 +737,6 @@ export function SessionView({ sessionId, projectId }: SessionViewProps) {
 	const transitionInspectorView = useCallback(
 		(next: InspectorView) => {
 			if (next === inspectorView) return;
-			if (next === "browser") {
-				const currentWidth = Number.parseFloat(
-					document.documentElement.style.getPropertyValue(inspectorWidthVar),
-				);
-				browserEntryWidthFloorRef.current = Number.isFinite(currentWidth) ? currentWidth : null;
-			} else {
-				browserEntryWidthFloorRef.current = null;
-			}
 			const nextSizing = inspectorSizing(next);
 			if (!sizingGeometryEqual(sizing, nextSizing)) prepareWorkspaceProfile(nextSizing);
 			setInspectorViewForSession(sessionId, next);
@@ -864,30 +788,6 @@ export function SessionView({ sessionId, projectId }: SessionViewProps) {
 		[activateCenterFile, closeCenterFile, fileAnnotation, fileTabs.activePath, fileTabs.openPaths],
 	);
 	const activeWorkspaceTabKey = fileTabs.activePath ? `file:${fileTabs.activePath}` : undefined;
-	const previewUrl = session?.previewUrl?.trim() || undefined;
-	const previewRevision = session?.previewRevision;
-	const browserSlotVisible = Boolean(
-		session && hasInspector && (browserPoppedOut || (isInspectorOpen && inspectorView === "browser")),
-	);
-	const terminated = session ? !sessionIsActive(session) : false;
-	const browserView = useBrowserView({
-		sessionId,
-		active: browserSlotVisible,
-		poppedOut: browserPoppedOut,
-		terminated,
-		previewUrl,
-		previewRevision,
-	});
-	const browserAnnotationQueue = useBrowserAnnotationQueue({
-		sessionId: session?.id,
-		navUrl: browserView.navState.url,
-	});
-	const browserUrl = browserView.navState.url.trim();
-	// A terminated session's `previewUrl` is a stale DB fact; useBrowserView
-	// suppresses and destroys the live preview for it, so it must not count as
-	// content here either — otherwise a merged/terminated session with an old
-	// preview auto-opens Browser onto a view the hook has already torn down.
-	const hasBrowserContent = !terminated && Boolean(previewUrl || browserUrl);
 
 	// Entering a session for the first time ever always starts on Summary. This
 	// must fire exactly once per session's *lifetime*, not once per "was this
@@ -895,17 +795,14 @@ export function SessionView({ sessionId, projectId }: SessionViewProps) {
 	// the initialized flag lives in the ui-store (inspectorSessions[sessionId])
 	// rather than a component-local ref, and survives both re-entering a
 	// different previously-visited session and unmounting/remounting this view
-	// entirely (e.g. across route transitions). Treat browser content that
-	// already existed when the route resolved as the baseline for that visit;
-	// only preview work arriving afterward may reveal Browser automatically.
+	// entirely (e.g. across route transitions).
 	useLayoutEffect(() => {
 		if (!session) return;
-		initializeInspectorSession(sessionId, hasBrowserContent, hasInspector);
-	}, [hasBrowserContent, hasInspector, session, sessionId, initializeInspectorSession]);
+		initializeInspectorSession(sessionId, hasInspector);
+	}, [hasInspector, session, sessionId, initializeInspectorSession]);
 
 	useLayoutEffect(() => {
 		setTerminalTarget({ kind: "worker" });
-		setBrowserPopOutState({ sessionId, phase: "docked" });
 		setFilesPoppedOut(false);
 	}, [sessionId]);
 
@@ -972,7 +869,6 @@ export function SessionView({ sessionId, projectId }: SessionViewProps) {
 	}, [clearVisibleTerminalKind, routedTerminalTarget.kind, sessionId, setVisibleTerminalKind]);
 
 	const prepareFilesInspector = useCallback(() => {
-		setBrowserPopOutState({ sessionId, phase: "docked" });
 		setFilesPoppedOut(false);
 		setFilesChangedOnly(sessionId, true);
 		transitionInspectorView("files");
@@ -1012,176 +908,12 @@ export function SessionView({ sessionId, projectId }: SessionViewProps) {
 
 	const handleToggleFilesPopOut = useCallback(
 		(next: boolean) => {
-			if (next) setBrowserPopOutState({ sessionId, phase: "docked" });
 			setFilesPoppedOut(next);
 			transitionInspectorView("files");
 			setInspectorOpenForSession(sessionId, true);
 		},
 		[sessionId, setInspectorOpenForSession, transitionInspectorView],
 	);
-
-	const measureBrowserDockRect = useCallback(() => {
-		const target = sessionSplitRef.current?.querySelector<HTMLElement>("[data-browser-dock-target]");
-		return browserPopOutRect(target?.getBoundingClientRect());
-	}, []);
-
-	const handleToggleBrowserPopOut = useCallback(
-		(next: boolean, sourceRect?: DOMRectReadOnly) => {
-			if (next) setFilesPoppedOut(false);
-			setBrowserPopOutState((current) => {
-				if (next) {
-					if (current.sessionId === sessionId && current.phase !== "docked") return current;
-					return {
-						sessionId,
-						phase: prefersReducedMotion ? "open" : "opening",
-						dockRect: browserPopOutRect(sourceRect) ?? measureBrowserDockRect(),
-					};
-				}
-				if (current.sessionId !== sessionId || current.phase === "docked") return current;
-				if (prefersReducedMotion) return { sessionId, phase: "docked" };
-				return {
-					sessionId,
-					phase: "closing",
-					dockRect: measureBrowserDockRect() ?? current.dockRect,
-				};
-			});
-		},
-		[measureBrowserDockRect, prefersReducedMotion, sessionId],
-	);
-
-	// Mount the portal at the exact docked geometry for one painted frame, then
-	// let CSS interpolate its real box. The native WebContentsView follows that
-	// moving slot through its ResizeObserver instead of snapping full-screen.
-	useEffect(() => {
-		if (browserPopOutPhase !== "opening") return;
-		const frame = window.requestAnimationFrame(() => {
-			setBrowserPopOutState((current) =>
-				current.sessionId === sessionId && current.phase === "opening"
-					? { ...current, phase: "open" }
-					: current,
-			);
-		});
-		return () => window.cancelAnimationFrame(frame);
-	}, [browserPopOutPhase, sessionId]);
-
-	const commitBrowserPopOutClose = useCallback(() => {
-		setBrowserPopOutState((current) =>
-			current.sessionId === sessionId && current.phase === "closing"
-				? { sessionId, phase: "docked" }
-				: current,
-		);
-	}, [sessionId]);
-
-	const finishBrowserPopOutClose = useCallback(() => {
-		if (browserPopOutHandoffFrameRef.current !== null) return;
-		// Hold the portal at the exact destination for two painted frames. Electron's
-		// native WebContentsView bounds update trails the DOM transition slightly;
-		// handing back to the dock immediately exposes that final compositor step.
-		browserPopOutHandoffFrameRef.current = window.requestAnimationFrame(() => {
-			browserPopOutHandoffFrameRef.current = window.requestAnimationFrame(() => {
-				browserPopOutHandoffFrameRef.current = null;
-				commitBrowserPopOutClose();
-			});
-		});
-	}, [commitBrowserPopOutClose]);
-
-	useEffect(
-		() => () => {
-			if (browserPopOutHandoffFrameRef.current !== null) {
-				window.cancelAnimationFrame(browserPopOutHandoffFrameRef.current);
-				browserPopOutHandoffFrameRef.current = null;
-			}
-		},
-		[],
-	);
-
-	// transitionend is the normal path; the timer protects restore when a window
-	// resize or compositor interruption suppresses that DOM event.
-	useEffect(() => {
-		if (browserPopOutPhase !== "closing") return;
-		const timer = window.setTimeout(finishBrowserPopOutClose, BROWSER_POPOUT_MOTION_MS + 80);
-		return () => window.clearTimeout(timer);
-	}, [browserPopOutPhase, finishBrowserPopOutClose]);
-
-	useEffect(() => {
-		if (!hasInspector) return;
-		const current = useUiStore.getState().inspectorSessions[sessionId];
-		if (!hasBrowserContent) {
-			if (current?.browserContentRevealed) setBrowserContentRevealed(sessionId, false);
-			else if (current?.browserUnseen) setBrowserUnseen(sessionId, false);
-			return;
-		}
-		if (current?.browserContentRevealed) return;
-		setBrowserContentRevealed(sessionId, true);
-	}, [
-		hasBrowserContent,
-		hasInspector,
-		previewRevision,
-		sessionId,
-		setBrowserContentRevealed,
-		setBrowserUnseen,
-		terminated,
-	]);
-
-	useEffect(() => {
-		if (!hasInspector) return;
-		const previewKey = previewRevealKey(previewUrl, previewRevision);
-		const baseline = previewBaselineRef.current;
-		if (!baseline || baseline.sessionId !== sessionId) {
-			previewBaselineRef.current = { sessionId, key: previewKey };
-			return;
-		}
-		if (baseline.key === previewKey) return;
-		previewBaselineRef.current = { sessionId, key: previewKey };
-		if (!previewKey) return;
-		setBrowserContentRevealed(sessionId, true);
-		if (browserIsVisible(sessionId, browserPoppedOut)) {
-			setBrowserUnseen(sessionId, false);
-			return;
-		}
-		// A new preview target used to force-switch the inspector to the Browser
-		// tab and pop it open, even if the user was looking at something else
-		// entirely (Reviews, a different session's Files tab, mid-typing in
-		// the composer). Match the agent-activity effect below: badge it as unseen and
-		// let the user open Browser themselves when they're ready, instead of
-		// grabbing focus out from under them.
-		setBrowserUnseen(sessionId, true);
-	}, [
-		browserPoppedOut,
-		hasInspector,
-		previewRevision,
-		previewUrl,
-		sessionId,
-		setBrowserContentRevealed,
-		setBrowserUnseen,
-	]);
-
-	// Agent browser commands are genuine browser activity even when they do not
-	// navigate (fill, click, snapshot, etc.) or land on an empty target — e.g. a
-	// command that runs before any page has loaded. When Browser is hidden,
-	// surface that activity as unseen rather than reopening the tab; gating this
-	// on hasBrowserContent/browserContentRevealed missed exactly that case.
-	useEffect(() => {
-		if (!hasInspector || terminated || !browserView.agentBrowserActive) return;
-		if (!browserIsVisible(sessionId, browserPoppedOut)) setBrowserUnseen(sessionId, true);
-	}, [
-		browserPoppedOut,
-		browserView.agentBrowserActive,
-		hasInspector,
-		inspectorView,
-		isInspectorOpen,
-		sessionId,
-		setBrowserUnseen,
-		terminated,
-	]);
-
-	// Opening Browser consumes the pending activity indicator, including the
-	// case where the inspector was collapsed while already parked on Browser.
-	useEffect(() => {
-		if (hasInspector && browserIsVisible(sessionId, browserPoppedOut)) {
-			setBrowserUnseen(sessionId, false);
-		}
-	}, [browserPoppedOut, hasInspector, inspectorView, isInspectorOpen, sessionId, setBrowserUnseen]);
 
 	const handleToggleInspector = useCallback(() => {
 		toggleInspector(sessionId);
@@ -1361,16 +1093,11 @@ export function SessionView({ sessionId, projectId }: SessionViewProps) {
 						isOpen={isInspectorOpen}
 						onCloseAnimationComplete={handleInspectorCloseAnimationComplete}
 						onExpand={() => setInspectorOpenForSession(sessionId, true)}
-						restoreMinWidth={
-							sizing.mode === "browser" ? (browserEntryWidthFloorRef.current ?? undefined) : undefined
-						}
 						sizing={sizing}
 						settledClosed={!isInspectorOpen && inspectorSettledClosed}
 						splitRef={sessionSplitRef}
 					>
 						<SessionInspector
-							browserAnnotationQueue={browserAnnotationQueue}
-							browserPoppedOut={browserPoppedOut}
 							filesView={
 								session ? (
 									<SessionFileExplorer
@@ -1385,10 +1112,8 @@ export function SessionView({ sessionId, projectId }: SessionViewProps) {
 							onOpenFiles={handleOpenFiles}
 							onOpenReviewFile={handleOpenReviewFile}
 							onOpenReviewerTerminal={selectReviewerTerminal}
-							onToggleBrowserPopOut={handleToggleBrowserPopOut}
 							onViewChange={transitionInspectorView}
 							view={inspectorView}
-							browserView={browserView}
 							session={session}
 						/>
 					</SessionInspectorRail>
@@ -1433,53 +1158,6 @@ export function SessionView({ sessionId, projectId }: SessionViewProps) {
 						document.body,
 					)
 				: null}
-			{/* Maximized browser: a fixed overlay across the app workspace,
-          portaled to <body> so it escapes the shell layout (covering the
-          sidebar + topbar, not just the session area) and sits outside any
-          `[data-panel]` column, so the native WebContentsView is not clamped
-          and fills the window below any native titlebar overlay. */}
-			{browserPoppedOut && session
-				? createPortal(
-						<div
-							aria-busy={browserPopOutPhase === "opening" || browserPopOutPhase === "closing"}
-							className={cn(
-								"browser-popout-overlay",
-								shellTopbarHiddenByPlatform && !isNativeFullScreen && "browser-popout-overlay--mac-windowed",
-							)}
-							data-phase={browserPopOutPhase}
-							style={
-								browserPopOutState.sessionId === sessionId && browserPopOutState.dockRect
-									? ({
-											"--browser-popout-dock-top": `${browserPopOutState.dockRect.top}px`,
-											"--browser-popout-dock-left": `${browserPopOutState.dockRect.left}px`,
-											"--browser-popout-dock-width": `${browserPopOutState.dockRect.width}px`,
-											"--browser-popout-dock-height": `${browserPopOutState.dockRect.height}px`,
-										} as CSSProperties)
-									: undefined
-							}
-						>
-							<div aria-hidden="true" className="browser-popout-backdrop" />
-							<div
-								className="browser-popout-frame"
-								onTransitionEnd={(event) => {
-									if (event.target === event.currentTarget && event.propertyName === "width") {
-										finishBrowserPopOutClose();
-									}
-								}}
-							>
-								<BrowserPanelView
-									active
-									annotationQueue={browserAnnotationQueue}
-									browserView={browserView}
-									onTogglePopOut={handleToggleBrowserPopOut}
-									poppedOut
-									session={session}
-								/>
-							</div>
-						</div>,
-						document.body,
-					)
-				: null}
-		</div>
+	</div>
 	);
 }

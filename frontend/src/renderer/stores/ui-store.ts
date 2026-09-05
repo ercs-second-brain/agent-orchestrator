@@ -24,7 +24,6 @@ export type GlobalSettingsSection =
 	| "agents"
 	| "mobile"
 	| "shortcuts"
-	| "browserProfiles"
 	| "updates"
 	| "help";
 
@@ -37,18 +36,14 @@ export type SettingsModal =
 
 /** Worker detail view toggles — Changes (Git rail) is the default. */
 export type WorkbenchTab = "changes" | "files" | "terminal";
-export type InspectorView = "summary" | "reviews" | "browser" | "files";
+export type InspectorView = "summary" | "reviews" | "files";
 
 export type InspectorSessionState = {
 	isOpen: boolean;
 	view: InspectorView;
-	/** The current non-empty browser content lifecycle has already been revealed. */
-	browserContentRevealed?: boolean;
-	/** Real browser activity occurred while Browser was not visible. */
-	browserUnseen?: boolean;
 	/** Files tab: show only files the agent has touched. Defaults to false (full tree). */
 	filesChangedOnly?: boolean;
-	/** The session-entry defaulting (Summary tab, baseline browser reveal) has already run once for this session's lifetime. */
+	/** The session-entry defaulting (Summary tab) has already run once for this session's lifetime. */
 	initialized?: boolean;
 };
 
@@ -128,15 +123,12 @@ export type UiState = {
 	toggleInspector: (sessionId: string) => void;
 	setInspectorView: (sessionId: string, view: InspectorView) => void;
 	/**
-	 * Runs the "entering this session" defaults — Summary tab, baseline browser
-	 * reveal — exactly once per session's lifetime. Backed by persisted store
-	 * state (not a component-local ref) so it stays a no-op across unmount and
-	 * remount of the session view, not just across re-renders of one mounted
-	 * instance.
+	 * Runs the "entering this session" defaults — Summary tab — exactly once per
+	 * session's lifetime. Backed by persisted store state (not a component-local
+	 * ref) so it stays a no-op across unmount and remount of the session view,
+	 * not just across re-renders of one mounted instance.
 	 */
-	initializeInspectorSession: (sessionId: string, hasBrowserContent: boolean, hasInspector: boolean) => void;
-	setBrowserContentRevealed: (sessionId: string, revealed: boolean) => void;
-	setBrowserUnseen: (sessionId: string, unseen: boolean) => void;
+	initializeInspectorSession: (sessionId: string, hasInspector: boolean) => void;
 	setFilesChangedOnly: (sessionId: string, changedOnly: boolean) => void;
 	setCommandPaletteOpen: (open: boolean) => void;
 	setProjectRestarting: (projectId: string, restarting: boolean) => void;
@@ -277,15 +269,14 @@ export const useUiStore = create<UiState>((set, get) => ({
 	setInspectorView: (sessionId, view) =>
 		set((state) => {
 			const current = inspectorState(state.inspectorSessions, sessionId);
-			const browserUnseen = view === "browser" ? false : current.browserUnseen;
 			return {
 				inspectorSessions: {
 					...state.inspectorSessions,
-					[sessionId]: { ...current, view, browserUnseen },
+					[sessionId]: { ...current, view },
 				},
 			};
 		}),
-	initializeInspectorSession: (sessionId, hasBrowserContent, hasInspector) =>
+	initializeInspectorSession: (sessionId, hasInspector) =>
 		set((state) => {
 			// Sessions without an inspector (e.g. orchestrator sessions) must not
 			// gain a store entry at all — leave inspectorSessions[sessionId]
@@ -300,34 +291,7 @@ export const useUiStore = create<UiState>((set, get) => ({
 						...current,
 						initialized: true,
 						view: "summary",
-						browserContentRevealed: current.browserContentRevealed ?? hasBrowserContent,
 					},
-				},
-			};
-		}),
-	setBrowserContentRevealed: (sessionId, browserContentRevealed) =>
-		set((state) => {
-			const current = inspectorState(state.inspectorSessions, sessionId);
-			if (Boolean(current.browserContentRevealed) === browserContentRevealed) return state;
-			return {
-				inspectorSessions: {
-					...state.inspectorSessions,
-					[sessionId]: {
-						...current,
-						browserContentRevealed,
-						browserUnseen: browserContentRevealed ? current.browserUnseen : false,
-					},
-				},
-			};
-		}),
-	setBrowserUnseen: (sessionId, browserUnseen) =>
-		set((state) => {
-			const current = inspectorState(state.inspectorSessions, sessionId);
-			if (Boolean(current.browserUnseen) === browserUnseen) return state;
-			return {
-				inspectorSessions: {
-					...state.inspectorSessions,
-					[sessionId]: { ...current, browserUnseen },
 				},
 			};
 		}),

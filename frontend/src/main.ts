@@ -11,7 +11,6 @@ import {
 	Notification as ElectronNotification,
 	protocol,
 	shell,
-	session,
 	WebContentsView,
 	webContents,
 	type WebContents,
@@ -49,7 +48,7 @@ import {
 	type UiSettings,
 } from "./main/ui-settings";
 import { spawn, type ChildProcess } from "node:child_process";
-import { randomBytes, randomUUID } from "node:crypto";
+import { randomUUID } from "node:crypto";
 import { closeSync, existsSync, mkdirSync, openSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import { chmod, copyFile, mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
@@ -102,28 +101,11 @@ import {
 	type RendererTelemetryCapture,
 	type TelemetryPolicyView,
 } from "./shared/telemetry-policy";
-import {
-	createBrowserViewHost,
-	shouldHandleAppShortcutInBrowserContext,
-	type BrowserViewHost,
-} from "./main/browser-view-host";
-import { createBrowserProfileStore } from "./main/browser-profile-store";
-import { BrowserHistoryStore } from "./main/browser-history-store";
-import { BrowserProfileImportService } from "./main/browser-profile-import";
-import {
-	registerBrowserProfileIpc,
-	type BrowserProfileIpc,
-	type BrowserProfileMenuItem,
-} from "./main/browser-profile-ipc";
-import type { BrowserProfileMenuInput } from "./shared/browser-profiles";
 import { createWindowComposition, type WindowComposition } from "./main/window-composition";
 import { createRemoteDaemonController } from "./main/desktop-remote-ipc";
 import { getActiveRemoteConfig, readDesktopRemoteConfig, remoteCspConnectOrigins } from "./main/desktop-remote";
 import { patchRendererCspHtml } from "./shared/desktop-remote-csp";
-import { AgentBrowserRuntime } from "./main/agent-browser-runtime";
-import { sameBrowserRuntimeIdentity, type BrowserRuntimeIdentity } from "./main/browser-runtime-identity";
 import { connectSupervisor, type SupervisorLinkHandle } from "./main/supervisor-link";
-import { connectBrowserRuntime, type BrowserRuntimeLinkHandle } from "./main/browser-runtime-link";
 import { keepDaemonAlive, shouldLinkOnAttach } from "./main/daemon-owner";
 import { writeAppStateMarker } from "./main/app-state";
 import { isAllowedAppExternalURL, openAllowedAppExternalURL } from "./main/external-open";
@@ -267,20 +249,12 @@ let daemonStartPromise: Promise<DaemonStatus> | null = null;
 let daemonStartEpoch = 0;
 let daemonStatus: DaemonStatus = { state: "stopped" };
 let daemonOutput = "";
-let browserViewHost: BrowserViewHost | null = null;
-let browserProfileIpc: BrowserProfileIpc | null = null;
-let browserProfileImporter: BrowserProfileImportService | null = null;
 let windowComposition: WindowComposition | null = null;
-const browserCleanupPromises = new Set<Promise<void>>();
-let browserQuitCleanupPromise: Promise<void> | null = null;
-let browserCleanupComplete = false;
-let browserQuitRequested = false;
+let quitCleanupComplete = false;
+let quitCleanupPromise: Promise<void> | null = null;
 let createWindowPromise: Promise<void> | null = null;
-let browserRuntimeLink: BrowserRuntimeLinkHandle | null = null;
-let browserRuntimeLinkIdentity: BrowserRuntimeIdentity | null = null;
 let keybindingOverrides: KeybindingOverrides = {};
 let keybindingRecordingActive = false;
-let closeShellTerminalShortcutEnabled = false;
 let terminalFocused = false;
 // Held for the app lifetime. Dropping it (on any exit) triggers daemon self-stop.
 let supervisorLink: SupervisorLinkHandle | null = null;
@@ -412,10 +386,6 @@ function preloadPath(): string {
 	return path.join(__dirname, "preload.js");
 }
 
-function annotatePreloadPath(): string {
-	return path.join(__dirname, "annotate-preload.js");
-}
-
 // Runtime window/taskbar icon for Linux and Windows. macOS ignores this and
 // uses the .app bundle's .icns instead. Packaged: shipped via extraResource to
 // resources/icon.png; dev: the source asset under frontend/assets.
@@ -452,12 +422,8 @@ function focusMainWindow(): void {
 }
 
 function setDaemonStatus(nextStatus: DaemonStatus): void {
-	if (nextStatus.state !== "ready") disposeBrowserRuntimeLink();
 	daemonStatus = nextStatus;
 	getShellWebContents()?.send("daemon:status", daemonStatus);
-	if (nextStatus.state === "ready" && browserViewHost) {
-		establishBrowserRuntimeLink();
-	}
 }
 
 const MAX_DAEMON_OUTPUT_CHARS = 12_000;
@@ -470,87 +436,16 @@ function appendDaemonOutput(text: string): void {
 
 // Menu installed on Windows where the native menu bar is hidden. The bar stays
 // out of sight, but the roles keep their accelerators alive (Reload, zoom, full
-// screen, edit commands). DevTools uses the AO browser toggle so the focused
-// Browser panel opens the same native Chromium surface as the toolbar.
+// screen, edit commands).
 function buildWindowsAppMenu(): Menu {
 	return Menu.buildFromTemplate(
 		buildWindowsAppMenuTemplate(() => {
-			const fallback = () => getShellWebContents()?.toggleDevTools();
-			void browserViewHost?.toggleDevToolsForLastFocused().then((state) => {
-				if (!state) fallback();
-			}).catch(fallback);
+			getShellWebContents()?.toggleDevTools();
 		}),
 	);
 }
 
-async function disposeBrowserViewHost(): Promise<void> {
-	const host = browserViewHost;
-	browserViewHost = null;
-	const profileIpc = browserProfileIpc;
-	browserProfileIpc = null;
-	profileIpc?.dispose();
-	const profileImporter = browserProfileImporter;
-	browserProfileImporter = null;
-	if (!host && !profileImporter) return;
-	const cleanup = Promise.resolve()
-		.then(async () => {
-			await profileImporter?.dispose();
-			await host?.dispose();
-		})
-		.catch((error) => {
-			console.error("browser host cleanup failed:", error);
-		});
-	browserCleanupPromises.add(cleanup);
-	void cleanup.then(
-		() => browserCleanupPromises.delete(cleanup),
-		() => browserCleanupPromises.delete(cleanup),
-	);
-	await cleanup;
-}
-
-function browserProfileStateDir(): string {
-	const runFile = runFilePath();
-	return path.dirname(runFile ?? path.join(os.homedir(), ".ao", "running.json"));
-}
-
-async function clearElectronBrowserProfileData(partition: string): Promise<void> {
-	const browserSession = session.fromPartition(partition);
-	await Promise.all([browserSession.clearStorageData(), browserSession.clearCache()]);
-}
-
-async function disposeAllBrowserViewHosts(): Promise<void> {
-	for (;;) {
-		if (browserViewHost) await disposeBrowserViewHost();
-		const pending = [...browserCleanupPromises];
-		if (pending.length === 0 && !browserViewHost) return;
-		if (pending.length > 0) await Promise.all(pending);
-	}
-}
-
 async function createWindowInternal(): Promise<void> {
-	await disposeAllBrowserViewHosts();
-	const agentBrowserRuntime = new AgentBrowserRuntime({
-		binaryPath: resolveAgentBrowserBinaryPath(),
-		// Agent Browser creates Unix sockets below each run root. Keep this base
-		// deliberately short so the namespace/session suffix stays below macOS's
-		// 103-byte sockaddr_un limit; all AO state remains under ~/.ao.
-		dataDir: path.join(os.homedir(), ".ao", ...(app.isPackaged ? ["br"] : ["dev", "br"])),
-		log: (message) => console.log(`AO: ${message}`),
-	});
-	await agentBrowserRuntime.prepare();
-	if (browserQuitRequested) {
-		await agentBrowserRuntime.dispose();
-		return;
-	}
-	const browserProfileStore = await createBrowserProfileStore({ stateDir: browserProfileStateDir() });
-	const browserHistoryStore = new BrowserHistoryStore({ stateDir: browserProfileStateDir() });
-	const profileImporter = new BrowserProfileImportService({
-		stateDir: browserProfileStateDir(),
-		profileStore: browserProfileStore,
-		historyStore: browserHistoryStore,
-		fromPartition: (partition) => session.fromPartition(partition),
-	});
-	await profileImporter.initialize();
 	const windowOptions: Electron.BaseWindowConstructorOptions = {
 		width: 1320,
 		height: 860,
@@ -605,15 +500,7 @@ async function createWindowInternal(): Promise<void> {
 		Menu.setApplicationMenu(
 			Menu.buildFromTemplate(
 				buildMacAppMenuTemplate(() => {
-					const fallback = () => getShellWebContents()?.toggleDevTools();
-					const host = browserViewHost;
-					if (!host) {
-						fallback();
-						return;
-					}
-					void host.toggleDevToolsForLastFocused().then((state) => {
-						if (!state) fallback();
-					}).catch(fallback);
+					getShellWebContents()?.toggleDevTools();
 				}),
 			),
 		);
@@ -636,8 +523,7 @@ async function createWindowInternal(): Promise<void> {
 	});
 
 	// Application shortcuts are handled here so they fire no matter which web
-	// contents holds focus — the shell renderer, xterm's helper textarea, or a
-	// browser-preview view (wired per-view in the browser host).
+	// contents holds focus — the shell renderer or xterm's helper textarea.
 	const isMac = process.platform === "darwin";
 	attachAppShortcuts(
 		shellWebContents,
@@ -646,59 +532,9 @@ async function createWindowInternal(): Promise<void> {
 		false,
 		() => keybindingOverrides,
 		() => keybindingRecordingActive,
-		(id, chord) =>
-			!browserViewHost?.isLastUsedBrowser() ||
-			shouldHandleAppShortcutInBrowserContext(id, chord, isMac),
-		(id) => {
-			if (id !== "toggle-browser-devtools") return;
-			void browserViewHost?.toggleDevToolsForLastFocused().catch(() => undefined);
-		},
+		() => true,
 		() => terminalFocused,
 	);
-
-	browserViewHost = createBrowserViewHost({
-		mainWindow,
-		shellWebContents,
-		ipcMain,
-		shell,
-		WebContentsView,
-		annotatePreloadPath: annotatePreloadPath(),
-		rendererOrigin: new URL(rendererUrl()).origin,
-		isMac,
-		getKeybindingOverrides: () => keybindingOverrides,
-		isKeybindingRecording: () => keybindingRecordingActive,
-		agentBrowserRuntime,
-		isCloseShellTerminalShortcutEnabled: () => closeShellTerminalShortcutEnabled,
-		browserProfileStore,
-		browserHistoryStore,
-		clearBrowserProfileData: clearElectronBrowserProfileData,
-	});
-	browserProfileImporter = profileImporter;
-	browserProfileIpc = registerBrowserProfileIpc({
-		ipcMain,
-		shellWebContents,
-		mainWindow,
-		store: browserProfileStore,
-		importer: profileImporter,
-		host: browserViewHost,
-		buildMenu: (items: BrowserProfileMenuItem[]) => {
-			const menu = Menu.buildFromTemplate(items as Electron.MenuItemConstructorOptions[]);
-			return { popup: (options) => menu.popup(options as Electron.PopupOptions) };
-		},
-		confirmSwitch: async (labels: BrowserProfileMenuInput["labels"]) => {
-			const result = await dialog.showMessageBox({
-				type: "warning",
-				title: labels.switchTitle,
-				message: labels.switchMessage,
-				detail: labels.switchDetail,
-				buttons: [labels.cancel, labels.confirm],
-				defaultId: 0,
-				cancelId: 0,
-			});
-			return result.response === 1;
-		},
-	});
-	if (daemonStatus.state === "ready") establishBrowserRuntimeLink();
 
 	void shellWebContents.loadURL(rendererUrl());
 
@@ -737,12 +573,9 @@ async function createWindowInternal(): Promise<void> {
 	shellWebContents.on("render-process-gone", () => trayLifecycle.clear());
 
 	mainWindow.on("closed", () => {
-		disposeBrowserRuntimeLink();
 		keybindingRecordingActive = false;
 		if (windowComposition === composition) windowComposition = null;
-		void disposeBrowserViewHost().finally(() => {
-			composition.dispose();
-		});
+		composition.dispose();
 		mainWindow = null;
 		// Drop any pending dock bounce with the window it was attached to: its
 		// focus listener died with the window, so leaving the id set would make
@@ -765,15 +598,6 @@ function createWindow(): Promise<void> {
 		},
 	);
 	return pending;
-}
-
-function resolveAgentBrowserBinaryPath(): string {
-	const override = process.env.AO_AGENT_BROWSER_PATH?.trim();
-	if (override) return path.resolve(override);
-	const binary = process.platform === "win32" ? "agent-browser.exe" : "agent-browser";
-	return app.isPackaged
-		? path.join(process.resourcesPath, "agent-browser", binary)
-		: path.join(app.getAppPath(), "agent-browser", binary);
 }
 
 // How long the supervisor waits for the daemon to confirm its bound port (via
@@ -909,7 +733,6 @@ function ensureShellEnv(): Promise<void> {
 // (including supervisor restarts) reports the same run. An explicit
 // AO_APP_RUN_ID in the environment wins, which lets a test or a wrapper pin it.
 const appRunId = process.env.AO_APP_RUN_ID ?? `apprun-${randomUUID()}`;
-const browserRuntimeToken = randomBytes(32).toString("base64url");
 let stagedBundledTmuxBinary: string | null = null;
 
 async function ensureBundledTmuxStaged(): Promise<void> {
@@ -960,24 +783,11 @@ function daemonEnv(forceKeep = keepDaemonAlive(process.env)): NodeJS.ProcessEnv 
 		AO_OWNER,
 		AO_DATA_DIR: desktopDataDir,
 		AO_APP_RUN_ID: appRunId,
-		// The browser runtime token is handed over through the child's private
-		// stdin pipe below. Never put it in the daemon environment, where a
-		// same-UID worker could inspect the parent process.
-		AO_BROWSER_RUNTIME_TOKEN: "",
-		AO_BROWSER_RUNTIME_TOKEN_STDIN: "1",
 		// Under AppImage, APPIMAGE is the stable outer .AppImage file path (the
 		// FUSE mount in executablePath is random per launch). The daemon echoes
 		// it as appImagePath in /healthz|/readyz so the identity check can
 		// recognise its own daemon across a relaunch-to-update.
 		...(process.env.APPIMAGE ? { AO_APPIMAGE: process.env.APPIMAGE } : {}),
-		// AO_ACP_RUNTIME_DIR points at the packaged acp-runtime resource. Legacy: the
-		// chat drivers were removed by #39 and the daemon no longer consumes this
-		// variable; kept only until the packaged resource is dropped.
-		AO_ACP_RUNTIME_DIR:
-			process.env.AO_ACP_RUNTIME_DIR ??
-			(app.isPackaged
-				? path.join(process.resourcesPath, "acp-runtime")
-				: path.join(app.getAppPath(), "resources", "acp-runtime")),
 		...(bundledTmuxBinary ? { AO_TMUX_BINARY: bundledTmuxBinary, AO_TMUX_SOCKET_NAME: "ao" } : {}),
 	};
 	// In dev mode, inject isolation defaults so the dev daemon never collides with
@@ -1079,57 +889,6 @@ function supervisorPipeFromRunFile(rfp: string | null): string {
 	const dir = path.basename(path.dirname(rfp));
 	if (dir === ".ao" || dir === "." || dir === "") return "\\\\.\\pipe\\ao-supervise";
 	return "\\\\.\\pipe\\ao-supervise-" + dir.replace(/[^a-zA-Z0-9-]/g, "-");
-}
-
-function disposeBrowserRuntimeLink(): void {
-	browserRuntimeLink?.dispose();
-	browserRuntimeLink = null;
-	browserRuntimeLinkIdentity = null;
-}
-
-function establishBrowserRuntimeLink(): void {
-	if (!browserViewHost) return;
-	const rfp = runFilePath();
-	if (!rfp) {
-		console.warn("AO: browser runtime link skipped; run-file path unavailable");
-		return;
-	}
-	let runInfo: ReturnType<typeof parseRunFile> = null;
-	try {
-		runInfo = parseRunFile(readFileSync(rfp, "utf8"));
-	} catch {
-		// Daemon readiness will retry this after running.json becomes readable.
-	}
-	const address = runInfo?.browserRuntimeAddress;
-	if (!address) {
-		console.warn("AO: browser runtime link skipped; daemon did not publish an address");
-		return;
-	}
-	const token = browserRuntimeToken;
-	const identity = {
-		pid: runInfo?.pid ?? 0,
-		startedAtMs: runInfo?.startedAtMs ?? 0,
-		address,
-		token,
-	};
-	if (browserRuntimeLink && browserRuntimeLinkIdentity && sameBrowserRuntimeIdentity(browserRuntimeLinkIdentity, identity)) {
-		return;
-	}
-	if (browserRuntimeLink) disposeBrowserRuntimeLink();
-	browserRuntimeLink = connectBrowserRuntime(address, {
-		token,
-		execute: (command, signal) => {
-			const host = browserViewHost;
-			if (!host) {
-				throw Object.assign(new Error("Browser target owner is unavailable"), {
-					code: "BROWSER_TARGET_UNAVAILABLE",
-				});
-			}
-			return host.execute(command.sessionId, command.action, command.args, signal);
-		},
-		log: (message) => console.log(`AO: ${message}`),
-	});
-	browserRuntimeLinkIdentity = identity;
 }
 
 function establishSupervisorLink(): void {
@@ -1552,16 +1311,10 @@ async function startDaemonInner(startEpoch: number): Promise<DaemonStatus> {
 		}
 		keepDaemonLogFd = undefined;
 	}
-	// daemonEnv deliberately contains only a marker. Deliver the actual token
-	// over the inherited pipe, then close it; Go does not pass this descriptor to
-	// worker processes when it spawns them.
-	if (child.stdin) {
-		child.stdin.on("error", () => undefined);
-		child.stdin.end(`${browserRuntimeToken}\n`);
-	} else {
-		console.warn("AO: browser runtime token handoff pipe was unavailable");
-	}
-	if (keep) child.unref();
+		if (child.stdin) {
+			child.stdin.end();
+		}
+		if (keep) child.unref();
 	daemonProcess = child;
 
 	// Discover the port the daemon ACTUALLY bound rather than trusting AO_PORT:
@@ -1736,7 +1489,6 @@ function stopDaemon(): DaemonStatus {
 	// A later daemon:start re-establishes the link via reportBoundPort.
 	supervisorLink?.dispose();
 	supervisorLink = null;
-	disposeBrowserRuntimeLink();
 	killDaemon(daemonProcess);
 	setDaemonStatus({ state: "stopped" });
 	return daemonStatus;
@@ -1834,20 +1586,12 @@ ipcMain.handle("theme:persist-terminal", (_event, scheme: unknown) => {
 });
 
 // Renderer calls this when focus lands on real shell UI (not the titlebar menu), so menu:action's panel fallback below doesn't go stale.
-ipcMain.on("shell:focus", () => browserViewHost?.forgetLastFocusedPanel());
+ipcMain.on("shell:focus", () => undefined);
 
-ipcMain.on("browser:overlay", (event, open: unknown) => {
-	if (event.sender !== getShellWebContents() || typeof open !== "boolean") return;
-	windowComposition?.setOverlayOpen(open);
-	// Raising the shell can leave the live page's own compositor surface stale
-	// (the same class of bug window-composition.ts already works around for
-	// the shell itself) — nudge it the same way once the shell is on top.
-	if (open) browserViewHost?.refreshLastFocusedPanelSurface();
-});
-
-ipcMain.on(SET_CLOSE_SHELL_TERMINAL_SHORTCUT_ENABLED_CHANNEL, (_event, enabled: unknown) => {
-	closeShellTerminalShortcutEnabled = enabled === true;
-});
+// The close-shell-terminal enable/disable signal is renderer-driven state that
+// only the removed browser view host consumed; the channel is kept as a no-op so
+// terminal surfaces can keep sending it.
+ipcMain.on(SET_CLOSE_SHELL_TERMINAL_SHORTCUT_ENABLED_CHANNEL, () => undefined);
 
 ipcMain.on(SET_TERMINAL_FOCUSED_CHANNEL, (event, focused: unknown) => {
 	if (event.sender !== getShellWebContents() || typeof focused !== "boolean") return;
@@ -1859,11 +1603,7 @@ ipcMain.on(SET_TERMINAL_FOCUSED_CHANNEL, (event, focused: unknown) => {
 ipcMain.handle("menu:action", (_event, action: string) => {
 	const win = mainWindow;
 	if (!win) return;
-	// Clicking this shell-painted menu moves focus off the panel, so prefer the last-focused panel, else the focused contents, else the shell.
-	const focused = webContents.getFocusedWebContents();
-	const shell = getShellWebContents();
-	const wc =
-		(focused && focused !== shell ? focused : browserViewHost?.getLastFocusedPanelContents()) ?? shell;
+	const wc = webContents.getFocusedWebContents() ?? getShellWebContents();
 	if (!wc) return;
 	switch (action) {
 		case "edit.undo":
@@ -1881,11 +1621,6 @@ ipcMain.handle("menu:action", (_event, action: string) => {
 		case "view.reload":
 			return wc.reload();
 		case "view.devtools":
-			if (browserViewHost) {
-				return browserViewHost.toggleDevToolsForLastFocused().then((state) => {
-					if (!state) wc?.toggleDevTools();
-				}).catch(() => wc?.toggleDevTools());
-			}
 			return wc?.toggleDevTools();
 		case "view.zoomIn":
 			return wc.setZoomLevel(wc.getZoomLevel() + 0.5);
@@ -1904,8 +1639,8 @@ ipcMain.handle("menu:action", (_event, action: string) => {
 		case "app.quit":
 			return app.quit();
 		case "help.shortcuts":
-			shell?.focus();
-			return shell?.send(KEYBOARD_SHORTCUTS_HELP_CHANNEL);
+			getShellWebContents()?.focus();
+			return getShellWebContents()?.send(KEYBOARD_SHORTCUTS_HELP_CHANNEL);
 		case "help.about":
 			void dialog.showMessageBox(win, {
 				type: "info",
@@ -2399,19 +2134,16 @@ app.whenReady().then(async () => {
 // The supervisorLink fd is NOT explicitly closed on quit; the OS closes it when
 // the process exits for any reason (Cmd+Q, crash, SIGKILL). Sessions survive.
 app.on("before-quit", (event) => {
-	browserQuitRequested = true;
-	disposeBrowserRuntimeLink();
 	trayLifecycle.dispose();
 	trayController = null;
-	if (!browserCleanupComplete) {
+	if (!quitCleanupComplete) {
 		event.preventDefault();
-		if (!browserQuitCleanupPromise) {
-			browserQuitCleanupPromise = Promise.all([
-				disposeAllBrowserViewHosts(),
+		if (!quitCleanupPromise) {
+			quitCleanupPromise = Promise.all([
 				telemetryPolicyController?.close() ?? Promise.resolve(),
 			]).then(() => undefined).finally(() => {
-				browserCleanupComplete = true;
-				browserQuitCleanupPromise = null;
+				quitCleanupComplete = true;
+				quitCleanupPromise = null;
 				app.quit();
 			});
 		}

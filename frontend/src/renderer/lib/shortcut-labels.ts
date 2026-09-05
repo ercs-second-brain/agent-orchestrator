@@ -15,7 +15,6 @@ export const shortcutLabels: Record<AppShortcutId, string> = {
 	"next-tab": "Next tab",
 	"toggle-inspector": "Toggle inspector",
 	"focus-terminal": "Focus terminal",
-	"toggle-browser-devtools": "Toggle DevTools",
 };
 
 export const shortcutCategoryLabels: Record<ShortcutCategory, string> = {

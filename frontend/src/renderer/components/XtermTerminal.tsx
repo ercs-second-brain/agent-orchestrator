@@ -76,8 +76,6 @@ export type XtermTerminalProps = {
 	paneScrollsByKeyboard?: boolean;
 	/** Terminal construction failed; the owner decides how to surface it. */
 	onError?: (error: unknown) => void;
-	/** Called after a terminal hyperlink is opened in the OS browser. */
-	onLinkOpen?: (uri: string) => void;
 	/** Publish the positive grid after a retained terminal becomes visible. */
 	onVisibleSize?: (cols: number, rows: number) => void;
 	/** Hidden retained terminals keep parsing output but expose no UI overlays. */
@@ -248,7 +246,7 @@ type TerminalContextMenuState = {
 	x: number;
 	y: number;
 	// The web link under the cursor when the menu opened, if any — enables the
-	// "Open in system browser" item (left-click opens it in the AO Browser).
+	// "Open in system browser" item.
 	link: string | null;
 };
 
@@ -422,18 +420,11 @@ export function XtermTerminal(props: XtermTerminalProps) {
 			if (!terminalHasFocus(host)) return;
 			callbacksRef.current.onChangeFontSize?.(delta);
 		});
-		const activateLink = (event: MouseEvent, uri: string) => {
-			// Left-click on a web link opens it inside the AO Browser panel (the
-			// parent decides how). Non-web schemes (mailto:, etc.) still go to the OS
-			// via the main process's window-open handler. Right-click to open a web
-			// link in the system browser instead — see the context menu below. Cmd-click
-			// follows the same escape hatch as links in rendered markdown views.
+		const activateLink = (_event: MouseEvent, uri: string) => {
+			// Web links open in the system browser via the main process's
+			// window-open handler. Non-web schemes (mailto:, etc.) also go to the OS.
 			if (isWebLink(uri)) {
-				if (event.altKey || event.metaKey) {
-					void openLinkInSystemBrowser(uri);
-					return;
-				}
-				callbacksRef.current.onLinkOpen?.(uri);
+				void openLinkInSystemBrowser(uri);
 				return;
 			}
 			window.open(uri, "_blank", "noopener");

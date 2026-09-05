@@ -1455,63 +1455,38 @@ describe("XtermTerminal", () => {
 		expect(onInput).toHaveBeenLastCalledWith("\x1b[5~", "wheel");
 	});
 
-	it("routes web links to the AO browser and does not open the system browser", () => {
-		const open = vi.spyOn(window, "open").mockReturnValue(null);
-		const onLinkOpen = vi.fn();
-		render(<XtermTerminal onLinkOpen={onLinkOpen} theme="dark" />);
+	it("opens web links in the system browser", () => {
+		const openExternal = vi.fn().mockResolvedValue(undefined);
+		window.ao!.app.openExternal = openExternal;
+		render(<XtermTerminal theme="dark" />);
 
-		// A left-click on an http(s) link is reported to the parent (which shows it
-		// in the AO Browser panel); it must NOT spawn a system-browser window.
 		expect(state.linkHandler).toBeTypeOf("function");
 		state.linkHandler!({} as MouseEvent, "https://example.com");
 
-		expect(onLinkOpen).toHaveBeenCalledWith("https://example.com");
-		expect(open).not.toHaveBeenCalled();
-		open.mockRestore();
+		expect(openExternal).toHaveBeenCalledWith("https://example.com");
 	});
 
-	it("routes OSC 8 web links to the AO browser without a system-browser window", () => {
-		const open = vi.spyOn(window, "open").mockReturnValue(null);
-		const onLinkOpen = vi.fn();
-		render(<XtermTerminal onLinkOpen={onLinkOpen} theme="dark" />);
+	it("opens OSC 8 web links in the system browser", () => {
+		const openExternal = vi.fn().mockResolvedValue(undefined);
+		window.ao!.app.openExternal = openExternal;
+		render(<XtermTerminal theme="dark" />);
 		const oscLinkHandler = state.lastTerminal!.options.linkHandler as {
 			activate: (event: MouseEvent, uri: string) => void;
 		};
 
 		oscLinkHandler.activate({} as MouseEvent, "http://localhost:3000");
 
-		expect(onLinkOpen).toHaveBeenCalledWith("http://localhost:3000");
-		expect(open).not.toHaveBeenCalled();
-		open.mockRestore();
+		expect(openExternal).toHaveBeenCalledWith("http://localhost:3000");
 	});
 
-	it.each([
-		["plain", "Option/Alt", { altKey: true }],
-		["OSC 8", "Option/Alt", { altKey: true }],
-		["plain", "Command", { metaKey: true }],
-		["OSC 8", "Command", { metaKey: true }],
-	])("opens %s web links in the system browser on %s+Click", (kind, _modifier, event) => {
-		const openExternal = vi.fn().mockResolvedValue(undefined);
-		window.ao!.app.openExternal = openExternal;
-		const onLinkOpen = vi.fn();
-		render(<XtermTerminal onLinkOpen={onLinkOpen} theme="dark" />);
-		const oscHandler = state.lastTerminal!.options.linkHandler as { activate: (event: MouseEvent, uri: string) => void };
-		const handler = kind === "plain" ? state.linkHandler! : oscHandler.activate;
-		handler(event as unknown as MouseEvent, "https://example.com");
-		expect(openExternal).toHaveBeenCalledWith("https://example.com");
-		expect(onLinkOpen).not.toHaveBeenCalled();
-	});
-
-	it("opens non-web links (mailto:) in the system browser, not the AO browser", () => {
+	it("opens non-web links (mailto:) in the system browser", () => {
 		const open = vi.spyOn(window, "open").mockReturnValue(null);
-		const onLinkOpen = vi.fn();
-		render(<XtermTerminal onLinkOpen={onLinkOpen} theme="dark" />);
+		render(<XtermTerminal theme="dark" />);
 
 		expect(state.linkHandler).toBeTypeOf("function");
 		state.linkHandler!({} as MouseEvent, "mailto:dev@example.com");
 
 		expect(open).toHaveBeenCalledWith("mailto:dev@example.com", "_blank", "noopener");
-		expect(onLinkOpen).not.toHaveBeenCalled();
 		open.mockRestore();
 	});
 

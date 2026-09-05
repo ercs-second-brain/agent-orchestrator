@@ -58,8 +58,6 @@ async function prepareNativeDependencies(platform: NodeJS.Platform, arch: string
 export function extraResourcesForPlatform(platform: NodeJS.Platform): string[] {
 	return [
 		"daemon",
-		"agent-browser",
-		"resources/acp-runtime",
 		...(platform === "darwin" || platform === "linux" ? ["tmux"] : []),
 		"assets/icon.png",
 		"assets/icon.ico",
@@ -298,7 +296,6 @@ const config: ForgeConfig = {
 			build: [
 				{ entry: "src/main.ts", config: "vite.main.config.ts", target: "main" },
 				{ entry: "src/preload.ts", config: "vite.preload.config.ts", target: "preload" },
-				{ entry: "src/annotate-preload.ts", config: "vite.preload.config.ts", target: "preload" },
 			],
 			renderer: [{ name: "main_window", config: "vite.renderer.config.ts" }],
 		}),

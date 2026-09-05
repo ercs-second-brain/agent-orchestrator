@@ -8,7 +8,6 @@ import { KeyboardShortcutsContent } from "./settings/KeyboardShortcutsContent";
 import { MobileDevicesSection } from "./settings/MobileDevicesSection";
 import { ReportProblemContent } from "./settings/ReportProblemContent";
 import { SettingsSection } from "./settings/SettingsSection";
-import { BrowserProfilesSection } from "./settings/BrowserProfilesSection";
 import { useRemoteConnection } from "../hooks/useRemoteConnection";
 
 const UpdatesSection = lazy(async () => {
@@ -47,7 +46,6 @@ export function GlobalSettingsForm({
 
 			{(all || section === "agents") && !isRemote ? <CodexAccountsSection titleHidden={titleHidden} /> : null}
 
-			{(all || section === "browserProfiles") && !isRemote ? <BrowserProfilesSection titleHidden={titleHidden} /> : null}
 
 			{(all || section === "mobile") && !isRemote ? (
 				<SettingsSection title={"Mobile"} titleHidden={titleHidden}>

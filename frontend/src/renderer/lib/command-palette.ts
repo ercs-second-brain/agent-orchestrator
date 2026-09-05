@@ -178,7 +178,7 @@ export function buildCommands(ctx: CommandPaletteContext): CommandItem[] {
 		group: "current",
 		title: "New task",
 		subtitle: currentProject?.name,
-		keywords: ["worker", "chat", "start"],
+		keywords: ["worker", "start"],
 		disabled: !currentProject || isProjectRestarting,
 		disabledReason: !currentProject
 			? "No current project"

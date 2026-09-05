@@ -10,12 +10,10 @@ import {
 describe("agent capabilities", () => {
 	it("keeps the public vocabulary stable", () => {
 		expect(AGENT_CAPABILITIES).toEqual([
-			"interface.chat",
 			"interface.tui",
 			"model.catalog",
 			"model.custom",
 			"attachments",
-			"browser.preview",
 			"review.execute",
 			"session.resume",
 		]);
@@ -25,7 +23,7 @@ describe("agent capabilities", () => {
 		const profile: AgentProfile = {
 			id: "runtime-agent",
 			label: "Runtime Agent",
-			capabilities: ["interface.chat", "session.resume"],
+			capabilities: ["session.resume"],
 			availability: {
 				available: false,
 				installation: "installed",
@@ -36,6 +34,7 @@ describe("agent capabilities", () => {
 
 		expect(hasAgentCapability(profile, "session.resume")).toBe(true);
 		expect(hasAgentCapability(profile, "attachments")).toBe(false);
+		expect(hasAgentCapability(profile, "model.custom")).toBe(false);
 		expect(profile.availability).toMatchObject({
 			installation: "installed",
 			authentication: "unauthorized",

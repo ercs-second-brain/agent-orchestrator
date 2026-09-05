@@ -109,9 +109,9 @@ export const mockWorkspaces: WorkspaceSummary[] = [
 				terminalHandleId: "demo-review-stack/terminal_0",
 				workspaceId: "ao-demo",
 				workspaceName: "ao-demo",
-				title: "Review stacked browser preview flow",
+				title: "Review stacked terminal polish flow",
 				provider: "copilot",
-				branch: "demo/browser-preview-stack",
+				branch: "demo/terminal-polish-stack",
 				status: "review_pending",
 				kanbanColumn: "needs_review",
 				displayStatus: "Needs human review",
@@ -119,14 +119,10 @@ export const mockWorkspaces: WorkspaceSummary[] = [
 				createdAt: hoursAgo(7),
 				updatedAt: minutesAgo(7),
 				activity: { state: "idle", lastActivityAt: minutesAgo(7) },
-				previewUrl: "http://localhost:5173",
-				previewRevision: 4,
 				changedFiles: [
-					{ path: "frontend/src/renderer/components/BrowserPanel.tsx", additions: 52, deletions: 11 },
-					{ path: "frontend/src/renderer/hooks/useBrowserView.ts", additions: 33, deletions: 6 },
-					{ path: "docs/assets/readme/browser-preview.png", additions: 1, deletions: 0 },
+					{ path: "frontend/src/renderer/components/CenterPane.tsx", additions: 52, deletions: 11 },
 				],
-				commitMessage: "wire readme browser preview",
+				commitMessage: "wire readme terminal polish",
 				prs: [
 					demoPr(319, "open", "passing", "none"),
 					demoPr(320, "open", "pending", "none", "unknown"),
@@ -309,7 +305,7 @@ export const mockSessionScmSummaries: Record<string, SessionPRSummary[]> = {
 		}),
 	],
 	// Carries human + bot PR reviews and an unresolved thread, so the Reviews
-	// tab's Pull request pane has something to show in the browser preview.
+	// tab's Pull request pane has something to show in the preview build.
 	"demo-needs-input": [
 		prSummary("demo-needs-input", 318, {
 			changedFiles: 2,
@@ -379,8 +375,8 @@ export const mockSessionScmSummaries: Record<string, SessionPRSummary[]> = {
 				decision: "changes_requested",
 				hasUnresolvedHumanComments: true,
 				reviews: [
-					{ reviewerId: "vickyshaw29", autoInjectReview: false, verdict: "changes_requested", submittedAt: hoursAgo(1), reviewUrl: "https://github.com/ercs-second-brain/agent-orchestrator/pull/321#review-1", body: "Please address the browser preview comments before merge." },
-					{ reviewerId: "Prasad-D-Ware", autoInjectReview: false, verdict: "approved", submittedAt: hoursAgo(1), reviewUrl: "https://github.com/ercs-second-brain/agent-orchestrator/pull/321#review-2", body: "The preview flow looks good overall." },
+					{ reviewerId: "vickyshaw29", autoInjectReview: false, verdict: "changes_requested", submittedAt: hoursAgo(1), reviewUrl: "https://github.com/ercs-second-brain/agent-orchestrator/pull/321#review-1", body: "Please address the terminal polish comments before merge." },
+					{ reviewerId: "Prasad-D-Ware", autoInjectReview: false, verdict: "approved", submittedAt: hoursAgo(1), reviewUrl: "https://github.com/ercs-second-brain/agent-orchestrator/pull/321#review-2", body: "The polish flow looks good overall." },
 				],
 				unresolvedBy: [{ reviewerId: "vickyshaw29", count: 3, reviewUrl: "https://github.com/ercs-second-brain/agent-orchestrator/pull/321#review-1", links: [] }],
 			},

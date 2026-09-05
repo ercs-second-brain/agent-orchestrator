@@ -70,8 +70,7 @@ const appShortcutChannel = (
 };
 
 // Handle application-owned shortcuts in the main process so they work no
-// matter which web contents holds focus, including xterm's helper textarea and
-// the native Browser-preview WebContentsView.
+// matter which web contents holds focus, including xterm's helper textarea.
 export function attachAppShortcuts(
 	contents: BeforeInputContents,
 	isMac: boolean,
@@ -80,7 +79,6 @@ export function attachAppShortcuts(
 	getOverrides: () => KeybindingOverrides = () => ({}),
 	isRecording: () => boolean = () => false,
 	shouldHandle: (id: AppShortcutId, chord: ShortcutChord) => boolean = () => true,
-	onShortcut?: (id: AppShortcutId) => void,
 	isTerminalFocused: () => boolean = () => false,
 ): void {
 	contents.on("before-input-event", (event, input) => {
@@ -104,16 +102,6 @@ export function attachAppShortcuts(
 		// Let the renderer's capture listener receive application-owned chords
 		// while the user is recording a replacement binding.
 		if (isRecording()) return;
-		if (
-			onShortcut &&
-			matchesAppShortcut("toggle-browser-devtools", chord, isMac, getOverrides()) &&
-			shouldHandle("toggle-browser-devtools", chord)
-		) {
-			event.preventDefault();
-			if (focusTarget) target.focus();
-			onShortcut("toggle-browser-devtools");
-			return;
-		}
 		const match = appShortcutChannel(chord, isMac, getOverrides());
 		if (!match) return;
 		const [id, channel] = match;
