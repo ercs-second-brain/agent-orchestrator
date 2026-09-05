@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"sort"
 	"strings"
 	"time"
 
@@ -388,7 +387,6 @@ func (s *Store) ApplyUsageChunk(
 		insertedEvent := false
 		for _, ev := range events {
 			ev.ModelID = strings.TrimSpace(ev.ModelID)
-			ev.BillingProviderID = strings.TrimSpace(ev.BillingProviderID)
 			if err := validateUsageEvent(source.Harness, ev); err != nil {
 				return err
 			}
@@ -400,8 +398,7 @@ func (s *Store) ApplyUsageChunk(
 				return err
 			}
 			if err == nil {
-				matches, promoteAttribution := usageEventReplayDisposition(existing, ev)
-				if !matches {
+				if !usageEventReplayMatches(existing, ev) {
 					return fmt.Errorf("%w: binding %d event %q", domain.ErrUsageSourceEventConflict, source.BindingID, ev.SourceEventKey)
 				}
 				// A replaced transcript re-emits the same logical event under
@@ -419,26 +416,6 @@ func (s *Store) ApplyUsageChunk(
 					); err != nil {
 						return err
 					}
-				}
-				if promoteAttribution {
-					rows, err := q.PromoteInferredUsageEventToObserved(ctx, gen.PromoteInferredUsageEventToObservedParams{
-						BillingProviderID:         stringOrNull(ev.BillingProviderID),
-						InputCostNanos:            ptrInt64ToNull(ev.Costs.InputCostNanos),
-						CachedInputCostNanos:      ptrInt64ToNull(ev.Costs.CachedInputCostNanos),
-						OutputCostNanos:           ptrInt64ToNull(ev.Costs.OutputCostNanos),
-						EstimatedCostNanos:        ptrInt64ToNull(ev.Costs.EstimatedCostNanos),
-						PricingVersion:            ev.Costs.PricingVersion,
-						ID:                        existing.ID,
-						ExpectedUsageSourceID:     sourceID,
-						ExpectedBillingProviderID: existing.BillingProviderID,
-					})
-					if err != nil {
-						return err
-					}
-					if rows != 1 {
-						return fmt.Errorf("%w: binding %d event %q attribution changed", domain.ErrUsageSourceEventConflict, source.BindingID, ev.SourceEventKey)
-					}
-					insertedEvent = true
 				}
 				if existing.ProviderUsageJson.Valid || ev.ProviderUsageJSON == "" {
 					continue
@@ -487,265 +464,6 @@ func (s *Store) ApplyUsageChunk(
 	return nil
 }
 
-// ListUsageCostCandidates returns the next stable bounded page of total-null
-// events whose exact canonical provider has not been attempted at version.
-func (s *Store) ListUsageCostCandidates(
-	ctx context.Context,
-	billingProviderID, version string,
-	afterID int64,
-) ([]domain.UsageCostCandidate, error) {
-	rows, err := s.qr.ListUsageCostCandidates(ctx, gen.ListUsageCostCandidatesParams{
-		BillingProviderID: sql.NullString{String: billingProviderID, Valid: true},
-		PricingVersion:    version,
-		AfterID:           afterID,
-	})
-	if err != nil {
-		return nil, fmt.Errorf("list %s usage cost candidates: %w", billingProviderID, err)
-	}
-	out := make([]domain.UsageCostCandidate, 0, len(rows))
-	for _, row := range rows {
-		out = append(out, domain.UsageCostCandidate{
-			ID:                row.ID,
-			BindingID:         row.BindingID,
-			ProviderID:        domain.UsageProviderID(row.ProviderID),
-			BillingProviderID: row.BillingProviderID.String,
-			ModelID:           row.ModelID,
-			MeasurementKind:   domain.UsageMeasurementKind(row.UsageMeasurementKind),
-			Tokens: storedUsageTokens(
-				row.InputTokens, row.CachedInputTokens,
-				row.UncachedInputTokens, row.OutputTokens,
-			),
-			ProviderUsageJSON: row.ProviderUsageJson.String,
-			PricingVersion:    row.PricingVersion,
-			SourceEventKey:    row.SourceEventKey,
-		})
-	}
-	return out, nil
-}
-
-// storedUsageTokens rebuilds the canonical token vector from one durable row. A
-// NULL column is an uncollected metric; a stored zero is a known zero.
-func storedUsageTokens(input, cached, uncached, output sql.NullInt64) domain.UsageTokenMetrics {
-	return domain.UsageTokenMetrics{
-		InputTokens:         nullInt64Ptr(input),
-		CachedInputTokens:   nullInt64Ptr(cached),
-		UncachedInputTokens: nullInt64Ptr(uncached),
-		OutputTokens:        nullInt64Ptr(output),
-	}
-}
-
-// ApplyUsageCostUpdates applies one bounded candidate page atomically. Stale
-// candidates are ignored, and every binding with at least one winning CAS is
-// touched exactly once so the existing trigger publishes one CDC invalidation.
-func (s *Store) ApplyUsageCostUpdates(
-	ctx context.Context,
-	updates []domain.UsageCostUpdate,
-	at time.Time,
-) (int, error) {
-	if len(updates) == 0 {
-		return 0, nil
-	}
-	if len(updates) > 256 {
-		return 0, fmt.Errorf("usage cost update batch has %d rows, maximum is 256", len(updates))
-	}
-	if err := s.writeMu.LockContext(ctx); err != nil {
-		return 0, err
-	}
-	defer s.writeMu.Unlock()
-	applied := 0
-	err := s.inTx(ctx, "apply usage cost updates", func(q *gen.Queries) error {
-		affectedBindings := make(map[int64]struct{})
-		for _, update := range updates {
-			candidate := update.Candidate
-			bindingID, err := q.UpdateUsageCostCandidate(ctx, gen.UpdateUsageCostCandidateParams{
-				InputCostNanos:               ptrInt64ToNull(update.Costs.InputCostNanos),
-				CachedInputCostNanos:         ptrInt64ToNull(update.Costs.CachedInputCostNanos),
-				OutputCostNanos:              ptrInt64ToNull(update.Costs.OutputCostNanos),
-				EstimatedCostNanos:           ptrInt64ToNull(update.Costs.EstimatedCostNanos),
-				AttemptedPricingVersion:      update.Costs.PricingVersion,
-				ID:                           candidate.ID,
-				BindingID:                    candidate.BindingID,
-				ExpectedBillingProviderID:    stringOrNull(candidate.BillingProviderID),
-				ExpectedModelID:              candidate.ModelID,
-				ExpectedUsageMeasurementKind: string(candidate.MeasurementKind),
-				ExpectedInputTokens:          ptrInt64ToNull(candidate.Tokens.InputTokens),
-				ExpectedCachedInputTokens:    ptrInt64ToNull(candidate.Tokens.CachedInputTokens),
-				ExpectedUncachedInputTokens:  ptrInt64ToNull(candidate.Tokens.UncachedInputTokens),
-				ExpectedOutputTokens:         ptrInt64ToNull(candidate.Tokens.OutputTokens),
-				ExpectedProviderUsageJson:    stringOrNull(candidate.ProviderUsageJSON),
-				ExpectedSourceEventKey:       candidate.SourceEventKey,
-				ExpectedPricingVersion:       candidate.PricingVersion,
-			})
-			if errors.Is(err, sql.ErrNoRows) {
-				continue
-			}
-			if err != nil {
-				return err
-			}
-			applied++
-			affectedBindings[bindingID] = struct{}{}
-		}
-		bindingIDs := make([]int64, 0, len(affectedBindings))
-		for bindingID := range affectedBindings {
-			bindingIDs = append(bindingIDs, bindingID)
-		}
-		sort.Slice(bindingIDs, func(left, right int) bool { return bindingIDs[left] < bindingIDs[right] })
-		for _, bindingID := range bindingIDs {
-			if err := q.TouchUsageBinding(ctx, gen.TouchUsageBindingParams{
-				UpdatedAt: timeOrNow(at),
-				ID:        bindingID,
-			}); err != nil {
-				return err
-			}
-		}
-		return nil
-	})
-	if err != nil {
-		return 0, err
-	}
-	return applied, nil
-}
-
-// ListLegacyUsageSources returns source contexts that still own provider-null,
-// total-null events. The repairer validates each durable artifact before use.
-func (s *Store) ListLegacyUsageSources(ctx context.Context) ([]domain.UsageSourceContext, error) {
-	ids, err := s.qr.ListLegacyUsageSourceIDs(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("list legacy usage sources: %w", err)
-	}
-	out := make([]domain.UsageSourceContext, 0, len(ids))
-	for _, id := range ids {
-		row, err := s.qr.GetUsageSourceWithBindingAndSession(ctx, id)
-		if errors.Is(err, sql.ErrNoRows) {
-			continue
-		}
-		if err != nil {
-			return nil, fmt.Errorf("get legacy usage source %d: %w", id, err)
-		}
-		out = append(out, usageSourceContextFromGen(row))
-	}
-	return out, nil
-}
-
-// ListLegacyUsageEvents returns the immutable generic facts that transcript
-// attribution must match before provider and split repair is eligible.
-func (s *Store) ListLegacyUsageEvents(ctx context.Context, sourceID int64) ([]domain.LegacyUsageEvent, error) {
-	rows, err := s.qr.ListLegacyUsageEvents(ctx, sourceID)
-	if err != nil {
-		return nil, fmt.Errorf("list legacy usage events for source %d: %w", sourceID, err)
-	}
-	out := make([]domain.LegacyUsageEvent, 0, len(rows))
-	for _, row := range rows {
-		out = append(out, domain.LegacyUsageEvent{
-			ID:                    row.ID,
-			BindingID:             row.BindingID,
-			UsageSourceID:         row.UsageSourceID,
-			ProviderID:            domain.UsageProviderID(row.ProviderID),
-			BillingProviderID:     row.BillingProviderID.String,
-			BillingProviderSource: domain.UsageBillingProviderSource(row.BillingProviderSource.String),
-			ModelID:               row.ModelID,
-			MeasurementKind:       domain.UsageMeasurementKind(row.UsageMeasurementKind),
-			Tokens: storedUsageTokens(
-				row.InputTokens, row.CachedInputTokens,
-				row.UncachedInputTokens, row.OutputTokens,
-			),
-			ProviderUsageJSON: row.ProviderUsageJson.String,
-			PricingVersion:    row.PricingVersion,
-			SourceEventKey:    row.SourceEventKey,
-		})
-	}
-	return out, nil
-}
-
-// ApplyLegacyUsageRepairs atomically CAS-updates one bounded replay result and
-// touches each winning binding once. It never writes usage source cursor state.
-func (s *Store) ApplyLegacyUsageRepairs(
-	ctx context.Context,
-	repairs []domain.LegacyUsageRepair,
-	at time.Time,
-) (int, error) {
-	if len(repairs) == 0 {
-		return 0, nil
-	}
-	if len(repairs) > 256 {
-		return 0, fmt.Errorf("legacy usage repair batch has %d rows, maximum is 256", len(repairs))
-	}
-	if err := s.writeMu.LockContext(ctx); err != nil {
-		return 0, err
-	}
-	defer s.writeMu.Unlock()
-	applied := 0
-	err := s.inTx(ctx, "apply legacy usage repairs", func(q *gen.Queries) error {
-		affectedBindings := make(map[int64]struct{})
-		for _, repair := range repairs {
-			billingProviderID := strings.TrimSpace(repair.BillingProviderID)
-			if billingProviderID == "" {
-				return errors.New("legacy usage repair billing provider must be nonempty")
-			}
-			switch repair.BillingProviderSource {
-			case domain.UsageBillingProviderObserved, domain.UsageBillingProviderInferred:
-			default:
-				return fmt.Errorf("invalid usage billing provider source %q", repair.BillingProviderSource)
-			}
-			candidate := repair.Candidate
-			bindingID, err := q.UpdateLegacyUsageEvent(ctx, gen.UpdateLegacyUsageEventParams{
-				BillingProviderID:             sql.NullString{String: billingProviderID, Valid: true},
-				BillingProviderSource:         stringOrNull(string(repair.BillingProviderSource)),
-				ProviderUsageJson:             stringOrNull(repair.ProviderUsageJSON),
-				InputCostNanos:                ptrInt64ToNull(repair.Costs.InputCostNanos),
-				CachedInputCostNanos:          ptrInt64ToNull(repair.Costs.CachedInputCostNanos),
-				OutputCostNanos:               ptrInt64ToNull(repair.Costs.OutputCostNanos),
-				EstimatedCostNanos:            ptrInt64ToNull(repair.Costs.EstimatedCostNanos),
-				PricingVersion:                repair.Costs.PricingVersion,
-				ID:                            candidate.ID,
-				BindingID:                     candidate.BindingID,
-				UsageSourceID:                 candidate.UsageSourceID,
-				ExpectedBillingProviderID:     stringOrNull(candidate.BillingProviderID),
-				ExpectedBillingProviderSource: stringOrNull(string(candidate.BillingProviderSource)),
-				ExpectedProviderID:            string(candidate.ProviderID),
-				ExpectedModelID:               candidate.ModelID,
-				ExpectedUsageMeasurementKind:  string(candidate.MeasurementKind),
-				ExpectedInputTokens:           ptrInt64ToNull(candidate.Tokens.InputTokens),
-				ExpectedCachedInputTokens:     ptrInt64ToNull(candidate.Tokens.CachedInputTokens),
-				ExpectedUncachedInputTokens:   ptrInt64ToNull(candidate.Tokens.UncachedInputTokens),
-				ExpectedOutputTokens:          ptrInt64ToNull(candidate.Tokens.OutputTokens),
-				ExpectedProviderUsageJson:     stringOrNull(candidate.ProviderUsageJSON),
-				ExpectedSourceEventKey:        candidate.SourceEventKey,
-				ExpectedPricingVersion:        candidate.PricingVersion,
-				ExpectedFileIdentity:          repair.ExpectedFileIdentity,
-				ExpectedByteOffset:            repair.ExpectedByteOffset,
-				ExpectedParserStateJson:       repair.ExpectedParserStateJSON,
-				ExpectedSourceUpdatedAt:       repair.ExpectedSourceUpdatedAt,
-			})
-			if errors.Is(err, sql.ErrNoRows) {
-				continue
-			}
-			if err != nil {
-				return err
-			}
-			applied++
-			affectedBindings[bindingID] = struct{}{}
-		}
-		bindingIDs := make([]int64, 0, len(affectedBindings))
-		for bindingID := range affectedBindings {
-			bindingIDs = append(bindingIDs, bindingID)
-		}
-		sort.Slice(bindingIDs, func(left, right int) bool { return bindingIDs[left] < bindingIDs[right] })
-		for _, bindingID := range bindingIDs {
-			if err := q.TouchUsageBinding(ctx, gen.TouchUsageBindingParams{
-				UpdatedAt: timeOrNow(at), ID: bindingID,
-			}); err != nil {
-				return err
-			}
-		}
-		return nil
-	})
-	if err != nil {
-		return 0, err
-	}
-	return applied, nil
-}
-
 // ListUsageModelAggregates returns model-level aggregate rows for a session.
 func (s *Store) ListUsageModelAggregates(ctx context.Context, sessionID domain.SessionID) ([]domain.UsageModelAggregate, error) {
 	rows, err := s.qr.AggregateUsageBySessionHarnessModel(ctx, sessionID)
@@ -781,16 +499,6 @@ func (s *Store) ListCompactSessionUsageAggregates(ctx context.Context, projectID
 			SessionID:       row.SessionID,
 			ProcessedTokens: int64PtrWhen(row.ProcessedTokens, row.ProcessedTokensKnown != 0),
 			Incomplete:      row.Incomplete != 0,
-			Cost: domain.UsageCostAggregate{
-				EventCount: row.EventCount, PricedEventCount: row.PricedEventCount, PricedTotalNanos: row.PricedTotalNanos,
-				ObservedCostEventCount: row.ObservedCostEventCount, InferredCostEventCount: row.InferredCostEventCount,
-				KnownInputCount: row.KnownInputCount, KnownInputNanos: row.KnownInputNanos,
-				UnpricedKnownInputNanos: row.UnpricedKnownInputNanos,
-				KnownCachedInputCount:   row.KnownCachedInputCount, KnownCachedInputNanos: row.KnownCachedInputNanos,
-				UnpricedKnownCachedInputNanos: row.UnpricedKnownCachedInputNanos,
-				KnownOutputCount:              row.KnownOutputCount, KnownOutputNanos: row.KnownOutputNanos,
-				UnpricedKnownOutputNanos: row.UnpricedKnownOutputNanos,
-			},
 		})
 	}
 	return out, nil
@@ -880,12 +588,14 @@ func usageSourceInsertParams(rec domain.UsageSourceRecord) gen.InsertUsageSource
 }
 
 func usageEventInsertParams(source gen.GetUsageSourceWithBindingAndSessionRow, ev domain.ModelUsageEvent) gen.InsertModelUsageEventParams {
+	// The retired cost columns stay NULL: usage pricing was removed, but stored
+	// historical values are left untouched in existing rows.
 	return gen.InsertModelUsageEventParams{
 		BindingID:             source.BindingID,
 		UsageSourceID:         source.SourceID,
 		ProviderID:            string(ev.ProviderID),
-		BillingProviderID:     stringOrNull(ev.BillingProviderID),
-		BillingProviderSource: stringOrNull(string(ev.BillingProviderSource)),
+		BillingProviderID:     sql.NullString{},
+		BillingProviderSource: sql.NullString{},
 		ModelID:               ev.ModelID,
 		UsageMeasurementKind:  string(ev.MeasurementKind),
 		InputTokens:           ptrInt64ToNull(ev.Tokens.InputTokens),
@@ -893,18 +603,17 @@ func usageEventInsertParams(source gen.GetUsageSourceWithBindingAndSessionRow, e
 		UncachedInputTokens:   ptrInt64ToNull(ev.Tokens.UncachedInputTokens),
 		OutputTokens:          ptrInt64ToNull(ev.Tokens.OutputTokens),
 		ProviderUsageJson:     stringOrNull(ev.ProviderUsageJSON),
-		InputCostNanos:        ptrInt64ToNull(ev.Costs.InputCostNanos),
-		CachedInputCostNanos:  ptrInt64ToNull(ev.Costs.CachedInputCostNanos),
-		OutputCostNanos:       ptrInt64ToNull(ev.Costs.OutputCostNanos),
-		EstimatedCostNanos:    ptrInt64ToNull(ev.Costs.EstimatedCostNanos),
-		PricingVersion:        ev.Costs.PricingVersion,
+		InputCostNanos:        sql.NullInt64{},
+		CachedInputCostNanos:  sql.NullInt64{},
+		OutputCostNanos:       sql.NullInt64{},
+		EstimatedCostNanos:    sql.NullInt64{},
+		PricingVersion:        "",
 		SourceEventKey:        ev.SourceEventKey,
 		CreatedAt:             sql.NullTime{Time: ev.CreatedAt.UTC(), Valid: !ev.CreatedAt.IsZero()},
 	}
 }
 
-// stringOrNull maps the empty attribution sentinel to SQL NULL so unattributed
-// events stay selectable by the legacy repairer.
+// stringOrNull maps the empty string to SQL NULL.
 func stringOrNull(value string) sql.NullString {
 	if value == "" {
 		return sql.NullString{}
@@ -912,18 +621,12 @@ func stringOrNull(value string) sql.NullString {
 	return sql.NullString{String: value, Valid: true}
 }
 
-// HasOpenUsageAttribution reports whether a source still owns an event whose
-// billing attribution a repair pass could finish.
-func (s *Store) HasOpenUsageAttribution(ctx context.Context, sourceID int64) (bool, error) {
-	open, err := s.qr.HasOpenUsageAttribution(ctx, sourceID)
-	if err != nil {
-		return false, fmt.Errorf("check open usage attribution for source %d: %w", sourceID, err)
-	}
-	return open != 0, nil
-}
-
-func usageEventReplayDisposition(existing gen.GetModelUsageEventByKeyRow, event domain.ModelUsageEvent) (matches, promoteAttribution bool) {
-	genericMatches := existing.ProviderID == string(event.ProviderID) && existing.ModelID == event.ModelID &&
+// usageEventReplayMatches reports whether a replayed event is the same durable
+// fact as the stored row it deduplicates against. A stored row with no billing
+// attribution predates that retired feature and stays token-only comparable so
+// replay never rejects it.
+func usageEventReplayMatches(existing gen.GetModelUsageEventByKeyRow, event domain.ModelUsageEvent) bool {
+	matches := existing.ProviderID == string(event.ProviderID) && existing.ModelID == event.ModelID &&
 		existing.UsageMeasurementKind == string(event.MeasurementKind) &&
 		existing.InputTokens == ptrInt64ToNull(event.Tokens.InputTokens) &&
 		existing.CachedInputTokens == ptrInt64ToNull(event.Tokens.CachedInputTokens) &&
@@ -931,22 +634,10 @@ func usageEventReplayDisposition(existing gen.GetModelUsageEventByKeyRow, event 
 		existing.OutputTokens == ptrInt64ToNull(event.Tokens.OutputTokens)
 	// A stored object is immutable; a stored NULL predates the capture and the
 	// replay is allowed to enrich it.
-	if genericMatches && existing.ProviderUsageJson.Valid && event.ProviderUsageJSON != "" {
-		genericMatches = existing.ProviderUsageJson.String == event.ProviderUsageJSON
+	if matches && existing.ProviderUsageJson.Valid && event.ProviderUsageJSON != "" {
+		matches = existing.ProviderUsageJson.String == event.ProviderUsageJSON
 	}
-	// A stored row with no billing attribution predates this feature. Keep it
-	// token-only comparable so replay never rejects it; the legacy repairer owns
-	// filling that column in.
-	if !genericMatches || !existing.BillingProviderID.Valid {
-		return genericMatches, false
-	}
-	// An inference is intentionally replaceable by the first observation. That
-	// observation also replaces every cost derived from the inferred provider.
-	if existing.BillingProviderSource.String == string(domain.UsageBillingProviderInferred) &&
-		event.BillingProviderSource == domain.UsageBillingProviderObserved {
-		return true, true
-	}
-	return existing.BillingProviderID.String == event.BillingProviderID, false
+	return matches
 }
 
 func usageAggregateFromGen(row gen.AggregateUsageBySessionHarnessModelRow) domain.UsageModelAggregate {
@@ -960,16 +651,6 @@ func usageAggregateFromGen(row gen.AggregateUsageBySessionHarnessModelRow) domai
 			CachedInputTokens:   int64PtrWhen(row.CachedInputTokens, row.KnownCachedInputTokenCount == row.EventCount),
 			UncachedInputTokens: int64PtrWhen(row.UncachedInputTokens, row.KnownUncachedInputTokenCount == row.EventCount),
 			OutputTokens:        int64PtrWhen(row.OutputTokens, row.KnownOutputTokenCount == row.EventCount),
-		},
-		Cost: domain.UsageCostAggregate{
-			EventCount: row.EventCount, PricedEventCount: row.PricedEventCount, PricedTotalNanos: row.PricedTotalNanos,
-			ObservedCostEventCount: row.ObservedCostEventCount, InferredCostEventCount: row.InferredCostEventCount,
-			KnownInputCount: row.KnownInputCount, KnownInputNanos: row.KnownInputNanos,
-			UnpricedKnownInputNanos: row.UnpricedKnownInputNanos,
-			KnownCachedInputCount:   row.KnownCachedInputCount, KnownCachedInputNanos: row.KnownCachedInputNanos,
-			UnpricedKnownCachedInputNanos: row.UnpricedKnownCachedInputNanos,
-			KnownOutputCount:              row.KnownOutputCount, KnownOutputNanos: row.KnownOutputNanos,
-			UnpricedKnownOutputNanos: row.UnpricedKnownOutputNanos,
 		},
 	}
 }
@@ -1001,21 +682,7 @@ func validateUsageEvent(harness domain.AgentHarness, event domain.ModelUsageEven
 		return errors.New("usage input does not equal cached plus uncached input")
 	}
 	// ALTER TABLE cannot add a CHECK that reads another column, so the pairing
-	// the schema comment describes is enforced here: a provider without a source
-	// would be an attribution nobody can tell apart from an inference, and a
-	// source without a provider names nothing.
-	switch event.BillingProviderSource {
-	case domain.UsageBillingProviderObserved, domain.UsageBillingProviderInferred:
-		if event.BillingProviderID == "" {
-			return errors.New("usage event billing provider source requires a billing provider")
-		}
-	case "":
-		if event.BillingProviderID != "" {
-			return errors.New("usage event billing provider requires a source")
-		}
-	default:
-		return fmt.Errorf("invalid usage billing provider source %q", event.BillingProviderSource)
-	}
+	// the schema comment describes is enforced here.
 	if event.ProviderUsageJSON != "" {
 		var object map[string]json.RawMessage
 		if err := json.Unmarshal([]byte(event.ProviderUsageJSON), &object); err != nil {

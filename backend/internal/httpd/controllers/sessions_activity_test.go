@@ -68,7 +68,6 @@ func TestSessionsAPI_ActivityForwardsUsageMetadataWithoutChangingActivity(t *tes
 		"agentSessionId":"native-1",
 		"usage":{
 			"harness":"claude-code",
-			"providerId":"zai",
 			"transcriptPath":"/tmp/main.jsonl",
 			"modelId":"claude-sonnet",
 			"subagentId":"sub-1",
@@ -83,7 +82,6 @@ func TestSessionsAPI_ActivityForwardsUsageMetadataWithoutChangingActivity(t *tes
 	}
 	if usage.gotSignal.NativeSessionID != "native-1" ||
 		usage.gotSignal.Harness != domain.HarnessClaudeCode ||
-		usage.gotSignal.ProviderHint != "zai" ||
 		usage.gotSignal.SubagentTranscriptPath != "/tmp/sub.jsonl" {
 		t.Fatalf("usage signal = %+v", usage.gotSignal)
 	}

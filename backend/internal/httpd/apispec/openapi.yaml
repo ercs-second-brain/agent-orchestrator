@@ -6491,7 +6491,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/APIError'
           description: Not Implemented
-      summary: List compact token and estimated cost usage for session cards
+      summary: List compact token usage for session cards
       tags:
       - usage
   /api/v1/usage/sessions/{sessionId}:
@@ -6530,7 +6530,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/APIError'
           description: Not Implemented
-      summary: Get detailed token and estimated cost usage for one session
+      summary: Get detailed token usage for one session
       tags:
       - usage
 components:
@@ -7669,11 +7669,6 @@ components:
       type: object
     CompactSessionUsageResponse:
       properties:
-        estimatedCost:
-          anyOf:
-          - type: "null"
-          - $ref: '#/components/schemas/EstimatedCostResponse'
-            type: object
         incomplete:
           type: boolean
         processedTokens:
@@ -7695,7 +7690,6 @@ components:
       - processedTokens
       - totalTokens
       - incomplete
-      - estimatedCost
       type: object
     ConsumeCodexAccountResetCreditRequest:
       properties:
@@ -8817,52 +8811,6 @@ components:
           type: array
         includeUsage:
           type: boolean
-      type: object
-    EstimatedCostResponse:
-      properties:
-        cachedInputNanos:
-          format: int64
-          minimum: 0
-          type:
-          - "null"
-          - integer
-        coverage:
-          enum:
-          - complete
-          - partial
-          type: string
-        inputNanos:
-          description: Every non-cache-read input charge, cache writes included.
-          format: int64
-          minimum: 0
-          type:
-          - "null"
-          - integer
-        outputNanos:
-          format: int64
-          minimum: 0
-          type:
-          - "null"
-          - integer
-        providerAttribution:
-          description: Whether contributing billing providers were detected, inferred
-            from model ownership, or both.
-          enum:
-          - observed
-          - inferred
-          - mixed
-          type: string
-        totalNanos:
-          format: int64
-          minimum: 0
-          type: integer
-      required:
-      - totalNanos
-      - inputNanos
-      - cachedInputNanos
-      - outputNanos
-      - coverage
-      - providerAttribution
       type: object
     ExitAgentResponse:
       properties:
@@ -11432,10 +11380,6 @@ components:
           type: string
         modelId:
           type: string
-        providerId:
-          description: Canonical provider routing hint derived by the trusted local
-            Claude hook.
-          type: string
         subagentId:
           type: string
         subagentTranscriptPath:
@@ -11470,11 +11414,6 @@ components:
           type:
           - "null"
           - integer
-        estimatedCost:
-          anyOf:
-          - type: "null"
-          - $ref: '#/components/schemas/EstimatedCostResponse'
-            type: object
         inputTokens:
           description: Total input, including cached and uncached input.
           minimum: 0
@@ -11509,7 +11448,6 @@ components:
       - outputTokens
       - processedTokens
       - cacheReadTokens
-      - estimatedCost
       type: object
     WorkspaceCommitSummary:
       properties:

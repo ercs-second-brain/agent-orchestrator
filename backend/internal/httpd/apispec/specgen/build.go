@@ -358,7 +358,6 @@ var schemaNames = map[string]string{ //nolint:gosec // Public OpenAPI type names
 	"ControllersMarkAllNotificationsReadResponse": "MarkAllNotificationsReadResponse",
 	"ControllersUsageHookMetadata":                "UsageHookMetadata",
 	"ControllersListUsageSessionsQuery":           "ListUsageSessionsQuery",
-	"ControllersEstimatedCostResponse":            "EstimatedCostResponse",
 	"ControllersCompactSessionUsageResponse":      "CompactSessionUsageResponse",
 	"ControllersListCompactSessionUsageResponse":  "ListCompactSessionUsageResponse",
 	"ControllersUsageTotalsResponse":              "UsageTotalsResponse",
@@ -656,7 +655,7 @@ func usageOperations() []operation {
 	return []operation{
 		{
 			method: http.MethodGet, path: "/api/v1/usage/sessions", id: "listCompactSessionUsage", tag: "usage",
-			summary:    "List compact token and estimated cost usage for session cards",
+			summary:    "List compact token usage for session cards",
 			pathParams: []any{controllers.ListUsageSessionsQuery{}},
 			resps: []respUnit{
 				{http.StatusOK, controllers.ListCompactSessionUsageResponse{}},
@@ -666,7 +665,7 @@ func usageOperations() []operation {
 		},
 		{
 			method: http.MethodGet, path: "/api/v1/usage/sessions/{sessionId}", id: "getSessionUsage", tag: "usage",
-			summary:    "Get detailed token and estimated cost usage for one session",
+			summary:    "Get detailed token usage for one session",
 			pathParams: []any{controllers.SessionIDParam{}},
 			resps: []respUnit{
 				{http.StatusOK, controllers.SessionUsageResponse{}},

@@ -85,11 +85,9 @@ func TestParseClaudeRetainsUnknownProviderUsageFieldsWithinTheBound(t *testing.T
 	}
 }
 
-// The transcript writes the same write-once column as the hook, so it earns the
-// same whitelist. A routing string AO cannot name is dropped rather than stored:
-// unattributed is repairable, and a wrong attribution — priced against nothing,
-// invisible to every repair path — is not.
-func TestParseClaudeProviderPrecedenceAndRetention(t *testing.T) {
+// Usage pricing and its billing attribution were removed: the transcript's
+// provider field is ignored entirely, and the model id keeps driving events.
+func TestParseClaudeIgnoresProviderRoutingStrings(t *testing.T) {
 	source := usageSource(domain.UsageSourceClaudeMain)
 	source.ProviderHint = "anthropic"
 	records := []jsonlRecord{
@@ -102,44 +100,13 @@ func TestParseClaudeProviderPrecedenceAndRetention(t *testing.T) {
 	if len(result.Events) != 3 {
 		t.Fatalf("events = %+v", result.Events)
 	}
-	// The first two records name nothing AO recognises, so the whitelisted hook
-	// hint stands. The third names a route AO does know, canonicalised, and it
-	// takes precedence and persists to the next chunk.
-	if result.Events[0].BillingProviderID != "anthropic" || result.Events[0].ModelID != "claude-a" ||
-		result.Events[1].BillingProviderID != "anthropic" || result.Events[1].ModelID != "claude-a" ||
-		result.Events[2].BillingProviderID != "zai" || result.Events[2].ModelID != "claude-b" {
-		t.Fatalf("billing provider/model sequence = %+v", result.Events)
-	}
-	for index, event := range result.Events {
-		if event.BillingProviderSource != domain.UsageBillingProviderObserved {
-			t.Fatalf("event %d attribution source = %q", index, event.BillingProviderSource)
-		}
+	if result.Events[0].ModelID != "claude-a" || result.Events[1].ModelID != "claude-a" ||
+		result.Events[2].ModelID != "claude-b" {
+		t.Fatalf("model sequence = %+v", result.Events)
 	}
 	state := parserStateFromResult(t, result, domain.UsageSourceClaudeMain)
-	if state.Claude.Provider != "zai" {
-		t.Fatalf("retained provider = %q", state.Claude.Provider)
-	}
-}
-
-func TestParseClaudeProviderFallsBackToTrustedHintThenUnknown(t *testing.T) {
-	record := jsonlRecord{Data: []byte(`{"type":"assistant","uuid":"one","message":{"id":"msg-1","model":"claude-a","stop_reason":"end_turn","usage":{"input_tokens":8,"cache_creation_input_tokens":0,"cache_read_input_tokens":0,"output_tokens":2}}}`)}
-	for _, test := range []struct {
-		name string
-		hint string
-		want string
-	}{
-		{name: "trusted hook hint", hint: "zai", want: "zai"},
-		{name: "z.ai alias", hint: "z.ai", want: "zai"},
-		{name: "unattributed", want: ""},
-	} {
-		t.Run(test.name, func(t *testing.T) {
-			source := usageSource(domain.UsageSourceClaudeMain)
-			source.ProviderHint = test.hint
-			result := parseRecords(source, []jsonlRecord{record}, 100, time.Unix(1700000000, 0).UTC())
-			if len(result.Events) != 1 || result.Events[0].BillingProviderID != test.want {
-				t.Fatalf("events = %+v, want billing provider %q", result.Events, test.want)
-			}
-		})
+	if state.Claude.Provider != "" {
+		t.Fatalf("retired billing provider was written to parser state: %q", state.Claude.Provider)
 	}
 }
 
@@ -300,7 +267,7 @@ func TestParseCodexCumulativeDeltasAndRepeats(t *testing.T) {
 		}
 	}
 	state := parserStateFromResult(t, result, domain.UsageSourceCodexRollout)
-	if state.Codex.Baseline.InputTokens != 160 || state.Codex.ModelID != "gpt-5.6" || state.Codex.Provider != "openai" {
+	if state.Codex.Baseline.InputTokens != 160 || state.Codex.ModelID != "gpt-5.6" || state.Codex.Provider != "" {
 		t.Fatalf("parser state = %+v", state.Codex)
 	}
 }
@@ -332,7 +299,7 @@ func TestParseCodexOversizedCumulativeUsageStaysAbsent(t *testing.T) {
 	}
 }
 
-func TestParseCodexSessionMetaProviderAppliesOnlyToSubsequentEvents(t *testing.T) {
+func TestParseCodexSessionMetaProviderIsIgnored(t *testing.T) {
 	source := usageSource(domain.UsageSourceCodexRollout)
 	result := parseRecords(source, []jsonlRecord{
 		{Data: []byte(`{"type":"turn_context","payload":{"model":"gpt-a"}}`)},
@@ -342,15 +309,12 @@ func TestParseCodexSessionMetaProviderAppliesOnlyToSubsequentEvents(t *testing.T
 		{Data: []byte(`{"type":"session_meta","payload":{"model_provider":" azure "}}`)},
 		{Data: codexTokenLine("2026-07-01T10:02:00Z", 30, 15, 0, 6, 3)},
 	}, 500, time.Unix(1700000000, 0).UTC())
-	if len(result.Events) != 3 ||
-		result.Events[0].BillingProviderID != "" ||
-		result.Events[1].BillingProviderID != "openai" ||
-		result.Events[2].BillingProviderID != "azure" {
-		t.Fatalf("billing provider sequence = %+v", result.Events)
+	if len(result.Events) != 3 {
+		t.Fatalf("events = %+v", result.Events)
 	}
 	state := parserStateFromResult(t, result, domain.UsageSourceCodexRollout)
-	if state.Codex.Provider != "azure" {
-		t.Fatalf("retained provider = %q", state.Codex.Provider)
+	if state.Codex.Provider != "" {
+		t.Fatalf("retired billing provider was written to parser state: %q", state.Codex.Provider)
 	}
 }
 
