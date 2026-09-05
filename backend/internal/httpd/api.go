@@ -42,7 +42,6 @@ type APIDeps struct {
 	Conversations controllers.ConversationService
 	// Settings is the daemon-owned preference surface.
 	Settings            controllers.SettingsService
-	DevImport           controllers.DevImportService
 	CDC                 cdc.Source
 	Events              cdcSubscriber
 	Telemetry           ports.EventSink
@@ -117,7 +116,6 @@ type API struct {
 	shellTerms    *controllers.ShellTerminalsController
 	conversations *controllers.ConversationsController
 	settings      *controllers.SettingsController
-	dev           *controllers.DevController
 	browser       *controllers.BrowserController
 	system        *controllers.SystemController
 	identity      *controllers.IdentityController
@@ -159,7 +157,6 @@ func NewAPI(cfg config.Config, deps APIDeps) *API {
 		shellTerms:    &controllers.ShellTerminalsController{Svc: deps.ShellTerminals},
 		conversations: &controllers.ConversationsController{Svc: deps.Conversations},
 		settings:      &controllers.SettingsController{Svc: deps.Settings},
-		dev:           &controllers.DevController{Import: deps.DevImport},
 		browser:       &controllers.BrowserController{Svc: deps.Browser},
 		system:        &controllers.SystemController{Checks: deps.SystemChecks},
 		identity:      &controllers.IdentityController{HostID: deps.HostID},
@@ -198,7 +195,6 @@ func (a *API) Register(root chi.Router) {
 			a.shellTerms.Register(r)
 			a.conversations.Register(r)
 			a.settings.Register(r)
-			a.dev.Register(r)
 			a.browser.Register(r)
 			a.system.Register(r)
 			a.identity.Register(r)

@@ -77,9 +77,7 @@ func Build() ([]byte, error) {
 		*(&openapi31.Tag{Name: "events"}).WithDescription(
 			"Server-sent CDC event stream with durable replay"),
 		*(&openapi31.Tag{Name: "import"}).WithDescription(
-			"Legacy AO project import (availability probe and run)"),
-		*(&openapi31.Tag{Name: "dev"}).WithDescription(
-			"Developer-only maintenance operations"),
+			"Project import onboarding (folder validation and Git preparation)"),
 		*(&openapi31.Tag{Name: "mobile"}).WithDescription(
 			"Connect Mobile LAN bridge control (loopback/desktop only)"),
 		*(&openapi31.Tag{Name: "browser"}).WithDescription(
@@ -394,8 +392,6 @@ var schemaNames = map[string]string{ //nolint:gosec // Public OpenAPI type names
 	"DomainReviewRun":     "ReviewRun",
 	"ReviewPRReviewState": "PRReviewState",
 	// httpd/controllers: import wire envelopes
-	"ControllersImportStatusResponse": "ImportStatusResponse",
-	"ControllersImportRunResponse":    "ImportRunResponse",
 	// service/importer: project import onboarding DTOs
 	"ImporterImportValidationInput":         "ImportValidationInput",
 	"ImporterImportValidationResult":        "ImportValidationResult",
@@ -404,9 +400,6 @@ var schemaNames = map[string]string{ //nolint:gosec // Public OpenAPI type names
 	"ImporterGitPreparationResult":          "GitPreparationResult",
 	"ImporterGitPreparationEvent":           "GitPreparationEvent",
 	"ImporterGitRepositoryPreparationInput": "GitRepositoryPreparationInput",
-	// httpd/controllers: dev wire envelopes
-	"ControllersDevImportProjectsRequest":  "DevImportProjectsRequest",
-	"ControllersDevImportProjectsResponse": "DevImportProjectsResponse",
 	// httpd/controllers: mobile wire envelopes
 	"ControllersMobileStatusResponse":  "MobileStatusResponse",
 	"MobilebridgeEndpoint":             "MobileEndpoint",
@@ -418,16 +411,11 @@ var schemaNames = map[string]string{ //nolint:gosec // Public OpenAPI type names
 	"ControllersMuteDeviceRequest":     "MuteDeviceRequest",
 	"ControllersInstallIDParam":        "InstallIDParam",
 	"ControllersPushPairingIDParam":    "PushPairingIDParam",
-	// devimport report
-	"DevimportReport":   "DevImportProjectsReport",
-	"DevimportConflict": "DevImportProjectsConflict",
 	// httpd/controllers: push-device wire envelopes
 	"ControllersRegisterPushDeviceRequest":    "RegisterPushDeviceRequest",
 	"ControllersPushDeviceEnvelope":           "PushDeviceEnvelope",
 	"ControllersPushDeviceResponse":           "PushDeviceResponse",
 	"ControllersUnregisterPushDeviceResponse": "UnregisterPushDeviceResponse",
-	// legacyimport report
-	"LegacyimportReport": "ImportReport",
 	// service/project entities + DTOs
 	"ProjectProject":                    "Project",
 	"ProjectSummary":                    "ProjectSummary",
@@ -543,7 +531,6 @@ func operations() []operation {
 	ops = append(ops, usageOperations()...)
 	ops = append(ops, pushOperations()...)
 	ops = append(ops, importOperations()...)
-	ops = append(ops, devOperations()...)
 	ops = append(ops, mobileOperations()...)
 	ops = append(ops, mobileDeviceOperations()...)
 	ops = append(ops, browserOperations()...)
@@ -1381,28 +1368,10 @@ func mobileDeviceOperations() []operation {
 	}
 }
 
-// importOperations declares the /import operations. Must stay 1:1 with
+// importOperations declares the /imports operations. Must stay 1:1 with
 // the routes ImportController.Register mounts (enforced by the parity test).
 func importOperations() []operation {
 	return []operation{
-		{
-			method: http.MethodGet, path: "/api/v1/import", id: "getImportStatus", tag: "import",
-			summary: "Check whether a legacy AO install is available to import",
-			resps: []respUnit{
-				{http.StatusOK, controllers.ImportStatusResponse{}},
-				{http.StatusInternalServerError, envelope.APIError{}},
-				{http.StatusNotImplemented, envelope.APIError{}},
-			},
-		},
-		{
-			method: http.MethodPost, path: "/api/v1/import", id: "runImport", tag: "import",
-			summary: "Run the legacy AO project import through the daemon store",
-			resps: []respUnit{
-				{http.StatusOK, controllers.ImportRunResponse{}},
-				{http.StatusInternalServerError, envelope.APIError{}},
-				{http.StatusNotImplemented, envelope.APIError{}},
-			},
-		},
 		{
 			method: http.MethodPost, path: "/api/v1/imports/validate", id: "validateImport", tag: "import",
 			summary: "Validate a selected folder for project import onboarding",
@@ -1420,24 +1389,6 @@ func importOperations() []operation {
 			resps: []respUnit{
 				{http.StatusOK, importsvc.GitPreparationResult{}},
 				{http.StatusBadRequest, envelope.APIError{}},
-				{http.StatusNotImplemented, envelope.APIError{}},
-			},
-		},
-	}
-}
-
-// devOperations declares developer-only API operations. Must stay 1:1 with
-// the routes DevController.Register mounts (enforced by the parity test).
-func devOperations() []operation {
-	return []operation{
-		{
-			method: http.MethodPost, path: "/api/v1/dev/import-projects", id: "runDevImportProjects", tag: "dev",
-			summary: "Run the developer project-registry import through the daemon store",
-			reqBody: controllers.DevImportProjectsRequest{},
-			resps: []respUnit{
-				{http.StatusOK, controllers.DevImportProjectsResponse{}},
-				{http.StatusBadRequest, envelope.APIError{}},
-				{http.StatusInternalServerError, envelope.APIError{}},
 				{http.StatusNotImplemented, envelope.APIError{}},
 			},
 		},
