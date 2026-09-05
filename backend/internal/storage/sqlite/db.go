@@ -974,7 +974,7 @@ WHERE name = 'billing_provider_source'`).Scan(&providerSource); err != nil {
 		}
 	}
 
-	var latestPromptShape, branchShape, prTriggerShape, cloudShape int
+	var latestPromptShape, branchShape, prTriggerShape, cloudShape, cloudDropped int
 	if err := tx.QueryRow(`
 SELECT COUNT(*) FROM pragma_table_info('sessions')
 WHERE name = 'latest_user_prompt_at'`).Scan(&latestPromptShape); err != nil {
@@ -996,6 +996,17 @@ SELECT COUNT(*) FROM pragma_table_info('app_settings')
 WHERE name = 'cloud_offering'`).Scan(&cloudShape); err != nil {
 		return err
 	}
+	// 0126 later dropped the cloud_offering column. Once that drop is recorded,
+	// 0112 is applied history regardless of the column's current presence —
+	// otherwise this repair would release the 0112 ledger entry every boot and
+	// goose would re-add the column forever.
+	if err := tx.QueryRow(`
+SELECT COALESCE((
+    SELECT is_applied FROM goose_db_version
+    WHERE version_id = 126 ORDER BY id DESC LIMIT 1
+), 0)`).Scan(&cloudDropped); err != nil {
+		return err
+	}
 	for _, migration := range []struct {
 		version int64
 		present bool
@@ -1003,7 +1014,7 @@ WHERE name = 'cloud_offering'`).Scan(&cloudShape); err != nil {
 		{version: 109, present: latestPromptShape != 0},
 		{version: 110, present: branchShape == 4},
 		{version: 111, present: prTriggerShape != 0},
-		{version: 112, present: cloudShape != 0},
+		{version: 112, present: cloudShape != 0 || cloudDropped != 0},
 	} {
 		if migration.present {
 			continue

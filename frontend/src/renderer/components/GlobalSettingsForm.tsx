@@ -3,7 +3,6 @@ import { Trans, useTranslation } from "react-i18next";
 import type { GlobalSettingsSection as GlobalSettingsPage } from "../stores/ui-store";
 import { GeneralSettingsSection } from "./settings/GeneralSettingsSection";
 import { HarnessSettingsSection } from "./settings/HarnessSettingsSection";
-import { CloudCredentialsSection } from "./settings/CloudCredentialsSection";
 import { CodexAccountsSection } from "./settings/CodexAccountsSection";
 import { ConnectMobileContent } from "./settings/ConnectMobileContent";
 import { KeyboardShortcutsContent } from "./settings/KeyboardShortcutsContent";
@@ -51,7 +50,6 @@ export function GlobalSettingsForm({
 			{(all || section === "agents") && !isRemote ? <CodexAccountsSection titleHidden={titleHidden} /> : null}
 
 			{(all || section === "browserProfiles") && !isRemote ? <BrowserProfilesSection titleHidden={titleHidden} /> : null}
-			{(all || section === "cloud") && !isRemote ? <CloudCredentialsSection titleHidden={titleHidden} /> : null}
 
 			{(all || section === "mobile") && !isRemote ? (
 				<SettingsSection title={t("settings.mobile")} titleHidden={titleHidden}>

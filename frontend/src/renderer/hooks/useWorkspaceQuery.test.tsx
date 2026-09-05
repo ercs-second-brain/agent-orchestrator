@@ -5,19 +5,15 @@ import type { ReactNode } from "react";
 import type { WorkspaceSummary } from "../types/workspace";
 
 const {
-	cloudState,
 	getApiBaseUrlMock,
 	getMock,
 	hasTrustedApiBaseUrlMock,
-	listProjectsMock,
 	setQueryHealthyMock,
 	subscribeApiBaseUrlMock,
 } = vi.hoisted(() => ({
-	cloudState: { ready: false, org: undefined as { id: string } | undefined },
 	getApiBaseUrlMock: vi.fn(() => "http://127.0.0.1:3001"),
 	getMock: vi.fn(),
 	hasTrustedApiBaseUrlMock: vi.fn(() => true),
-	listProjectsMock: vi.fn(),
 	setQueryHealthyMock: vi.fn(),
 	subscribeApiBaseUrlMock: vi.fn(() => () => undefined),
 }));
@@ -30,18 +26,6 @@ vi.mock("../lib/api-client", () => ({
 }));
 
 vi.mock("../lib/agent-switch-visibility", () => ({ agentSwitchVisibility: { setQueryHealthy: setQueryHealthyMock } }));
-
-vi.mock("./useCloudCp", () => ({
-	useCloudCp: () => ({
-		client: { listProjects: listProjectsMock },
-		ready: cloudState.ready,
-		baseUrl: "https://cp.example.com",
-	}),
-}));
-
-vi.mock("./useCloudOrg", () => ({
-	useCloudOrg: () => ({ org: cloudState.org, isLoading: false, error: undefined, ready: cloudState.ready }),
-}));
 
 import { useWorkspaceQuery, useWorkspaceSession, useWorkspaceTraySessions, workspaceQueryKey } from "./useWorkspaceQuery";
 
@@ -67,9 +51,6 @@ beforeEach(() => {
 	getApiBaseUrlMock.mockReset().mockReturnValue("http://127.0.0.1:3001");
 	hasTrustedApiBaseUrlMock.mockReset().mockReturnValue(true);
 	subscribeApiBaseUrlMock.mockReset().mockReturnValue(() => undefined);
-	cloudState.ready = false;
-	cloudState.org = undefined;
-	listProjectsMock.mockReset();
 	setQueryHealthyMock.mockReset();
 });
 
@@ -575,70 +556,6 @@ describe("useWorkspaceQuery", () => {
 
 		await waitFor(() => expect(result.current.isError).toBe(true), { timeout: 3_000 });
 		expect(result.current.error).toBe(failure);
-	});
-
-	it("merges control-plane projects after local ones with kind cloud", async () => {
-		cloudState.ready = true;
-		cloudState.org = { id: "org-1" };
-		listProjectsMock.mockResolvedValue({
-			items: [
-				{
-					id: "cp-1",
-					orgId: "org-1",
-					displayName: "cloud-app",
-					repositoryUrl: "https://github.com/acme/cloud-app",
-					defaultBranch: "main",
-					config: {},
-					createdAt: "2026-08-01T00:00:00Z",
-					updatedAt: "2026-08-01T00:00:00Z",
-				},
-			],
-			page: { hasMore: false },
-		});
-		respondWith({
-			projects: { data: { projects: [{ id: "proj-1", name: "my-app", path: "/p" }] }, error: undefined },
-		});
-
-		const { result } = renderHook(() => useWorkspaceQuery(), { wrapper });
-		await waitFor(() => expect(result.current.data).toHaveLength(2));
-
-		expect(result.current.data?.[0]).toMatchObject({ id: "proj-1", name: "my-app", path: "/p" });
-		expect(result.current.data?.[1]).toEqual({
-			id: "cp-1",
-			name: "cloud-app",
-			kind: "cloud",
-			path: "",
-			sessions: [],
-		});
-		expect(listProjectsMock).toHaveBeenCalledWith("org-1", { limit: 100 });
-	});
-
-	it("keeps local projects when the cloud fetch fails", async () => {
-		cloudState.ready = true;
-		cloudState.org = { id: "org-1" };
-		listProjectsMock.mockRejectedValue(new Error("control plane down"));
-		respondWith({
-			projects: { data: { projects: [{ id: "proj-1", name: "my-app", path: "/p" }] }, error: undefined },
-		});
-
-		const { result } = renderHook(() => useWorkspaceQuery(), { wrapper });
-		await waitFor(() => expect(result.current.isSuccess).toBe(true));
-		await waitFor(() => expect(listProjectsMock).toHaveBeenCalled());
-
-		expect(result.current.data).toHaveLength(1);
-		expect(result.current.data?.[0]).toMatchObject({ id: "proj-1" });
-		expect(result.current.isError).toBe(false);
-	});
-
-	it("does not call the control plane while cloud is not ready", async () => {
-		respondWith({
-			projects: { data: { projects: [{ id: "proj-1", name: "my-app", path: "/p" }] }, error: undefined },
-		});
-
-		const { result } = renderHook(() => useWorkspaceQuery(), { wrapper });
-		await waitFor(() => expect(result.current.isSuccess).toBe(true));
-
-		expect(listProjectsMock).not.toHaveBeenCalled();
 	});
 
 	it("selects only attention-worthy worker sessions for the always-mounted tray", async () => {

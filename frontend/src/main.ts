@@ -93,14 +93,6 @@ import {
 } from "./shared/shell-env";
 import { DEFAULT_TERMINAL_SHELL, type TerminalShellPreference } from "./shared/ui-locale";
 import { bundledTmuxBinaryPath, stableBundledTmuxBinaryPath } from "./shared/bundled-tmux";
-import {
-	handleCloudDeepLink,
-	installCloudIPC,
-	registerCloudProtocol,
-	showCloudSignInFailure,
-} from "./main/cloud-auth";
-import { installCloudLocalAuthIPC } from "./main/cloud-auth-local";
-import { installCloudCpProxy } from "./main/cloud-cp-proxy";
 import { DEFAULT_SENTRY_DSN } from "./shared/sentry-config";
 import { rendererTelemetryEnabled } from "./shared/telemetry";
 import {
@@ -374,9 +366,6 @@ protocol.registerSchemesAsPrivileged([
 	},
 ]);
 
-// Register ao-app:// as the deep-link protocol for WorkOS auth callbacks.
-// Must run before app.whenReady().
-registerCloudProtocol();
 if (!app.requestSingleInstanceLock()) {
 	app.exit(0);
 }
@@ -2205,65 +2194,7 @@ ipcMain.on(TRAY_RENDERER_READY_CHANNEL, (event) => {
 	}
 });
 
-// Cloud auth IPC — cloud:getSession, cloud:signIn, cloud:signOut.
-// Data dir resolves to ~/.ao (prod) or ~/.ao/dev (dev) matching daemon conventions.
-function cloudDataDir(): string {
-	return isDev
-		? path.join(os.homedir(), ".ao", DEV_STATE_SUBDIR)
-		: path.join(os.homedir(), ".ao");
-}
-
-function notifyRenderersOfCloudSession(account: import("./shared/cloud-account").CloudAccount | null): void {
-	const contents = getShellWebContents();
-	if (!contents || contents.isDestroyed()) return;
-	contents.send("cloud:sessionChanged", account);
-}
-
-installCloudIPC(cloudDataDir, notifyRenderersOfCloudSession);
-
-// Dev-only local (email/password) sign-in against a loopback Docker control
-// plane running AO_CLOUD_LOCAL_AUTH. Gated to unpackaged/dev builds + loopback
-// CP inside the handlers; a no-op surface for production/WorkOS users.
-installCloudLocalAuthIPC(cloudDataDir, notifyRenderersOfCloudSession);
-
-// Cloud control-plane proxy IPC — cloudCp:request/openStream/closeStream.
-// CP calls go through main so the WorkOS bearer token never reaches a renderer.
-installCloudCpProxy(cloudDataDir);
-
-function focusCloudWindow(): void {
-	const window = BaseWindow.getAllWindows()[0];
-	if (!window) return;
-	if (window.isMinimized()) window.restore();
-	window.show();
-	window.focus();
-}
-
-async function handleCloudDeepLinkAndFocus(url: string): Promise<void> {
-	focusCloudWindow();
-	try {
-		const session = await handleCloudDeepLink(url, cloudDataDir());
-		if (!session) return;
-		notifyRenderersOfCloudSession(session);
-	} catch (error) {
-		console.error("WorkOS callback failed:", error);
-		await showCloudSignInFailure(error);
-	}
-}
-
-// macOS: the OS sends the ao-app:// URL via the open-url event when the app is
-// already running. If the app is not running, the URL is passed in process.argv
-// on first launch (handled in app.whenReady below).
-app.on("open-url", (event, url) => {
-	event.preventDefault();
-	void handleCloudDeepLinkAndFocus(url);
-});
-
 app.on("second-instance", (_event, argv) => {
-	const deepLink = argv.find((value) => value.startsWith("ao-app://"));
-	if (deepLink) {
-		void handleCloudDeepLinkAndFocus(deepLink);
-		return;
-	}
 	// A folder dropped on the taskbar icon/shortcut while already running.
 	// Usually the renderer is already mounted and listening, so send directly
 	// — but this can still fire while the first instance is early in
@@ -2449,13 +2380,6 @@ app.whenReady().then(async () => {
 	remoteDaemonController.installIpc();
 	void remoteDaemonController.bootRemoteOrLocal();
 	initAutoUpdates();
-
-	// Windows/Linux: on first launch, the deep-link URL may arrive as a
-	// process.argv entry (e.g. ao-app://callback?token=...).
-	const deepLinkArg = process.argv.find((a) => a.startsWith("ao-app://"));
-	if (deepLinkArg) {
-		void handleCloudDeepLinkAndFocus(deepLinkArg);
-	}
 
 	// Windows/Linux: a folder dropped on the taskbar icon/shortcut while the
 	// app was not running launches it with the folder's path in argv. The

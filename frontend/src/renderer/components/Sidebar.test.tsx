@@ -37,8 +37,6 @@ type DragOverTestEvent = {
 
 const {
 	checkUpdateMock,
-	cloudGateState,
-	cloudSessionState,
 	dragEnds,
 	dragOvers,
 	dragStarts,
@@ -54,14 +52,6 @@ const {
 	commandPaletteEnabled,
 } = vi.hoisted(
 	() => ({
-		cloudGateState: { cloudEnabled: true, localEnabled: true, client: "" },
-		cloudSessionState: {
-			configured: false,
-			session: null as null | { user: { email: string } },
-			status: "unauthenticated" as "authenticated" | "loading" | "unauthenticated",
-			signIn: vi.fn(),
-			signOut: vi.fn().mockResolvedValue(undefined),
-		},
 		dragEnds: new Map<string, (event: { active: { id: string }; over: { id: string } | null }) => void>(),
 		dragOvers: new Map<string, (event: DragOverTestEvent) => void>(),
 		dragStarts: new Map<string, (event: { active: { id: string } }) => void>(),
@@ -101,22 +91,6 @@ vi.mock("@dnd-kit/core", async (importOriginal) => {
 
 vi.mock("../lib/rename-session", () => ({ renameSession: renameSessionMock }));
 vi.mock("../lib/spawn-orchestrator", () => ({ spawnOrchestrator: spawnMock }));
-vi.mock("../lib/cloud-session", () => ({ useCloudSession: () => cloudSessionState }));
-vi.mock("../hooks/useCloudGate", () => ({ useCloudGate: () => cloudGateState }));
-// Local (dev-only) cloud sign-in is off in these tests; mock it like its cloud
-// siblings so the sign-in row never fires a real settings fetch.
-vi.mock("../hooks/useCloudLocalAuth", () => ({
-	useCloudLocalAuth: () => ({
-		available: false,
-		cpUrl: "",
-		register: async () => {
-			throw new Error("useCloudLocalAuth is mocked");
-		},
-		login: async () => {
-			throw new Error("useCloudLocalAuth is mocked");
-		},
-	}),
-}));
 vi.mock("../hooks/useCommandPaletteEnabled", () => ({
 	useCommandPaletteEnabled: () => commandPaletteEnabled.current,
 }));
@@ -368,14 +342,6 @@ beforeEach(() => {
 	dragStarts.clear();
 	document.documentElement.style.removeProperty("--ao-sidebar-w");
 	commandPaletteEnabled.current = true;
-	cloudGateState.cloudEnabled = true;
-	cloudGateState.localEnabled = true;
-	cloudGateState.client = "";
-	cloudSessionState.configured = false;
-	cloudSessionState.session = null;
-	cloudSessionState.status = "unauthenticated";
-	cloudSessionState.signIn.mockReset();
-	cloudSessionState.signOut.mockReset().mockResolvedValue(undefined);
 	useUiStore.setState({ isCommandPaletteOpen: false, settingsModal: null });
 	getMock.mockReset();
 	postMock.mockReset();
@@ -420,37 +386,6 @@ afterEach(() => {
 });
 
 describe("Sidebar", () => {
-	it("shows the cloud sign-in entry point while signed out", () => {
-		cloudSessionState.configured = true;
-		renderSidebar();
-
-		const signInControls = screen.getAllByLabelText("Sign in to AO Cloud");
-		expect(signInControls).toHaveLength(2);
-		const activeControl = signInControls.find((control) => control.tabIndex === 0);
-		expect(activeControl).toBeDefined();
-		fireEvent.click(activeControl!);
-		expect(cloudSessionState.signIn).toHaveBeenCalledOnce();
-	});
-
-	it("keeps cloud account controls visible while signed in", () => {
-		cloudSessionState.configured = true;
-		cloudSessionState.status = "authenticated";
-		cloudSessionState.session = { user: { email: "user@example.com" } };
-		renderSidebar();
-
-		expect(screen.getAllByLabelText("Signed in as user@example.com")).toHaveLength(2);
-	});
-
-	it("hides cloud account controls when the daemon reports the cloud offering off", () => {
-		cloudGateState.cloudEnabled = false;
-		cloudSessionState.configured = true;
-		cloudSessionState.status = "authenticated";
-		cloudSessionState.session = { user: { email: "user@example.com" } };
-		renderSidebar();
-
-		expect(screen.queryByLabelText("Signed in as user@example.com")).not.toBeInTheDocument();
-	});
-
 	it("suppresses focus chrome without removing keyboard focusability", () => {
 		renderSidebar();
 

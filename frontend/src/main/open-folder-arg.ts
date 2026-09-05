@@ -13,8 +13,8 @@ import path from "node:path";
 // slot at argv[1] is ALSO a real directory (the app path it was told to load,
 // e.g. "." resolved to the frontend build dir) — every cold start and
 // second-instance relaunch would otherwise queue that as a dropped folder.
-// `process.defaultApp` marks exactly that slot; see registerCloudProtocol in
-// cloud-auth.ts for the same convention.
+// `process.defaultApp` marks exactly that slot; the same convention applies to
+// any Electron deep-link protocol registration.
 export function parseOpenFolderPathArg(argv: string[]): string | undefined {
 	const bootstrapAppIndex = process.defaultApp ? 1 : -1;
 	for (const [index, entry] of argv.entries()) {

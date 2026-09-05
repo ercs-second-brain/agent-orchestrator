@@ -168,11 +168,4 @@ run: |
     );
   });
 
-  it("forwards WorkOS client ID when the repository variable is set", async () => {
-    const contents = await readFile(artifactBuilder, "utf8");
-
-    expect(contents).toContain(
-      "VITE_WORKOS_CLIENT_ID: ${{ vars.VITE_WORKOS_CLIENT_ID }}",
-    );
-  });
 });

@@ -25,13 +25,6 @@ import {
 	type TelemetryPolicyView,
 } from "./shared/telemetry-policy";
 import type { UpdateSettings, UpdateStatus } from "./main/update-settings";
-import type { CloudAccount } from "./shared/cloud-account";
-import type { LocalLoginInput, LocalRegisterInput } from "./main/cloud-auth-local";
-import type {
-	CloudCpProxyRequestInit,
-	CloudCpProxyResponse,
-	CloudCpStreamEvent,
-} from "./main/cloud-cp-proxy";
 import type { UpdateOutcome } from "./shared/update-telemetry";
 import type { UiSettings } from "./main/ui-settings";
 import type { UpdateCheckOptions } from "./main/auto-updater";
@@ -531,48 +524,6 @@ const api = {
 	featureBuilds: {
 		list: () => ipcRenderer.invoke("featureBuilds:list") as Promise<FeatureBuild[]>,
 		getActive: () => ipcRenderer.invoke("featureBuilds:getActive") as Promise<{ pr: number } | null>,
-	},
-	cloud: {
-		getSession: () => ipcRenderer.invoke("cloud:getSession") as Promise<CloudAccount | null>,
-		signIn: () => ipcRenderer.invoke("cloud:signIn") as Promise<void>,
-		signOut: () => ipcRenderer.invoke("cloud:signOut") as Promise<void>,
-		// Dev-only local (email/password) sign-in against a loopback Docker CP.
-		// Whether the surface is offered is decided in main (unpackaged/dev +
-		// loopback); the renderer only mirrors it for UI visibility.
-		localAuthAvailable: (cpUrl: string) =>
-			ipcRenderer.invoke("cloud:localAuthAvailable", cpUrl) as Promise<boolean>,
-		localRegister: (input: LocalRegisterInput) =>
-			ipcRenderer.invoke("cloud:localRegister", input) as Promise<CloudAccount>,
-		localLogin: (input: LocalLoginInput) =>
-			ipcRenderer.invoke("cloud:localLogin", input) as Promise<CloudAccount>,
-		onSessionChanged: (listener: (account: CloudAccount | null) => void) => {
-			const wrapped = (_event: Electron.IpcRendererEvent, account: CloudAccount | null) => listener(account);
-			ipcRenderer.on("cloud:sessionChanged", wrapped);
-			return () => {
-				ipcRenderer.off("cloud:sessionChanged", wrapped);
-			};
-		},
-	},
-	// Cloud control-plane transport. The CP has no CORS and the WorkOS bearer
-	// token lives only in the main process, so every CP call is proxied through
-	// main (main/cloud-cp-proxy.ts), which attaches the token; the token itself
-	// never crosses this bridge.
-	cloudCp: {
-		request: (init: CloudCpProxyRequestInit) =>
-			ipcRenderer.invoke("cloudCp:request", init) as Promise<CloudCpProxyResponse>,
-		openStream: (init: CloudCpProxyRequestInit) =>
-			ipcRenderer.invoke("cloudCp:openStream", init) as Promise<{ streamId: string }>,
-		closeStream: (streamId: string) => {
-			ipcRenderer.send("cloudCp:closeStream", streamId);
-		},
-		onStreamEvent: (streamId: string, listener: (event: CloudCpStreamEvent) => void) => {
-			const channel = `cloudCp:stream:${streamId}`;
-			const wrapped = (_event: Electron.IpcRendererEvent, event: CloudCpStreamEvent) => listener(event);
-			ipcRenderer.on(channel, wrapped);
-			return () => {
-				ipcRenderer.off(channel, wrapped);
-			};
-		},
 	},
 	desktopRemote: {
 		getConfig: () =>
