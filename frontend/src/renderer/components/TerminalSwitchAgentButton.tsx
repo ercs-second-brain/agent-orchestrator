@@ -34,7 +34,6 @@ export function TerminalSwitchAgentButton({
 	switchError,
 	variant = "icon",
 }: TerminalSwitchAgentButtonProps) {
-	const { t } = useTranslation();
 	const queryClient = useQueryClient();
 	const controlPresentation = presentation?.outcome === "success" ? undefined : presentation;
 	const switching = controlPresentation?.outcome === "in_progress";
@@ -55,8 +54,8 @@ export function TerminalSwitchAgentButton({
 	}
 
 	const label = controlPresentation
-		? t(controlPresentation.compactLabelKey, controlPresentation.values)
-		: t("switchAgent.action");
+		? controlPresentation.compactLabel
+		: "Switch agent";
 	const handleOpenChange = (nextOpen: boolean) => {
 		onOpenChange?.(nextOpen);
 		if (!nextOpen && switchError) {

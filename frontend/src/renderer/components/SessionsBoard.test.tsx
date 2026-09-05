@@ -1378,7 +1378,7 @@ describe("SessionsBoard", () => {
 			data: [{ ...workspaceWithSessions([]), folderMissing: true }],
 		});
 		renderBoard("p1");
-		expect(screen.getByText(appI18n.t("home.folderMissing"))).toBeInTheDocument();
+		expect(screen.getByText("Folder missing")).toBeInTheDocument();
 	});
 
 	it("does not show the folder-missing banner when the project folder exists", () => {
@@ -1386,7 +1386,7 @@ describe("SessionsBoard", () => {
 			data: [{ ...workspaceWithSessions([]), folderMissing: false }],
 		});
 		renderBoard("p1");
-		expect(screen.queryByText(appI18n.t("home.folderMissing"))).not.toBeInTheDocument();
+		expect(screen.queryByText("Folder missing")).not.toBeInTheDocument();
 	});
 });
 

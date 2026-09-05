@@ -24,7 +24,6 @@ function errorMessage(cause: unknown, fallback: string): string {
 }
 
 export function useCodexAccountActions(queryClient: QueryClient) {
-	const { t } = useTranslation();
 	const [error, setError] = useState<string | null>(null);
 	const [loginPending, setLoginPending] = useState(false);
 	const [loginOperationPending, setLoginOperationPending] = useState(false);
@@ -58,7 +57,7 @@ export function useCodexAccountActions(queryClient: QueryClient) {
 			}));
 			void queryClient.invalidateQueries({ queryKey: shellTerminalsQueryKey });
 		} catch (cause) {
-			setError(errorMessage(cause, t("settings.codexAccounts.loginFailed")));
+			setError(errorMessage(cause, "Could not open the Codex login terminal."));
 			throw cause;
 		} finally {
 			setLoginPending(false);
@@ -94,7 +93,7 @@ export function useCodexAccountActions(queryClient: QueryClient) {
 			if (operation.status === "completed") void queryClient.invalidateQueries({ queryKey: shellTerminalsQueryKey });
 			return operation;
 		} catch (cause) {
-			setError(errorMessage(cause, t("settings.codexAccounts.loginVerificationFailed")));
+			setError(errorMessage(cause, "Could not check the Codex authentication state. Check again when the daemon is available."));
 			writeCurrent((snapshot) => snapshot.activeLogin?.operationId === login.operationId
 				? { ...snapshot, activeLogin: { ...snapshot.activeLogin, status: "unverified", reasonCode: "login_unverified" } }
 				: snapshot);
@@ -122,7 +121,7 @@ export function useCodexAccountActions(queryClient: QueryClient) {
 			}));
 			void queryClient.invalidateQueries({ queryKey: shellTerminalsQueryKey });
 		} catch (cause) {
-			setError(errorMessage(cause, t("settings.codexAccounts.loginCloseFailed")));
+			setError(errorMessage(cause, "Could not stop the Codex sign-in terminal. Settings will stay open."));
 			throw cause;
 		} finally {
 			setLoginOperationPending(false);
@@ -145,10 +144,10 @@ export function useCodexAccountActions(queryClient: QueryClient) {
 			const nextSwitch = await startCodexAccountSwitch(account.id, revision, idempotencyKey);
 			writeCurrent((snapshot) => ({ ...snapshot, currentSwitch: nextSwitch }));
 		} catch (cause) {
-			setError(errorMessage(cause, t("settings.codexAccounts.switchFailed")));
+			setError(errorMessage(cause, "Could not start the Codex account switch."));
 			throw cause;
 		}
-	}, [t, writeCurrent]);
+	}, [writeCurrent]);
 
 	const recoverSwitch = useCallback(async (switchId: string) => {
 		setError(null);
@@ -157,30 +156,30 @@ export function useCodexAccountActions(queryClient: QueryClient) {
 			const nextSwitch = await recoverCodexAccountSwitch(switchId);
 			writeCurrent((snapshot) => ({ ...snapshot, currentSwitch: nextSwitch }));
 		} catch (cause) {
-			setError(errorMessage(cause, t("settings.codexAccounts.switchRecoveryFailed")));
+			setError(errorMessage(cause, "Could not retry the failed Codex sessions."));
 			throw cause;
 		} finally {
 			setRecoverPending(false);
 		}
-	}, [t, writeCurrent]);
+	}, [writeCurrent]);
 
 	const resetAccount = useCallback(async (account: CodexAccount, idempotencyKey: string) => {
 		setError(null);
 		try { writeCodexAccounts(queryClient, await consumeCodexAccountResetCredit(account.id, idempotencyKey), "replace"); }
-		catch (cause) { setError(errorMessage(cause, t("settings.codexAccounts.resetFailed"))); throw cause; }
-	}, [queryClient, t]);
+		catch (cause) { setError(errorMessage(cause, "Could not reset the Codex usage limits.")); throw cause; }
+	}, [queryClient]);
 
 	const logoutAccount = useCallback(async (account: CodexAccount) => {
 		setError(null);
 		try { writeCodexAccounts(queryClient, await logoutCodexAccount(account.id), "replace"); }
-		catch (cause) { setError(errorMessage(cause, t("settings.codexAccounts.logoutFailed"))); throw cause; }
-	}, [queryClient, t]);
+		catch (cause) { setError(errorMessage(cause, "Could not log out of the Codex account.")); throw cause; }
+	}, [queryClient]);
 
 	const deleteAccount = useCallback(async (account: CodexAccount) => {
 		setError(null);
 		try { writeCodexAccounts(queryClient, await deleteCodexAccount(account.id), "replace"); }
-		catch (cause) { setError(errorMessage(cause, t("settings.codexAccounts.deleteFailed"))); throw cause; }
-	}, [queryClient, t]);
+		catch (cause) { setError(errorMessage(cause, "Could not delete the Codex account.")); throw cause; }
+	}, [queryClient]);
 
 	return {
 		error,

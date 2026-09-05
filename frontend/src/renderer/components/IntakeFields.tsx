@@ -117,14 +117,13 @@ export function IntakeFields({
 	labelClassName?: string;
 	variant?: "default" | "settings";
 }) {
-	const { t } = useTranslation();
 	const needsRule = intakeNeedsRule(form);
 	if (variant === "settings") {
 		return (
 			<div className="flex flex-col gap-1.5">
-				<SettingsRow label={t("settings.project.enableIssueIntake")}>
+				<SettingsRow label={"Enable issue intake"}>
 					<Switch
-						aria-label={t("settings.project.enableIssueIntake")}
+						aria-label={"Enable issue intake"}
 						checked={form.enabled}
 						onCheckedChange={(enabled) => onChange({ enabled })}
 					/>
@@ -132,7 +131,7 @@ export function IntakeFields({
 				{form.enabled && (
 					<>
 						{repoPreview && (
-							<SettingsRow label={t("settings.project.repository")}>
+							<SettingsRow label={"Repository"}>
 								{repoPreview.value ? (
 									<a
 										href={`https://${repoPreview.host ?? "github.com"}/${repoPreview.value}`}
@@ -144,18 +143,18 @@ export function IntakeFields({
 									</a>
 								) : (
 									<span className="settings-row-value">
-										{t("settings.project.repoNotDetected")}
+										{"Could not detect a GitHub repo from this project's git origin."}
 									</span>
 								)}
 							</SettingsRow>
 						)}
-						<SettingsRow label={t("settings.project.assignee")}>
+						<SettingsRow label={"Assignee"}>
 							<SettingsInlineInput
 								id="intakeAssignee"
-								label={t("settings.project.assignee")}
+								label={"Assignee"}
 								value={form.assignee}
 								onChange={(assignee) => onChange({ assignee })}
-								placeholder={t("settings.project.intakeAssigneePlaceholder")}
+								placeholder={"type username or * for any"}
 							/>
 						</SettingsRow>
 						{needsRule && <IntakeAssigneeError />}
@@ -168,18 +167,18 @@ export function IntakeFields({
 		<div className="flex flex-col gap-4">
 			{!compact && (
 				<p className="text-xs leading-row text-muted-foreground">
-						{t("settings.project.intakeDescription")}
+						{"Auto-spawn worker sessions from matching tracker issues."}
 				</p>
 			)}
 			<div className={cn("flex items-center", compact ? "justify-between gap-3" : "gap-2")}>
 				{compact ? (
 					<>
 						<label htmlFor="intakeEnabled" className="text-control text-foreground">
-							{t("createProject.workOnAssignedIssues")}
+							{"Automatically work on assigned issues"}
 						</label>
 						<Switch
 							id="intakeEnabled"
-							aria-label={t("createProject.workOnAssignedIssues")}
+							aria-label={"Automatically work on assigned issues"}
 							checked={form.enabled}
 							onCheckedChange={(enabled) => onChange({ enabled })}
 						/>
@@ -192,14 +191,14 @@ export function IntakeFields({
 							checked={form.enabled}
 							onChange={(e) => onChange({ enabled: e.target.checked })}
 						/>
-						{t("settings.project.enableIssueIntake")}
+						{"Enable issue intake"}
 					</label>
 				)}
 			</div>
 			{form.enabled && (
 				<>
 					{repoPreview && (
-						<IntakeField label={t("settings.project.repository")} labelClassName={labelClassName}>
+						<IntakeField label={"Repository"} labelClassName={labelClassName}>
 							{repoPreview.value ? (
 								<a
 									href={`https://${repoPreview.host ?? "github.com"}/${repoPreview.value}`}
@@ -211,12 +210,12 @@ export function IntakeFields({
 								</a>
 							) : (
 								<span className="text-control text-muted-foreground">
-									{t("settings.project.repoNotDetected")}
+									{"Could not detect a GitHub repo from this project's git origin."}
 								</span>
 							)}
 						</IntakeField>
 					)}
-					<IntakeField label={t("settings.project.assignee")} htmlFor="intakeAssignee" labelClassName={labelClassName}>
+					<IntakeField label={"Assignee"} htmlFor="intakeAssignee" labelClassName={labelClassName}>
 						<input
 							id="intakeAssignee"
 							className={cn(
@@ -225,7 +224,7 @@ export function IntakeFields({
 							)}
 							value={form.assignee}
 							onChange={(e) => onChange({ assignee: e.target.value })}
-							placeholder={t("settings.project.intakeAssigneePlaceholder")}
+							placeholder={"type username or * for any"}
 						/>
 					</IntakeField>
 					{!compact && needsRule && <IntakeAssigneeError />}
@@ -236,11 +235,10 @@ export function IntakeFields({
 }
 
 function IntakeAssigneeError() {
-	const { t } = useTranslation();
 	return (
 		<p className="flex items-center gap-1.5 px-1 text-xs leading-row text-error">
 			<TriangleAlert className="size-3 shrink-0 text-error" aria-hidden="true" />
-			{t("settings.project.intakeAssigneeRequired")}
+			{"Enabling intake requires an assignee."}
 		</p>
 	);
 }

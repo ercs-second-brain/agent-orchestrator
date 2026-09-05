@@ -580,7 +580,6 @@ export function TerminalPane({
 	inputRequest,
 	onInputRequestResult,
 }: TerminalPaneProps) {
-	const { t } = useTranslation();
 	const terminalTarget =
 		requestedTerminalTarget &&
 		terminalTargetBelongsToSession(requestedTerminalTarget, session?.id)
@@ -651,7 +650,7 @@ export function TerminalPane({
 	if (isOptimisticShell) {
 		return (
 			<div
-				aria-label={t("terminal.shellAria")}
+				aria-label={"Shell terminal"}
 				className="terminal-surface h-full"
 				data-testid="optimistic-terminal"
 			/>
@@ -823,15 +822,11 @@ export function providerScrollsByKeyboard(provider?: string): boolean {
 	return provider ? KEYBOARD_SCROLL_PROVIDERS.has(provider) : false;
 }
 
-function bannerText(
-	state: TerminalSessionState,
-	t: TFunction,
-	error?: string,
-): string | undefined {
+function bannerText(state: TerminalSessionState, error?: string): string | undefined {
 	if (state === "reattaching") {
-		return t("terminal.reattaching");
+		return "Terminal disconnected — reattaching…";
 	}
-	if (state === "error") return t("terminal.error", { error: error ?? t("terminal.connectionFailed") });
+	if (state === "error") return `Terminal error: ${error ?? "connection failed"}`;
 	return undefined;
 }
 
@@ -858,7 +853,6 @@ function AttachedTerminal({
 	onFatal?: (message: string) => void;
 	onTerminalReady?: (terminal: AttachableTerminal) => void;
 }) {
-	const { t } = useTranslation();
 	const attachSession =
 		terminalTarget?.kind === "shell"
 			? undefined
@@ -959,11 +953,11 @@ function AttachedTerminal({
 				setRestoreError(result.message);
 			}
 		} catch (err) {
-			setRestoreError(err instanceof Error ? err.message : t("terminal.unableRestore"));
+			setRestoreError(err instanceof Error ? err.message : "Unable to restore session");
 		} finally {
 			setIsRestoring(false);
 		}
-	}, [canRestoreSession, isRestoring, restoreSessionById, session?.id, t]);
+	}, [canRestoreSession, isRestoring, restoreSessionById, session?.id]);
 
 	useEffect(() => {
 		if (!terminal) return;
@@ -986,12 +980,12 @@ function AttachedTerminal({
 	if (initFailed) {
 		return (
 			<div className="terminal-surface grid h-full place-items-center p-4 font-mono text-xs text-muted-foreground">
-				{t("terminal.initFailed")}
+				{"Terminal failed to initialize on this GPU/driver. Restart the app to retry."}
 			</div>
 		);
 	}
 
-	const banner = bannerText(state, t, error);
+	const banner = bannerText(state, error);
 	const showEmptyState = !handleId;
 	// Cover xterm while the attachment buffers the initial replay, so the pane
 	// appears already drawn at the tail instead of visibly scrolling down to it.
@@ -1008,12 +1002,12 @@ function AttachedTerminal({
 		(!replaySettled || replayPaintPending) &&
 		(state === "connecting" || state === "attached");
 	const showEndedState = state === "exited" || canRestoreSession;
-	const emptyStateTitle = session ? t("terminal.startingSession") : "Agent Orchestrator";
+	const emptyStateTitle = session ? "Starting session" : "Agent Orchestrator";
 	const emptyStateMessage = session
 		? session.kind === "orchestrator"
-			? t("terminal.preparingOrchestrator")
-			: t("terminal.preparingWorker")
-		: t("terminal.noSessionSelected");
+			? "Preparing the orchestrator terminal. This can take a moment while AO creates the workspace and starts the agent."
+			: "Preparing the worker terminal. This can take a moment while AO creates the workspace and starts the agent."
+		: "No session selected. Pick a worker to attach its terminal.";
 
 	return (
 		<div className="terminal-surface flex h-full min-h-0 flex-col" data-testid="session-terminal">
@@ -1034,7 +1028,7 @@ function AttachedTerminal({
 			    overlays (empty state, banner) keep covering the full padding box. */}
 			<div className="relative min-h-0 flex-1 pl-2">
 				<XtermTerminal
-					ariaLabel={terminalTarget?.kind === "shell" ? t("terminal.shellAria") : t("terminal.sessionAria")}
+					ariaLabel={terminalTarget?.kind === "shell" ? "Shell terminal" : "Session terminal"}
 					fontSize={fontSize}
 					focusRequested={focusRequested}
 					isFullscreen={isFullscreen}
@@ -1100,21 +1094,20 @@ type TerminalEndedStripProps = {
 };
 
 function TerminalEndedStrip({ canRestore, error, isRestoring, onRestore, variant }: TerminalEndedStripProps) {
-	const { t } = useTranslation();
 	const message = canRestore
-		? t("terminal.restoreToContinue")
+		? "Restore the session to attach a live terminal and continue writing."
 		: variant === "reviewer"
-			? t("terminal.reviewerEnded")
+			? "This reviewer terminal has ended. Re-run review from the summary panel, or switch back to the agent terminal."
 			: variant === "shell"
-				? t("terminal.shellExited")
-				: t("terminal.sessionEndedNotTerminated");
+				? "This shell exited. Close the tab, or open a new terminal."
+				: "This terminal process ended, but the session is not marked terminated yet.";
 
 	return (
 		<div className="shrink-0 border-b border-border bg-surface/80 px-4 py-2">
 			<div className="flex min-h-control-board items-center gap-3">
 				<div className="min-w-0 flex-1">
 					<div className="font-mono text-caption font-medium uppercase tracking-wide-md text-muted-foreground">
-						{t("terminal.ended")}
+						{"Terminal ended"}
 					</div>
 					<div className="mt-0.5 truncate text-xs text-muted-foreground">{message}</div>
 				</div>
@@ -1125,7 +1118,7 @@ function TerminalEndedStrip({ canRestore, error, isRestoring, onRestore, variant
 							<span className="inline-flex">
 								<button
 									type="button"
-									aria-label={t("terminal.restoreSession")}
+									aria-label={"Restore session"}
 									className="inline-flex size-control-form shrink-0 items-center justify-center rounded-md border border-border bg-raised text-foreground transition hover:bg-interactive-hover disabled:cursor-not-allowed disabled:opacity-50"
 									disabled={isRestoring}
 									onClick={onRestore}
@@ -1134,7 +1127,7 @@ function TerminalEndedStrip({ canRestore, error, isRestoring, onRestore, variant
 								</button>
 							</span>
 						</TooltipTrigger>
-						<TooltipContent side="bottom">{t("terminal.restoreSession")}</TooltipContent>
+						<TooltipContent side="bottom">{"Restore session"}</TooltipContent>
 					</Tooltip>
 				)}
 			</div>

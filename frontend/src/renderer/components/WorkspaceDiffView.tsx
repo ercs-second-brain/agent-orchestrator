@@ -55,8 +55,8 @@ export function canSplitCompare(status: WorkspaceFileStatus): boolean {
 }
 
 
-function emptyDiffMessage(compareMode: WorkspaceCompareMode | undefined, t: TFunction): string {
-	return compareMode === "base" ? t("files.noChangesBase") : t("files.noChangesHead");
+function emptyDiffMessage(compareMode: WorkspaceCompareMode | undefined): string {
+	return compareMode === "base" ? "No changes against base." : "No changes against HEAD.";
 }
 
 
@@ -81,7 +81,6 @@ export function ReviewDiffBody({
 	split: boolean;
 	wrap: boolean;
 }) {
-	const { t } = useTranslation();
 	const { rows, pending } = useParsedDiff(detail.diff);
 	// An image has no readable line diff, so it renders as the images themselves
 	// rather than the binary placeholder.
@@ -97,13 +96,13 @@ export function ReviewDiffBody({
 		);
 	}
 	if (detail.binary) {
-		return <PanelMessage compact>{t("files.binaryUnavailable")}</PanelMessage>;
+		return <PanelMessage compact>{"Binary file preview is not available."}</PanelMessage>;
 	}
 	if (pending) {
-		return <PanelMessage compact>{t("files.loadingDiff")}</PanelMessage>;
+		return <PanelMessage compact>{"Loading diff..."}</PanelMessage>;
 	}
 	if (rows.length === 0) {
-		return emptyFallback ?? <PanelMessage compact>{emptyDiffMessage(detail.compareMode, t)}</PanelMessage>;
+		return emptyFallback ?? <PanelMessage compact>{emptyDiffMessage(detail.compareMode)}</PanelMessage>;
 	}
 	return (
 		<DiffView
@@ -274,7 +273,6 @@ function DiffView({
 	truncated?: boolean;
 	wrap: boolean;
 }) {
-	const { t } = useTranslation();
 	const containerRef = useRef<HTMLDivElement>(null);
 	const [hasSelection, setHasSelection] = useState(false);
 	const [menuState, setMenuState] = useState<DiffViewMenuState | null>(null);
@@ -340,7 +338,7 @@ function DiffView({
 		<div>
 			{truncated ? (
 				<div className="shrink-0 border-b border-border bg-warning/10 px-3 py-1.5 text-xs text-warning">
-					{t("files.diffTruncated")}
+					{"Diff preview truncated."}
 				</div>
 			) : null}
 			<div
@@ -703,8 +701,8 @@ function LineFeedbackButton({
 	target: ActiveFileAnnotationTarget;
 }) {
 	if (active) return null;
-	const side = t(target.side === "old" ? "files.oldSide" : "files.newSide");
-	const label = t("files.addLineFeedback", { file: target.path, line: target.line, side });
+	const side = (target.side === "old" ? "old" : "new");
+	const label = `Add feedback on ${side} line ${target.line} in ${target.path}`;
 	return (
 		<Button
 			aria-label={label}
@@ -720,14 +718,13 @@ function LineFeedbackButton({
 }
 
 export function FileAnnotationComposer({ annotation }: { annotation: FileAnnotationModel }) {
-	const { t } = useTranslation();
 	const target = annotation.target;
 	if (!target) return null;
-	const side = target.side === "file" ? "" : t(target.side === "old" ? "files.oldSide" : "files.newSide");
+	const side = target.side === "file" ? "" : (target.side === "old" ? "old" : "new");
 	const targetLabel =
 		target.side === "file"
-			? t("files.fileFeedbackTarget", { file: target.path })
-			: t("files.lineFeedbackTarget", { file: target.path, line: target.line, side });
+			? `${target.path} · whole file`
+			: `${target.path} · ${side} line ${target.line}`;
 	const submit = () => void annotation.submit();
 
 	return (
@@ -743,12 +740,12 @@ export function FileAnnotationComposer({ annotation }: { annotation: FileAnnotat
 				{annotation.status === "sent" ? (
 					<span className="inline-flex items-center gap-1 text-caption text-success" role="status">
 						<Check className="size-icon-sm" aria-hidden="true" />
-						{t("files.feedbackSent")}
+						{"Sent to agent"}
 					</span>
 				) : null}
 			</div>
 			<textarea
-				aria-label={t("files.feedbackLabel", { target: targetLabel })}
+				aria-label={`Feedback for ${targetLabel}`}
 				autoFocus
 				className="min-h-20 w-full resize-y rounded-md border border-input bg-background px-2.5 py-2 text-sm text-foreground outline-none placeholder:text-passive focus-visible:outline-none disabled:opacity-60"
 				disabled={annotation.status === "sending" || annotation.status === "sent"}
@@ -762,7 +759,7 @@ export function FileAnnotationComposer({ annotation }: { annotation: FileAnnotat
 						submit();
 					}
 				}}
-				placeholder={t("files.feedbackPlaceholder")}
+				placeholder={"Describe what the agent should change..."}
 				value={annotation.draft}
 			/>
 			{annotation.status === "error" ? (
@@ -771,7 +768,7 @@ export function FileAnnotationComposer({ annotation }: { annotation: FileAnnotat
 				</p>
 			) : null}
 			<div className="mt-2 flex items-center justify-end gap-1.5">
-				<span className="mr-auto text-caption text-passive">{t("files.feedbackShortcut")}</span>
+				<span className="mr-auto text-caption text-passive">{"⌘/Ctrl + Enter to send · Esc to cancel"}</span>
 				<Button
 					disabled={annotation.status === "sending" || annotation.status === "sent"}
 					onClick={annotation.cancel}
@@ -779,7 +776,7 @@ export function FileAnnotationComposer({ annotation }: { annotation: FileAnnotat
 					type="button"
 					variant="ghost"
 				>
-					{t("files.cancelFeedback")}
+					{"Cancel"}
 				</Button>
 				<Button
 					disabled={!annotation.draft.trim() || annotation.status === "sending" || annotation.status === "sent"}
@@ -787,7 +784,7 @@ export function FileAnnotationComposer({ annotation }: { annotation: FileAnnotat
 					type="submit"
 				>
 					<SendIcon className="size-icon-sm" aria-hidden="true" />
-					{annotation.status === "sending" ? t("files.sendingFeedback") : t("files.sendFeedback")}
+					{annotation.status === "sending" ? "Sending..." : "Send feedback"}
 				</Button>
 			</div>
 		</form>
@@ -836,16 +833,14 @@ export function PanelMessage({ action, children, compact = false }: { action?: R
 }
 
 export function RetryButton({ onClick }: { onClick: () => void }) {
-	const { t } = useTranslation();
 	return (
 		<Button onClick={onClick} size="sm" type="button" variant="outline">
-			{t("files.retry")}
+			{"Retry"}
 		</Button>
 	);
 }
 
 export function StatusMark({ status }: { status: WorkspaceFileStatus }) {
-	const { t } = useTranslation();
 	const label = statusLabel[status];
 	return (
 		<span
@@ -853,7 +848,7 @@ export function StatusMark({ status }: { status: WorkspaceFileStatus }) {
 				"inline-flex w-5 shrink-0 items-center justify-center font-mono text-caption font-medium",
 				statusTone[status],
 			)}
-			title={t(`files.status.${status}`)}
+			title={diffFileStatusText[status] ?? status}
 		>
 			{label}
 		</span>

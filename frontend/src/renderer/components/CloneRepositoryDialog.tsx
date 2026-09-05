@@ -41,7 +41,6 @@ export default function CloneRepositoryDialog({
 	open: boolean;
 	value: CloneRepositoryDetails;
 }) {
-	const { t } = useTranslation();
 	const [submitted, setSubmitted] = useState(false);
 	const [choosingDestination, setChoosingDestination] = useState(false);
 	const [destinationPickerError, setDestinationPickerError] = useState<string | null>(null);
@@ -49,15 +48,15 @@ export default function CloneRepositoryDialog({
 	const destinationLocked = Boolean(lockDestinationParent);
 	const repositoryName = repositoryNameFromGitUrl(value.remoteUrl);
 	const repositoryAvatar = repositoryAvatarFromGitUrl(value.remoteUrl);
-	const urlError = submitted && !repositoryName ? t("createProject.cloneInvalidUrl") : null;
-	const destinationError = submitted && !destinationParent ? t("createProject.cloneDestinationRequired") : null;
+	const urlError = submitted && !repositoryName ? "Enter a valid HTTPS, SSH, Git, or file URL." : null;
+	const destinationError = submitted && !destinationParent ? "Choose a destination folder." : null;
 
 	const chooseDestination = async () => {
 		if (destinationLocked) return;
 		setDestinationPickerError(null);
 		setChoosingDestination(true);
 		try {
-			const selected = await aoBridge.app.chooseDirectory(t("createProject.cloneChooseDestination"));
+			const selected = await aoBridge.app.chooseDirectory("Choose where to clone the repository");
 			if (!selected) return;
 			try {
 				window.localStorage.setItem(LAST_CLONE_DESTINATION_KEY, selected);
@@ -67,7 +66,7 @@ export default function CloneRepositoryDialog({
 			}
 			onChange({ ...value, destinationParent: selected });
 		} catch (err) {
-			setDestinationPickerError(err instanceof Error ? err.message : t("createProject.couldNotAdd"));
+			setDestinationPickerError(err instanceof Error ? err.message : "Could not add project");
 		} finally {
 			setChoosingDestination(false);
 		}
@@ -94,7 +93,7 @@ export default function CloneRepositoryDialog({
 							type="button"
 							variant="outline"
 							size="icon"
-							aria-label={t("createProject.cloneBack")}
+							aria-label={"Back to code source"}
 							disabled={disabled || choosingDestination}
 							onClick={onBack}
 						>
@@ -102,16 +101,16 @@ export default function CloneRepositoryDialog({
 						</Button>
 						<div className="min-w-0 flex-1 pr-8">
 							<Dialog.Title className="text-balance text-[18px] font-semibold text-[var(--color-text-import-title)]">
-								{t("createProject.cloneTitle")}
+								{"Clone a Git repository"}
 							</Dialog.Title>
 							<Dialog.Description className="sr-only">
-								{t("createProject.cloneDescription")}
+								{"Paste a Git URL and choose where AO should create the local checkout."}
 							</Dialog.Description>
 						</div>
 						<button
 							type="button"
 							className="settings-close-button"
-							aria-label={t("createProject.cloneClose")}
+							aria-label={"Close clone repository dialog"}
 							disabled={disabled || choosingDestination}
 							onClick={onClose}
 						>
@@ -129,7 +128,7 @@ export default function CloneRepositoryDialog({
 
 							<div className="space-y-2">
 								<Label htmlFor="cloneRepositoryUrl" className="text-[13px] font-semibold text-[var(--color-text-import-title)]">
-									{t("createProject.cloneRepositoryUrl")}
+									{"Repository URL"}
 								</Label>
 								<div className="relative">
 									<Input
@@ -141,7 +140,7 @@ export default function CloneRepositoryDialog({
 										aria-invalid={urlError ? true : undefined}
 										className="bg-[var(--color-bg-import-card)] pl-10 font-mono text-[13px]"
 										disabled={disabled}
-										placeholder={t("createProject.cloneRepositoryUrlPlaceholder")}
+										placeholder={"https://github.com/org/repository.git"}
 										spellCheck={false}
 										value={value.remoteUrl}
 										onChange={(event) => onChange({ ...value, remoteUrl: event.target.value })}
@@ -154,14 +153,14 @@ export default function CloneRepositoryDialog({
 									</p>
 								) : (
 									<span id="cloneRepositoryUrlHelp" className="sr-only">
-										{t("createProject.cloneRepositoryUrlHelp")}
+										{"HTTPS and SSH URLs are supported. Use configured Git credentials; do not include them in the URL."}
 									</span>
 								)}
 							</div>
 
 							<div className="space-y-2">
 								<Label htmlFor="cloneDestination" className="text-[13px] font-semibold text-[var(--color-text-import-title)]">
-									{t("createProject.cloneDestination")}
+									{"Clone into"}
 								</Label>
 								{destinationLocked ? (
 									<div
@@ -179,7 +178,7 @@ export default function CloneRepositoryDialog({
 									<button
 										type="button"
 										id="cloneDestination"
-										aria-label={t("createProject.cloneChoose")}
+										aria-label={"Choose"}
 										aria-describedby={destinationError ? "cloneDestinationError" : undefined}
 										aria-invalid={destinationError ? true : undefined}
 										className="flex h-control-form w-full items-center overflow-hidden rounded-md border border-transparent bg-[var(--color-bg-import-card)] text-left text-[13px] text-foreground outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-50"
@@ -188,10 +187,10 @@ export default function CloneRepositoryDialog({
 									>
 										<span className="flex min-w-0 flex-1 items-center gap-3 px-3">
 											<Folder className="size-4 shrink-0 text-[var(--color-text-import-muted)]" aria-hidden="true" />
-											<span className="truncate">{value.destinationParent || t("createProject.cloneDestinationPlaceholder")}</span>
+											<span className="truncate">{value.destinationParent || "Choose a parent folder"}</span>
 										</span>
 										<span className="flex h-full shrink-0 items-center border-l border-border/60 px-4 text-foreground hover:bg-foreground/10">
-											{t("createProject.cloneChoose")}
+											{"Choose"}
 										</span>
 									</button>
 								)}
@@ -207,7 +206,7 @@ export default function CloneRepositoryDialog({
 						<div className="flex shrink-0 justify-end gap-2 px-4 pb-4 pt-3">
 							<div className="flex items-center justify-end gap-3">
 								<Button type="submit" variant="primary" disabled={disabled || choosingDestination}>
-									{t("createProject.cloneContinue")}
+									{"Continue"}
 								</Button>
 							</div>
 						</div>

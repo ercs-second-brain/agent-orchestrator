@@ -298,7 +298,6 @@ function configureScrollbarReservation(term: Terminal): void {
 }
 
 export function XtermTerminal(props: XtermTerminalProps) {
-	const { t } = useTranslation();
 	const themeStyle = useUiStore((state) => state.themeStyle);
 	const macPlatform = isMacPlatform();
 	const shellRef = useRef<HTMLDivElement | null>(null);
@@ -1360,7 +1359,7 @@ export function XtermTerminal(props: XtermTerminalProps) {
 						className="pointer-events-none absolute bottom-3 left-1/2 z-10 -translate-x-1/2 rounded-md border border-[var(--color-border-import-modal)] bg-[var(--color-bg-import-modal)] px-3 py-1.5 text-xs text-[var(--color-text-import-title)] shadow-[var(--shadow-import-modal)]"
 						role="status"
 					>
-						{t("terminal.copiedToClipboard")}
+						{"Copied to clipboard"}
 					</div>
 				) : null}
 			</div>
@@ -1400,16 +1399,16 @@ export function XtermTerminal(props: XtermTerminalProps) {
 									if (link) void aoBridge.app.openExternal(link);
 								}}
 							>
-								{t("terminal.openSystemBrowser")}
+								{"Open in system browser"}
 							</DropdownMenuItem>
 							<DropdownMenuSeparator />
 						</>
 					) : null}
 					<DropdownMenuItem disabled={!contextMenu.canCopy} onSelect={() => runContextMenuAction("copy")}>
-						{t("titlebar.copy")}
+						{"Copy"}
 					</DropdownMenuItem>
-					<DropdownMenuItem onSelect={() => runContextMenuAction("paste")}>{t("titlebar.paste")}</DropdownMenuItem>
-					<DropdownMenuItem onSelect={() => runContextMenuAction("selectAll")}>{t("titlebar.selectAll")}</DropdownMenuItem>
+					<DropdownMenuItem onSelect={() => runContextMenuAction("paste")}>{"Paste"}</DropdownMenuItem>
+					<DropdownMenuItem onSelect={() => runContextMenuAction("selectAll")}>{"Select All"}</DropdownMenuItem>
 					<DropdownMenuSeparator />
 					<DropdownMenuItem
 						onSelect={() => {
@@ -1417,7 +1416,7 @@ export function XtermTerminal(props: XtermTerminalProps) {
 							setSearchOpen(true);
 						}}
 					>
-						{t("terminal.search")}
+						{"Search terminal"}
 					</DropdownMenuItem>
 					{props.onToggleFullscreen ? (
 						<DropdownMenuItem
@@ -1426,7 +1425,7 @@ export function XtermTerminal(props: XtermTerminalProps) {
 								callbacksRef.current.onToggleFullscreen?.();
 							}}
 						>
-							{props.isFullscreen ? t("terminal.exitFullscreen") : t("terminal.fullscreen")}
+							{props.isFullscreen ? "Exit fullscreen" : "Fullscreen terminal"}
 						</DropdownMenuItem>
 					) : null}
 				</DropdownMenuContent>

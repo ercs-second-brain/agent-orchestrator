@@ -50,13 +50,12 @@ export function SessionFileTab({
 	onClose: () => void;
 	path: string;
 }) {
-	const { t } = useTranslation();
 	const name = basename(path);
 	const closeAction = (
 		<Tooltip>
 			<TooltipTrigger asChild>
 				<button
-					aria-label={t("files.closeTab", { name })}
+					aria-label={`Close ${name}`}
 					className="grid size-icon-sm place-items-center rounded-sm text-passive opacity-0 pointer-events-none hover:bg-interactive-hover hover:text-foreground group-hover:pointer-events-auto group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100 focus-visible:pointer-events-auto focus-visible:opacity-100 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent/50"
 					onClick={(event) => {
 						event.stopPropagation();
@@ -67,14 +66,14 @@ export function SessionFileTab({
 					<X className="size-icon-sm" aria-hidden="true" />
 				</button>
 			</TooltipTrigger>
-			<TooltipContent side="bottom">{t("files.closeTab", { name })}</TooltipContent>
+			<TooltipContent side="bottom">{`Close ${name}`}</TooltipContent>
 		</Tooltip>
 	);
 	const feedbackAction = active ? (
 		<Tooltip>
 			<TooltipTrigger asChild>
 				<button
-					aria-label={t("files.addFileFeedback", { file: path })}
+					aria-label={`Add feedback for file ${path}`}
 					className="grid size-5 shrink-0 place-items-center rounded-sm text-passive hover:bg-interactive-hover hover:text-foreground"
 					onClick={(event) => {
 						event.stopPropagation();
@@ -85,7 +84,7 @@ export function SessionFileTab({
 					<Plus className="size-3" aria-hidden="true" />
 				</button>
 			</TooltipTrigger>
-			<TooltipContent side="bottom">{t("files.addFileFeedback", { file: path })}</TooltipContent>
+			<TooltipContent side="bottom">{`Add feedback for file ${path}`}</TooltipContent>
 		</Tooltip>
 	) : undefined;
 	return (

@@ -92,7 +92,6 @@ export function SettingsInlineInput({
 	placeholder?: string;
 	className?: string;
 }) {
-	const { t } = useTranslation();
 	const [editing, setEditing] = useState(false);
 	const inputRef = useRef<HTMLInputElement>(null);
 
@@ -128,7 +127,7 @@ export function SettingsInlineInput({
 			<button
 				type="button"
 				className={cn("settings-inline-edit-trigger", className)}
-				aria-label={t("settings.field.edit", { label })}
+				aria-label={`Edit ${label}`}
 				onClick={() => setEditing(true)}
 			>
 				<span className="settings-row-value" title={value || placeholder}>

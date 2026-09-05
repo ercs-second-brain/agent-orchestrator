@@ -24,34 +24,33 @@ export function FileContentPane({
 	split: boolean;
 	wrap: boolean;
 }) {
-	const { t } = useTranslation();
 	// Mirrors WorkspaceDiffView's own guard: a background refetch mid-selection
 	// would re-render the pane out from under an active text selection or its
 	// context menu.
 	const [selectionOrMenuActive, setSelectionOrMenuActive] = useState(false);
 	const query = useQuery({
-		...sessionWorkspaceFileQueryOptions(sessionId, path ?? "", t("files.error.loadWorkspaceFile")),
+		...sessionWorkspaceFileQueryOptions(sessionId, path ?? "", "Unable to load workspace file"),
 		enabled: Boolean(path) && !selectionOrMenuActive,
 	});
 	const refetch = query.refetch;
 
 	if (!path) {
-		return <PanelMessage>{t("files.explorer.selectFile")}</PanelMessage>;
+		return <PanelMessage>{"Select a file to preview."}</PanelMessage>;
 	}
 	if (query.isPending) {
-		return <PanelMessage>{t("files.loadingDiff")}</PanelMessage>;
+		return <PanelMessage>{"Loading diff..."}</PanelMessage>;
 	}
 	if (query.error) {
 		return (
 			<PanelMessage action={<RetryButton onClick={() => void refetch()} />}>
-				{query.error.message || t("files.error.loadFile")}
+				{query.error.message || "Unable to load this file."}
 			</PanelMessage>
 		);
 	}
 	if (!query.data) {
 		return (
 			<PanelMessage action={<RetryButton onClick={() => void refetch()} />}>
-				{t("files.error.loadFile")}
+				{"Unable to load this file."}
 			</PanelMessage>
 		);
 	}

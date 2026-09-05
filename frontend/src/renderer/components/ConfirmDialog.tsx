@@ -41,7 +41,6 @@ export function ConfirmDialog({
 	onConfirm,
 	onOpenChange,
 }: ConfirmDialogProps) {
-	const { t } = useTranslation();
 	// Sized for a two-line prompt, not a settings form: the shared settings
 	// frame (575px, 38px footer pills) reads oversized around one question, so
 	// the confirm narrows the dialog and compacts the buttons while keeping the
@@ -58,8 +57,8 @@ export function ConfirmDialog({
 						type="button"
 						disabled={busy}
 						className="settings-dialog-close-button settings-close-button"
-						aria-label={t("confirm.close")}
-						title={t("confirm.closeEsc")}
+						aria-label={"Close dialog"}
+						title={"Close (Esc)"}
 					>
 						<X className="size-4" aria-hidden="true" />
 					</button>
@@ -83,7 +82,7 @@ export function ConfirmDialog({
 				<div className={cn(settingsDialogFooterClass, "gap-2 p-4")}>
 					<DialogClose asChild>
 						<Button type="button" variant="footer" className={compactButtonClass} disabled={busy}>
-							{t("confirm.cancel")}
+							{"Cancel"}
 						</Button>
 					</DialogClose>
 					<Button

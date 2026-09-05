@@ -166,7 +166,6 @@ export function CenterPane({
 	onAuxiliaryTabOrderChange,
 	agentInputDisabled = false,
 }: CenterPaneProps) {
-	const { t } = useTranslation();
 	const paneRef = useRef<HTMLDivElement | null>(null);
 	const wheelZoomRemainderRef = useRef(0);
 	const lastWheelZoomAtRef = useRef(0);
@@ -325,14 +324,14 @@ export function CenterPane({
 	});
 	const sessionTabLabel = session
 		? isOrchestratorSession(session)
-			? t("shell.orchestrator")
+			? "Orchestrator"
 			: session.title
-		: t("terminal.noSession");
+		: "No session";
 	const activeTerminalLabel =
 		target.kind === "shell"
 			? (shellTerminals.find((shell) => shell.handleId === target.handleId)?.title ?? target.title)
 			: target.kind === "reviewer"
-				? `${t("terminal.reviewer")} · ${target.harness}`
+				? `${"Reviewer"} · ${target.harness}`
 				: (session?.title ?? sessionTabLabel);
 	const reorderAuxiliaryTabs = useCallback(
 		(nextKeys: string[]) => {
@@ -436,10 +435,9 @@ export function CenterPane({
 				? `${agentSwitch.id}:${presentation.outcome}`
 				: undefined;
 	const alertText = presentation
-		? t(
-				presentation.allowSourceInput ? presentation.descriptionKey : presentation.titleKey,
-				presentation.values,
-			)
+		? presentation.allowSourceInput
+			? presentation.description
+			: presentation.title
 		: undefined;
 	useEffect(() => {
 		if (!alertKey || !alertText) {
@@ -609,7 +607,7 @@ export function CenterPane({
 					}}
 				>
 					<div
-							aria-label={t("terminal.tabsAria")}
+							aria-label={"Open terminals"}
 							className="flex h-full min-w-0 flex-1 items-stretch"
 							onKeyDown={handleTerminalTabListKeyDown}
 							role="tablist"
@@ -653,7 +651,7 @@ export function CenterPane({
 															/>
 														}
 														isActive={target.kind === "reviewer"}
-														label={t("terminal.reviewer")}
+														label={"Reviewer"}
 														onSelect={() => onSelectReviewerTerminal?.(tab.terminal)}
 														title={tab.terminal.harness}
 													/>
@@ -705,7 +703,7 @@ export function CenterPane({
 		>
 			{isFullscreen ? terminalTopbar : <SessionTopbarPortal>{terminalTopbar}</SessionTopbarPortal>}
 			<div
-				aria-label={t("terminal.panelAria", { title: activeTerminalLabel })}
+				aria-label={`${activeTerminalLabel} terminal`}
 				className="relative min-h-0 flex-1"
 				role="tabpanel"
 			>
@@ -770,10 +768,9 @@ function AgentSwitchTerminalOverlay({
 	onDismiss,
 	presentation,
 }: AgentSwitchTerminalOverlayProps) {
-	const { t } = useTranslation();
 	const overlayRef = useRef<HTMLDivElement | null>(null);
-	const title = t(presentation.titleKey, presentation.values);
-	const description = t(presentation.descriptionKey, presentation.values);
+	const title = presentation.title;
+	const description = presentation.description;
 	const sourceInput = presentation.allowSourceInput;
 	const staticWarning = presentation.outcome === "failure" || presentation.outcome === "recovery";
 	const success = presentation.outcome === "success";
@@ -828,7 +825,7 @@ function AgentSwitchTerminalOverlay({
 					</div>
 					{onDismiss ? (
 						<button
-							aria-label={t("common.close")}
+							aria-label={"Close"}
 							className="absolute right-2 top-2 grid size-7 place-items-center rounded-md text-muted-foreground transition-colors hover:bg-interactive-hover hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent/50"
 							onClick={onDismiss}
 							type="button"
@@ -881,24 +878,23 @@ function AgentSwitchTerminalStrip({
 	onSelectSessionTerminal?: () => void;
 	presentation: AgentSwitchPresentation;
 }) {
-	const { t } = useTranslation();
 	return (
 		<div
-			aria-label={t(presentation.titleKey, presentation.values)}
+			aria-label={presentation.title}
 			aria-atomic="true"
 			aria-live="polite"
 			className="agent-switch-shell-strip absolute inset-x-3 top-3 z-20 flex items-center justify-between gap-3 rounded-lg border border-border-strong bg-surface/95 px-3 py-2 shadow-lg"
 			role="status"
 		>
 			<span className="min-w-0 truncate text-caption text-muted-foreground">
-				{t(presentation.descriptionKey, presentation.values)}
+				{presentation.description}
 			</span>
 			<button
 				className="shrink-0 rounded-md border border-border-strong bg-background px-2.5 py-1 text-caption font-medium text-foreground transition-colors hover:bg-interactive-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent/50"
 				onClick={onSelectSessionTerminal}
 				type="button"
 			>
-				{t("terminal.backToAgent")}
+				{"Back to agent terminal"}
 			</button>
 		</div>
 	);
@@ -943,9 +939,8 @@ export function SessionPaneTab({
 	title,
 	tabAction,
 }: SessionPaneTabProps) {
-	const { t } = useTranslation();
 	const { ref, isTruncated } = useTruncatedText<HTMLButtonElement>(label);
-	const activityLabel = session ? getAgentActivityView(session.activity, t).label : undefined;
+	const activityLabel = session ? getAgentActivityView(session.activity).label : undefined;
 	const providerLabel = session ? agentLabel(session.provider) : undefined;
 	const tabIcon = session ? <AgentAvatar className="size-terminal-agent-icon" decorative provider={session.provider} /> : icon;
 	const connected = appearance === "connected";
@@ -958,7 +953,7 @@ export function SessionPaneTab({
 		<div className="flex h-full min-w-0 flex-1 items-center gap-2 px-2">
 			{tabIcon}
 			<input
-				aria-label={t("shell.renameSession", { title: renameSession.title })}
+				aria-label={`Rename ${renameSession.title}`}
 				autoFocus
 				className="min-w-0 flex-1 rounded-xs border border-accent bg-background px-1 text-control text-foreground outline-none ring-1 ring-accent"
 				maxLength={MAX_SESSION_DISPLAY_NAME_LEN}
@@ -1006,7 +1001,7 @@ export function SessionPaneTab({
 					: undefined,
 				role: "tab",
 				tabIndex: isActive ? 0 : -1,
-				title: title ?? (isTruncated ? label : t("terminal.sessionAria")),
+				title: title ?? (isTruncated ? label : "Session terminal"),
 				type: "button",
 			}}
 			buttonRef={ref}
@@ -1025,9 +1020,9 @@ export function SessionPaneTab({
 				<span className="contents">{tabFrame}</span>
 			</ContextMenuTrigger>
 			<ContextMenuContent className="min-w-44">
-				<ContextMenuItem aria-label={t("shell.renameSession", { title: renameSession.title })} onSelect={rename.begin}>
+				<ContextMenuItem aria-label={`Rename ${renameSession.title}`} onSelect={rename.begin}>
 					<Pencil aria-hidden="true" />
-					{t("shell.rename")}
+					{"Rename"}
 				</ContextMenuItem>
 			</ContextMenuContent>
 		</ContextMenu>

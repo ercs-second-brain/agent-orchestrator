@@ -160,7 +160,6 @@ function Sidebar({
 	variant?: "sidebar" | "floating" | "inset";
 	collapsible?: "offcanvas" | "icon" | "none";
 }) {
-	const { t } = useTranslation();
 	const prefersReducedMotion = useReducedMotion();
 	const { isMobile, state, openMobile, setOpenMobile, isReady } = useSidebar();
 
@@ -192,8 +191,8 @@ function Sidebar({
 					side={side}
 				>
 					<SheetHeader className="sr-only">
-						<SheetTitle>{t("common.sidebar")}</SheetTitle>
-						<SheetDescription>{t("common.sidebarDescription")}</SheetDescription>
+						<SheetTitle>{"Sidebar"}</SheetTitle>
+						<SheetDescription>{"Displays the mobile sidebar."}</SheetDescription>
 					</SheetHeader>
 					<div className="flex h-full w-full flex-col">{children}</div>
 				</SheetContent>
@@ -272,7 +271,6 @@ function Sidebar({
 }
 
 function SidebarTrigger({ className, onClick, ...props }: React.ComponentProps<typeof Button>) {
-	const { t } = useTranslation();
 	const { toggleSidebar } = useSidebar();
 
 	return (
@@ -289,20 +287,19 @@ function SidebarTrigger({ className, onClick, ...props }: React.ComponentProps<t
 			{...props}
 		>
 			<PanelLeftIcon />
-			<span className="sr-only">{t("shortcut.toggle-sidebar")}</span>
+			<span className="sr-only">{"Toggle sidebar"}</span>
 		</Button>
 	);
 }
 
 function SidebarRail({ className, ...props }: React.ComponentProps<"button">) {
-	const { t } = useTranslation();
 	const { toggleSidebar } = useSidebar();
 
 	return (
 		<button
 			data-sidebar="rail"
 			data-slot="sidebar-rail"
-			aria-label={t("shortcut.toggle-sidebar")}
+			aria-label={"Toggle sidebar"}
 			tabIndex={-1}
 			onClick={toggleSidebar}
 			className={cn(

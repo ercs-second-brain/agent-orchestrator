@@ -56,11 +56,10 @@ type DestinationOption = {
 };
 
 export function ReportProblemContent({ active }: { active: boolean }) {
-	const { t } = useTranslation();
 	const destinations: DestinationOption[] = [
-		{ value: "github", label: t("report.github"), action: t("report.githubAction"), icon: GithubIcon },
-		{ value: "discord", label: t("report.discord"), action: t("report.discordAction"), icon: DiscordIcon },
-		{ value: "email", label: t("report.email"), action: t("report.emailAction"), icon: EmailIcon },
+		{ value: "github", label: "GitHub", action: "Copy & Create GitHub Issue", icon: GithubIcon },
+		{ value: "discord", label: "Discord", action: "Copy & Open Discord", icon: DiscordIcon },
+		{ value: "email", label: "Email", action: "Copy & Open Email", icon: EmailIcon },
 	];
 	const titleId = useId();
 	const detailsId = useId();
@@ -112,7 +111,7 @@ export function ReportProblemContent({ active }: { active: boolean }) {
 			setSummary("");
 			setDetails("");
 		} catch (err) {
-			setCopyError(err instanceof Error ? err.message : t("report.copyFailed"));
+			setCopyError(err instanceof Error ? err.message : "Could not copy report draft");
 			setCopiedOutput(null);
 		}
 	};
@@ -127,11 +126,11 @@ export function ReportProblemContent({ active }: { active: boolean }) {
 				}
 			}}
 		>
-			<p className="text-xs leading-4 text-settings-muted">{t("report.subtitle")}</p>
+			<p className="text-xs leading-4 text-settings-muted">{"Found an issue? Tell us what happened."}</p>
 
 			<div className="flex flex-col gap-1.5">
 				<label className="settings-field-label" htmlFor={titleId}>
-					{t("report.titleLabel")}
+					{"Title"}
 				</label>
 				<input
 					ref={titleRef}
@@ -142,13 +141,13 @@ export function ReportProblemContent({ active }: { active: boolean }) {
 						setSummary(event.target.value);
 						clearStatus();
 					}}
-					placeholder={t("report.titlePlaceholder")}
+					placeholder={"Brief Title"}
 				/>
 			</div>
 
 			<div className="flex flex-col gap-1.5">
 				<label className="settings-field-label" htmlFor={detailsId}>
-					{t("report.whatHappened")}
+					{"What happened?"}
 				</label>
 				<textarea
 					id={detailsId}
@@ -158,18 +157,18 @@ export function ReportProblemContent({ active }: { active: boolean }) {
 						setDetails(event.target.value);
 						clearStatus();
 					}}
-					placeholder={t("report.detailsPlaceholder")}
+					placeholder={"Share what happened, what you expected, and how to reproduce it."}
 				/>
 			</div>
 
-			<div role="group" aria-label={t("report.destination")} className="flex flex-wrap items-center justify-end gap-3">
+			<div role="group" aria-label={"Report destination"} className="flex flex-wrap items-center justify-end gap-3">
 				{copyError ? (
 					<p role="alert" className="text-caption leading-4 text-error">
 						{copyError}
 					</p>
 				) : null}
 				{copiedLabel && !copyError ? (
-					<p className="text-caption leading-4 text-success">{t("report.draftCopied", { label: copiedLabel })}</p>
+					<p className="text-caption leading-4 text-success">{`${copiedLabel} draft copied.`}</p>
 				) : null}
 				<div className="flex items-center gap-1.5">
 					{destinations.map((option) => (

@@ -5,16 +5,15 @@ import { useSystemRequirementsGate } from "../hooks/useSystemRequirementsGate";
 import { InstallDependencyDialog } from "./InstallDependencyDialog";
 
 const STARTUP_PHRASE_KEYS = [
-	"startup.startingServices",
-	"startup.connectingDaemon",
-	"startup.loadingWorkspaces",
-	"startup.preparingBoard",
+	"Starting local services",
+	"Connecting to the daemon",
+	"Loading workspaces",
+	"Preparing your board",
 ] as const;
 
 const PHRASE_INTERVAL_MS = 2_200;
 
 export function DaemonStartupLoader() {
-	const { t } = useTranslation();
 	const [phraseIndex, setPhraseIndex] = useState(0);
 	const {
 		query: requirementsQuery,
@@ -29,12 +28,12 @@ export function DaemonStartupLoader() {
 		return () => window.clearInterval(timer);
 	}, []);
 
-	const phrase = t(STARTUP_PHRASE_KEYS[phraseIndex]);
+	const phrase = STARTUP_PHRASE_KEYS[phraseIndex];
 
 	return (
 		<div
 			aria-busy="true"
-			aria-label={t("startup.aria", { brand: "Agent Orchestrator" })}
+			aria-label={`${"Agent Orchestrator"} is starting`}
 			aria-live="polite"
 			className="ao-startup-screen flex h-full w-full items-center justify-center bg-background text-foreground"
 			data-testid="daemon-startup-loader"

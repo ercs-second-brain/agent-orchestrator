@@ -40,7 +40,6 @@ export function DiffSelectionMenu({
 	position,
 	onOpenChange,
 }: DiffSelectionMenuProps) {
-	const { t } = useTranslation();
 	const [mode, setMode] = useState<Mode>("actions");
 	const [status, setStatus] = useState<SendStatus>("idle");
 	const [errorMessage, setErrorMessage] = useState("");
@@ -103,7 +102,7 @@ export function DiffSelectionMenu({
 				if (openGeneration !== openGenerationRef.current) return;
 				if (error) {
 					setStatus("error");
-					setErrorMessage(apiErrorMessage(error, t("diffSelection.error.send")));
+					setErrorMessage(apiErrorMessage(error, "Unable to send message."));
 					return;
 				}
 				setStatus("sent");
@@ -114,10 +113,10 @@ export function DiffSelectionMenu({
 			} catch (thrown) {
 				if (openGeneration !== openGenerationRef.current) return;
 				setStatus("error");
-				setErrorMessage(apiErrorMessage(thrown, t("diffSelection.error.send")));
+				setErrorMessage(apiErrorMessage(thrown, "Unable to send message."));
 			}
 		},
-		[clearSentTimer, filePath, lines, onOpenChange, sessionId, t],
+		[clearSentTimer, filePath, lines, onOpenChange, sessionId],
 	);
 
 	const handleCopy = useCallback(() => {
@@ -154,9 +153,9 @@ export function DiffSelectionMenu({
 
 	const statusLabel =
 		status === "sending"
-			? t("diffSelection.sending")
+			? "Sending"
 			: status === "sent"
-				? t("diffSelection.sent")
+				? "Sent"
 				: status === "error"
 					? errorMessage
 					: "";
@@ -214,17 +213,17 @@ export function DiffSelectionMenu({
 								handleCopy();
 							}}
 						>
-							{t("diffSelection.copy")}
+							{"Copy"}
 						</DropdownMenuItem>
 						<DropdownMenuSeparator />
 						<DropdownMenuItem
 							disabled={status === "sending"}
 							onSelect={(event) => {
 								event.preventDefault();
-								void send(t("diffSelection.explainInstruction"));
+								void send("Explain what these lines do and why.");
 							}}
 						>
-							{t("diffSelection.explain")}
+							{"Explain"}
 						</DropdownMenuItem>
 						<DropdownMenuItem
 							disabled={status === "sending"}
@@ -241,17 +240,17 @@ export function DiffSelectionMenu({
 								setMode("input");
 							}}
 						>
-							{t("diffSelection.makeChanges")}
+							{"Make changes"}
 						</DropdownMenuItem>
 					</>
 				) : (
 					<div className="p-1.5">
 						<Input
-							aria-label={t("diffSelection.describeChange")}
+							aria-label={"Describe the change"}
 							disabled={status === "sending"}
 							onChange={(event) => setInputValue(event.target.value)}
 							onKeyDown={handleInputKeyDown}
-							placeholder={t("diffSelection.placeholder")}
+							placeholder={"Tell the agent what to change…"}
 							ref={inputRef}
 							value={inputValue}
 						/>

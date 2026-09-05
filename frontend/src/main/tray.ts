@@ -57,7 +57,7 @@ export function createTrayController(options: TrayControllerOptions): TrayContro
 	};
 
 	const sessionItem = (entry: TraySessionEntry): MenuItemConstructorOptions => {
-		const title = entry.title || t("tray.untitledSession");
+		const title = entry.title || "Untitled session";
 		return {
 			label: entry.projectName ? `${title}  ·  ${entry.projectName}` : title,
 			click: () => options.openSession({ projectId: entry.projectId, sessionId: entry.sessionId }),
@@ -71,7 +71,7 @@ export function createTrayController(options: TrayControllerOptions): TrayContro
 
 		const items: MenuItemConstructorOptions[] = [];
 		if (count === 0) {
-			items.push({ label: t("tray.empty"), enabled: false });
+			items.push({ label: "No sessions need attention", enabled: false });
 		} else {
 			const ordered = [...sessions].sort(
 				(a, b) => zoneRank[a.zone] - zoneRank[b.zone] || a.title.localeCompare(b.title),
@@ -90,12 +90,12 @@ export function createTrayController(options: TrayControllerOptions): TrayContro
 			}
 			if (overflow.length > 0) {
 				items.push({ type: "separator" });
-				items.push({ label: `${t("tray.more")} (${overflow.length})`, submenu: overflow.map(sessionItem) });
+				items.push({ label: `${"More"} (${overflow.length})`, submenu: overflow.map(sessionItem) });
 			}
 		}
 		items.push({ type: "separator" });
-		items.push({ label: t("tray.show"), click: () => options.focusWindow() });
-		items.push({ label: t("tray.quit"), role: "quit" });
+		items.push({ label: "Show Agent Orchestrator", click: () => options.focusWindow() });
+		items.push({ label: "Quit Agent Orchestrator", role: "quit" });
 		tray.setContextMenu(Menu.buildFromTemplate(items));
 	};
 

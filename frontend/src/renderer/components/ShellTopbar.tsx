@@ -80,7 +80,6 @@ export function ShellTopbar({
 	sessionAction?: ReactNode;
 	compactActions?: boolean;
 } = {}) {
-	const { t } = useTranslation();
 	const navigate = useNavigate();
 	const queryClient = useQueryClient();
 	const params = useParams({ strict: false }) as { projectId?: string; sessionId?: string };
@@ -130,14 +129,14 @@ export function ShellTopbar({
 	const isProjectBoardRoute = !isSessionRoute && Boolean(projectId);
 	const isRootBoardRoute = !isSessionRoute && !isProjectBoardRoute;
 	const project = workspaceScope?.project;
-	const projectLabel = project?.name ?? session?.workspaceName ?? (projectId ? "" : t("shell.board"));
+	const projectLabel = project?.name ?? session?.workspaceName ?? (projectId ? "" : "Board");
 	const orchestrator = workspaceScope?.orchestrator;
-	const orchestratorActivityLabel = orchestrator ? getAgentActivityView(orchestrator.activity, t).label : undefined;
-	const orchestratorActionLabel = orchestrator ? t("shell.openOrchestrator") : t("shell.spawnOrchestrator");
+	const orchestratorActivityLabel = orchestrator ? getAgentActivityView(orchestrator.activity).label : undefined;
+	const orchestratorActionLabel = orchestrator ? "Open orchestrator" : "Spawn Orchestrator";
 	const orchestratorTooltip = isProjectRestarting
-		? t("shell.restarting")
+		? "Restarting…"
 		: isSpawning
-			? t("shell.spawning")
+			? "Spawning…"
 			: orchestratorActionLabel;
 
 	const openBoard = () =>
@@ -185,7 +184,7 @@ export function ShellTopbar({
 			});
 		} catch (error) {
 			console.error("Failed to spawn orchestrator:", error);
-			setBoardSpawnError(error instanceof Error ? error.message : t("shell.couldNotSpawn"));
+			setBoardSpawnError(error instanceof Error ? error.message : "Could not spawn orchestrator");
 		} finally {
 			setIsSpawning(false);
 		}
@@ -224,7 +223,7 @@ export function ShellTopbar({
 							transition={{ type: "spring", stiffness: 400, damping: 40 }}
 						>
 							<LayoutDashboard aria-hidden="true" className="size-icon-md" />
-							{t("shell.board")}
+							{"Board"}
 						</motion.span>
 					</div>
 				)}
@@ -249,7 +248,7 @@ export function ShellTopbar({
 							<TooltipTrigger asChild>
 								<span className="inline-flex" style={noDragStyle}>
 									<TopbarButton
-										aria-label={t("shell.newTask")}
+										aria-label={"New task"}
 										className="topbar-control--labeled"
 										data-priority="primary"
 										disabled={isProjectRestarting}
@@ -257,11 +256,11 @@ export function ShellTopbar({
 										variant="accent"
 									>
 										<Plus className="size-icon-md" aria-hidden="true" />
-										<span data-compact-label>{t("newTask.task")}</span>
+										<span data-compact-label>{"Task"}</span>
 									</TopbarButton>
 								</span>
 							</TooltipTrigger>
-							<TooltipContent side="bottom">{t("shell.newTask")}</TooltipContent>
+							<TooltipContent side="bottom">{"New task"}</TooltipContent>
 						</Tooltip>
 						<Tooltip>
 							<TooltipTrigger asChild>
@@ -269,7 +268,7 @@ export function ShellTopbar({
 									<TopbarButton
 										aria-label={
 											orchestratorActivityLabel
-												? t("shell.orchestratorWithActivity", { activity: orchestratorActivityLabel })
+												? `Orchestrator, ${orchestratorActivityLabel}`
 												: orchestratorActionLabel
 										}
 										className="topbar-control--labeled"
@@ -279,7 +278,7 @@ export function ShellTopbar({
 										variant="primary"
 									>
 										<OrchestratorIcon className="size-icon-md" aria-hidden="true" />
-										<span data-compact-label>{t("shell.orchestrator")}</span>
+										<span data-compact-label>{"Orchestrator"}</span>
 										{orchestrator ? <OrchestratorActivityIndicator session={orchestrator} /> : null}
 									</TopbarButton>
 								</span>
@@ -302,7 +301,7 @@ export function ShellTopbar({
 									<TooltipTrigger asChild>
 										<span className="inline-flex" style={noDragStyle}>
 											<TopbarButton
-												aria-label={t("shell.newTask")}
+												aria-label={"New task"}
 												className="topbar-control--labeled"
 												data-priority="primary"
 												disabled={isProjectRestarting}
@@ -310,16 +309,16 @@ export function ShellTopbar({
 												variant="accent"
 											>
 												<Plus className="size-icon-md" aria-hidden="true" />
-												<span data-compact-label>{t("newTask.task")}</span>
+												<span data-compact-label>{"Task"}</span>
 											</TopbarButton>
 										</span>
 									</TooltipTrigger>
-									<TooltipContent side="bottom">{t("shell.newTask")}</TooltipContent>
+									<TooltipContent side="bottom">{"New task"}</TooltipContent>
 								</Tooltip>
 								<Tooltip>
 									<TooltipTrigger asChild>
 										<TopbarButton
-											aria-label={t("shell.openKanban")}
+											aria-label={"Open Kanban"}
 											className="topbar-control--labeled"
 											data-priority="secondary"
 											onClick={openBoard}
@@ -327,10 +326,10 @@ export function ShellTopbar({
 											variant="feature"
 										>
 											<LayoutDashboard className="size-icon-md" aria-hidden="true" />
-											<span data-compact-label>{t("shell.openKanban")}</span>
+											<span data-compact-label>{"Open Kanban"}</span>
 										</TopbarButton>
 									</TooltipTrigger>
-									<TooltipContent side="bottom">{t("shell.openKanban")}</TooltipContent>
+									<TooltipContent side="bottom">{"Open Kanban"}</TooltipContent>
 								</Tooltip>
 							</>
 						) : null}
@@ -367,7 +366,7 @@ export function ShellTopbar({
 								<TooltipTrigger asChild>
 									<span className="inline-flex" style={noDragStyle}>
 										<TopbarButton
-											aria-label={t("shell.openOrchestrator")}
+											aria-label={"Open orchestrator"}
 											className="topbar-control--labeled -mr-1"
 											data-priority="secondary"
 											disabled={isSpawning || isProjectRestarting}
@@ -375,7 +374,7 @@ export function ShellTopbar({
 											variant="primary"
 										>
 											<OrchestratorIcon className="size-icon-md" aria-hidden="true" />
-											<span data-compact-label>{t("shell.orchestrator")}</span>
+											<span data-compact-label>{"Orchestrator"}</span>
 										</TopbarButton>
 									</span>
 								</TooltipTrigger>
@@ -415,7 +414,6 @@ export function TopbarKillButton({
 	orchestratorId?: string;
 	onKilled: (workspaceId: string, orchestratorId?: string) => void;
 }) {
-	const { t } = useTranslation();
 	const [confirmOpen, setConfirmOpen] = useState(false);
 	const queryClient = useQueryClient();
 	const kill = useTerminateSession();
@@ -439,7 +437,7 @@ export function TopbarKillButton({
 							session={session}
 							trigger={
 								<TopbarButton
-									aria-label={isPending ? t("shell.killing") : t("shell.killSession")}
+									aria-label={isPending ? "Killing..." : "Kill session"}
 									disabled={isPending}
 									onClick={() => {
 										clearTerminateSessionState(queryClient, session.id);
@@ -452,7 +450,7 @@ export function TopbarKillButton({
 						/>
 					</span>
 				</TooltipTrigger>
-				<TooltipContent side="bottom">{t("shell.killSession")}</TooltipContent>
+				<TooltipContent side="bottom">{"Kill session"}</TooltipContent>
 			</Tooltip>
 			{error ? <TopbarActionError>{error}</TopbarActionError> : null}
 		</div>
@@ -460,12 +458,11 @@ export function TopbarKillButton({
 }
 
 function ProjectTerminationFeedback({ projectId }: { projectId: string | undefined }) {
-	const { t } = useTranslation();
 	const states = useProjectTerminateSessionStates(projectId);
 	if (states.length === 0) return null;
 
 	return (
-		<div aria-label={t("shell.sessionTerminationStatus")} className="flex max-w-content-max items-center gap-2">
+		<div aria-label={"Session termination status"} className="flex max-w-content-max items-center gap-2">
 			{states.map((state) =>
 				state.error ? (
 					<TopbarActionError className="max-w-48 truncate" key={state.session.id} title={state.error}>
@@ -476,9 +473,9 @@ function ProjectTerminationFeedback({ projectId }: { projectId: string | undefin
 						className="max-w-40 truncate text-caption text-muted-foreground"
 						key={state.session.id}
 						role="status"
-						title={t("shell.killingNamed", { title: state.session.title })}
+						title={`Killing ${state.session.title}…`}
 					>
-						{t("shell.killingNamed", { title: state.session.title })}
+						{`Killing ${state.session.title}…`}
 					</span>
 				),
 			)}
@@ -486,13 +483,12 @@ function ProjectTerminationFeedback({ projectId }: { projectId: string | undefin
 	);
 }
 function SessionStatusPill({ session }: { session: WorkspaceSession }) {
-	const { t } = useTranslation();
 	const switchPresentation = deriveSessionAgentSwitchPresentation(session);
 	if (switchPresentation) {
 		const visual = agentSwitchStatusVisual(switchPresentation);
 		return (
 			<StatusPill
-				label={t(switchPresentation.compactLabelKey, switchPresentation.values)}
+				label={switchPresentation.compactLabel}
 				tone={visual.tone}
 				breathe={visual.breathe}
 				leading="none"
@@ -500,7 +496,7 @@ function SessionStatusPill({ session }: { session: WorkspaceSession }) {
 			/>
 		);
 	}
-	const { label, tone, breathe } = getAgentActivityView(session.activity, t);
+	const { label, tone, breathe } = getAgentActivityView(session.activity);
 	return (
 		<StatusPill label={label} tone={tone} breathe={breathe} leading="none" className="px-2 py-1 text-micro" />
 	);

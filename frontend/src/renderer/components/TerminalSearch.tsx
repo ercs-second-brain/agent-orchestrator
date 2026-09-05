@@ -54,7 +54,6 @@ function isValidRegex(query: string): boolean {
 }
 
 export function TerminalSearch({ onClose, onReturnFocus, open, searchAddon }: TerminalSearchProps) {
-	const { t } = useTranslation();
 	const inputRef = useRef<HTMLInputElement | null>(null);
 	const [caseSensitive, setCaseSensitive] = useState(false);
 	const [query, setQuery] = useState("");
@@ -134,7 +133,7 @@ export function TerminalSearch({ onClose, onReturnFocus, open, searchAddon }: Te
 
 	return (
 		<div
-			aria-label={t("terminal.search")}
+			aria-label={"Search terminal"}
 			className="absolute right-3 top-2 z-20 flex h-9 w-[22rem] max-w-[calc(100%-1.5rem)] items-center gap-0.5 rounded-md border border-border bg-surface/95 px-1 shadow-lg backdrop-blur-sm"
 			data-testid="terminal-search"
 			onKeyDown={(event) => {
@@ -156,12 +155,12 @@ export function TerminalSearch({ onClose, onReturnFocus, open, searchAddon }: Te
 			role="search"
 		>
 			<input
-				aria-label={t("terminal.search")}
+				aria-label={"Search terminal"}
 				aria-invalid={!queryIsValid || undefined}
 				className="h-7 min-w-0 flex-1 bg-transparent px-2 font-mono text-xs text-foreground outline-none placeholder:text-terminal-dim aria-invalid:text-destructive"
 				maxLength={512}
 				onChange={(event) => setQuery(event.target.value)}
-				placeholder={t("terminal.searchPlaceholder")}
+				placeholder={"Find in terminal…"}
 				ref={inputRef}
 				type="search"
 				value={query}
@@ -169,8 +168,8 @@ export function TerminalSearch({ onClose, onReturnFocus, open, searchAddon }: Te
 			<span
 				aria-label={
 					queryIsValid
-						? t("terminal.searchResults", { current: currentResult, total: results.resultCount })
-						: t("terminal.searchInvalidRegex")
+						? `Match ${currentResult} of ${results.resultCount}`
+						: "Invalid regular expression"
 				}
 				aria-live="polite"
 				className="min-w-9 text-center font-mono text-2xs tabular-nums text-terminal-dim"
@@ -178,7 +177,7 @@ export function TerminalSearch({ onClose, onReturnFocus, open, searchAddon }: Te
 				{resultLabel}
 			</span>
 			<Button
-				aria-label={t("terminal.searchCaseSensitive")}
+				aria-label={"Match case"}
 				aria-pressed={caseSensitive}
 				className={cn("size-7 text-muted-foreground", caseSensitive && "bg-muted text-primary")}
 				onClick={() => setCaseSensitive((current) => !current)}
@@ -190,7 +189,7 @@ export function TerminalSearch({ onClose, onReturnFocus, open, searchAddon }: Te
 				<CaseSensitive className="size-icon-sm" aria-hidden="true" />
 			</Button>
 			<Button
-				aria-label={t("terminal.searchRegex")}
+				aria-label={"Use regular expression"}
 				aria-pressed={regex}
 				className={cn("size-7 text-muted-foreground", regex && "bg-muted text-primary")}
 				onClick={() => setRegex((current) => !current)}
@@ -203,7 +202,7 @@ export function TerminalSearch({ onClose, onReturnFocus, open, searchAddon }: Te
 			</Button>
 			<div className="mx-0.5 h-4 w-px bg-border" />
 			<Button
-				aria-label={t("terminal.searchPrevious")}
+				aria-label={"Previous match"}
 				className="size-7 text-muted-foreground"
 				disabled={!query || !queryIsValid}
 				onClick={() => find("previous")}
@@ -215,7 +214,7 @@ export function TerminalSearch({ onClose, onReturnFocus, open, searchAddon }: Te
 				<ChevronUp className="size-icon-sm" aria-hidden="true" />
 			</Button>
 			<Button
-				aria-label={t("terminal.searchNext")}
+				aria-label={"Next match"}
 				className="size-7 text-muted-foreground"
 				disabled={!query || !queryIsValid}
 				onClick={() => find("next")}
@@ -227,7 +226,7 @@ export function TerminalSearch({ onClose, onReturnFocus, open, searchAddon }: Te
 				<ChevronDown className="size-icon-sm" aria-hidden="true" />
 			</Button>
 			<Button
-				aria-label={t("files.closeSearch")}
+				aria-label={"Close search"}
 				className="size-7 text-muted-foreground"
 				onClick={close}
 				size="icon-sm"

@@ -39,7 +39,7 @@ export function RestartToUpdateDialog() {
 }
 
 function RestartToUpdateDialogBody() {
-	const { t, i18n } = useTranslation();
+	const { i18n } = useTranslation();
 	const close = useUiStore((state) => state.closeUpdateInstallPrompt);
 	const status = useUpdateStatus();
 	// Subscription off: this only ever reads the already-cached workspace list,
@@ -50,13 +50,10 @@ function RestartToUpdateDialogBody() {
 	const version = staged?.version ?? status.version;
 	const nightly = parseNightlyVersion(version);
 	const buildLabel = nightly
-		? t("shell.nightlyBuild", {
-				version: nightly.base,
-				date: new Intl.DateTimeFormat(i18n.resolvedLanguage ?? i18n.language, {
+		? `Nightly ${nightly.base} · ${new Intl.DateTimeFormat(i18n.resolvedLanguage ?? i18n.language, {
 					month: "short",
 					day: "numeric",
-				}).format(nightly.builtAt),
-			})
+				}).format(nightly.builtAt)}`
 		: version
 			? `v${version}`
 			: null;
@@ -74,7 +71,7 @@ function RestartToUpdateDialogBody() {
 		<Dialog open onOpenChange={(next) => !next && close()}>
 			<DialogContent className={settingsDialogContentClass} data-testid="restart-to-update-dialog">
 				<div className={settingsDialogHeaderClass}>
-					<DialogTitle>{t("update.restart.title")}</DialogTitle>
+					<DialogTitle>{"Restart to update"}</DialogTitle>
 					{buildLabel && <DialogDescription>{buildLabel}</DialogDescription>}
 				</div>
 
@@ -87,7 +84,7 @@ function RestartToUpdateDialogBody() {
 							<p className="flex items-start gap-2 text-xs font-medium leading-5 text-warning">
 								<AlertTriangle className="mt-0.5 size-icon-sm shrink-0" aria-hidden="true" />
 								<span className="min-w-0">
-									{t("update.restart.sessionsTitle", { count: atRisk.length })}
+									{(atRisk.length) === 1 ? "1 chat session will lose its current turn" : `${atRisk.length} chat sessions will lose their current turn`}
 								</span>
 							</p>
 							<ul className="mt-2 space-y-1 pl-6">
@@ -98,13 +95,13 @@ function RestartToUpdateDialogBody() {
 								))}
 							</ul>
 							<p className="mt-2 pl-6 text-xs leading-4 text-settings-muted">
-								{t("update.restart.sessionsBody")}
+								{"Restarting stops these mid-turn. Terminal sessions and Codex chat sessions reconnect on their own."}
 							</p>
 						</div>
 					)}
 
 					<p className="text-caption font-medium uppercase tracking-wide text-settings-muted">
-						{t("update.restart.whatsNew")}
+						{"What's new"}
 					</p>
 					{status.releaseNotes ? (
 						// Plain text on purpose. The notes are the remote release body,
@@ -113,18 +110,18 @@ function RestartToUpdateDialogBody() {
 							{status.releaseNotes}
 						</p>
 					) : (
-						<p className="mt-1.5 text-sm leading-5 text-settings-muted">{t("update.restart.noNotes")}</p>
+						<p className="mt-1.5 text-sm leading-5 text-settings-muted">{"No release notes were published for this build."}</p>
 					)}
 
-					<p className="mt-4 text-xs leading-4 text-settings-muted">{t("update.restart.installsOnQuit")}</p>
+					<p className="mt-4 text-xs leading-4 text-settings-muted">{"This build also installs on its own the next time you quit the app."}</p>
 				</div>
 
 				<div className={settingsDialogFooterClass}>
 					<Button type="button" variant="outline" size="sm" onClick={close}>
-						{t("confirm.cancel")}
+						{"Cancel"}
 					</Button>
 					<Button type="button" variant="primary" size="sm" onClick={confirm}>
-						{t("update.restart.confirm")}
+						{"Restart & install"}
 					</Button>
 				</div>
 			</DialogContent>

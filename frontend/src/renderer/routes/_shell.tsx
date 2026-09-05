@@ -162,7 +162,6 @@ const ShellCenter = memo(function ShellCenter({
 // instead of Zustand. The daemon-status effect runs here exactly once.
 function ShellLayout() {
 	// Reports how many agents this install has available, once per launch.
-	const { t } = useTranslation();
 	const navigate = useNavigate();
 	const matchRoute = useMatchRoute();
 	const queryClient = useQueryClient();
@@ -837,7 +836,7 @@ function ShellLayout() {
 								<FolderPlus className="size-5" aria-hidden="true" />
 							</span>
 							<p className="text-[15px] font-semibold text-[var(--color-text-import-title)]">
-								{t("createProject.dropToAdd")}
+								{"Drop to add project"}
 							</p>
 						</div>
 					</div>

@@ -13,15 +13,15 @@ export function reasonMessage(reason: string, t: TFunction): string | undefined 
 	switch (reason) {
 		case "no_cli":
 		case "no_magicdns":
-			return t("mobile.securePairing.noCli");
+			return "The tailscale command isn't available, or MagicDNS is off. Install the Tailscale CLI and enable MagicDNS, then reopen this window.";
 		case "no_certs":
-			return t("mobile.securePairing.noCerts");
+			return "Enable HTTPS certificates for your tailnet in the Tailscale admin console (DNS page), then reopen this window.";
 		case "serve_failed":
-			return t("mobile.securePairing.serveFailed");
+			return "Couldn't start the Tailscale proxy. Port 443 may already be in use by another serve target.";
 		case "port_mismatch":
-			return t("mobile.securePairing.portMismatch");
+			return "The Tailscale proxy is pointing somewhere else. Turn secure pairing off and on again.";
 		case "clear_failed":
-			return t("mobile.securePairing.clearFailed");
+			return "Secure pairing is off, but the Tailscale proxy may still be running. Run `tailscale serve --https=443 off` to remove it.";
 		default:
 			return undefined;
 	}
@@ -56,7 +56,6 @@ interface ConnectMobileSetupProps {
 // (backend/internal/mobilebridge/netiface.go), or the MagicDNS host over 443
 // when secure pairing is active.
 export function ConnectMobileSetup({ mode, onModeChange, enabled, busy = false, secure, onSecureChange }: ConnectMobileSetupProps) {
-	const { t } = useTranslation();
 	const reasonText = reasonMessage(secure.reason, t);
 
 	// Margin-free on purpose: the parent settings page owns the spacing around this block.
@@ -65,23 +64,23 @@ export function ConnectMobileSetup({ mode, onModeChange, enabled, busy = false, 
 			<RadioGroup.Root
 				value={mode}
 				onValueChange={(value) => onModeChange(value as SetupMode)}
-				aria-label={t("mobile.connectionMethod")}
+				aria-label={"Connection method"}
 				className="settings-segment rounded-md"
 			>
 				<RadioGroup.Item value="lan" tabIndex={enabled ? 0 : -1} className="settings-segment-item rounded-md">
-					{t("mobile.lan")}
+					{"LAN"}
 				</RadioGroup.Item>
 				<RadioGroup.Item value="tailscale" tabIndex={enabled ? 0 : -1} className="settings-segment-item rounded-md">
-					{t("mobile.tailscale")}
+					{"Tailscale"}
 				</RadioGroup.Item>
 			</RadioGroup.Root>
 
 			{mode === "lan" ? (
 				<div className="mt-3 w-full px-(--size-settings-mobile-details-pad-x)">
 					<ol className="settings-mobile-steps">
-						<li>{t("mobile.lan.step1")}</li>
-						<li>{t("mobile.lan.step2")}</li>
-						<li>{t("mobile.lan.step3")}</li>
+						<li>{"Put your phone on the same Wi-Fi as this computer."}</li>
+						<li>{"Open Agent Orchestrator on your phone and tap Scan."}</li>
+						<li>{"Scan the code below — address and password fill in automatically."}</li>
 					</ol>
 				</div>
 			) : (
@@ -89,17 +88,17 @@ export function ConnectMobileSetup({ mode, onModeChange, enabled, busy = false, 
 					<div className="relative flex items-start justify-between gap-3 rounded-(--radius-settings-dialog-lg) border border-[var(--color-border-settings-input)] bg-[var(--color-bg-settings-input)] px-3.5 py-2.5">
 						<div className="flex min-w-0 flex-col gap-1 pr-2">
 							<span className="text-subtitle leading-(--leading-settings-mobile-title) text-settings-label">
-								{t("mobile.securePairing")}
+								{"Secure pairing (TLS)"}
 							</span>
 							<span className="text-caption leading-(--leading-settings-mobile-hint) text-settings-muted">
-								{t("mobile.securePairing.hint")}
+								{"Always on for Tailscale. iOS blocks unencrypted connections to Tailscale addresses; Android works either way."}
 							</span>
 						</div>
 						<Switch
 							checked={secure.enabled}
 							onCheckedChange={onSecureChange}
 							disabled={!enabled || busy}
-							aria-label={t("mobile.securePairing")}
+							aria-label={"Secure pairing (TLS)"}
 							tabIndex={enabled ? 0 : -1}
 							className={cn(
 								"h-(--size-settings-mobile-switch-h) w-(--size-settings-mobile-switch-w) shrink-0 transition-colors duration-300 ease-out",
@@ -113,7 +112,7 @@ export function ConnectMobileSetup({ mode, onModeChange, enabled, busy = false, 
 					</div>
 
 					<p className="mt-3 text-caption leading-(--leading-settings-mobile-hint) text-settings-muted">
-						{t("mobile.tailscale.iosHint")}
+						{"iPhone needs secure pairing turned on — iOS blocks unencrypted connections to Tailscale addresses. Android works either way."}
 					</p>
 
 					{secure.enabled && reasonText && (
@@ -121,13 +120,13 @@ export function ConnectMobileSetup({ mode, onModeChange, enabled, busy = false, 
 					)}
 
 					<ol className="settings-mobile-steps mt-3">
-						<li>{t("mobile.tailscale.step1")}</li>
+						<li>{"Install Tailscale here and on your phone, signed into the same account."}</li>
 						<li>
-							{t("mobile.tailscale.step2Lead")}{" "}
+							{"Run"}{" "}
 							<span className="tracking-settings-mono text-settings-label">tailscale ip -4</span>{" "}
-							{t("mobile.tailscale.step2Trail")}
+							{"here to get your 100.x address."}
 						</li>
-						<li>{t("mobile.tailscale.step3")}</li>
+						<li>{"Scan the code below — your Tailscale address and password fill in automatically."}</li>
 					</ol>
 				</div>
 			)}

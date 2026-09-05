@@ -97,7 +97,7 @@ export function useObservedAgentSwitchLifecycle({
 			retire(agentSwitch.id);
 			setTransientSuccess({
 				agentSwitch: { ...agentSwitch },
-				presentation: { ...presentation, values: { ...presentation.values } },
+				presentation: { ...presentation },
 				sessionId: stateRef.current.sessionId,
 				switchId: agentSwitch.id,
 				visit: stateRef.current.visit,

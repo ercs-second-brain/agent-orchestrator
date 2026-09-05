@@ -56,7 +56,6 @@ function SwitchTargetPicker({
 	onChange: (value: SwitchAgentHarness) => void;
 	value: SwitchAgentHarness;
 }) {
-	const { t } = useTranslation();
 	const options = ALL_SWITCH_AGENT_OPTIONS.map((option) => ({
 		...option,
 		disabled: !canSwitchAgentHarness(option.value) || option.value === currentHarness,
@@ -64,7 +63,7 @@ function SwitchTargetPicker({
 	const selected = options.find((option) => option.value === value);
 	return (
 		<SettingsOptionMenu
-			aria-label={t("switchAgent.targetLabel")}
+			aria-label={"Target agent"}
 			disabled={disabled}
 			menuAlign="start"
 			menuClassName="settings-agent-menu-surface"
@@ -83,12 +82,12 @@ function SwitchTargetPicker({
 						{!supported ? (
 							<span className="shrink-0 text-micro text-settings-muted">
 								<span className="sr-only">, </span>
-								{t("switchAgent.comingSoon")}
+								{"Coming soon"}
 							</span>
 						) : current ? (
 							<span className="shrink-0 text-micro text-settings-muted">
 								<span className="sr-only">, </span>
-								{t("switchAgent.current")}
+								{"Current"}
 							</span>
 						) : null}
 					</span>
@@ -117,7 +116,6 @@ type SwitchAgentDialogProps = {
 };
 
 export function SwitchAgentDialog({ agentSwitch, container, open, session, onOpenChange }: SwitchAgentDialogProps) {
-	const { t } = useTranslation();
 	const queryClient = useQueryClient();
 	const defaultTargetHarness: SwitchAgentHarness = session.provider === "claude-code" ? "codex" : "claude-code";
 	const [targetHarness, setTargetHarness] = useState<SwitchAgentHarness>(defaultTargetHarness);
@@ -139,23 +137,23 @@ export function SwitchAgentDialog({ agentSwitch, container, open, session, onOpe
 	const sourceLabel = durableSwitch
 		? agentLabel(durableSwitch.fromHarness)
 		: agentLabel(session.provider);
-	const recoveryTitleKey = sourceStopRecoveryRequired
-		? "switchAgent.sourceStopRecovery.title"
+	const recoveryTitle = sourceStopRecoveryRequired
+		? `${sourceLabel} status could not be confirmed`
 		: sourceRestoreRequired
-			? "switchAgent.sourceRecovery.title"
-			: "switchAgent.recovery.title";
-	const recoveryDescriptionKey = sourceStopRecoveryRequired
-		? "switchAgent.sourceStopRecovery.description"
+			? `${sourceLabel} could not be restored`
+			: "Target startup could not be confirmed";
+	const recoveryDescription = sourceStopRecoveryRequired
+		? `AO could not confirm whether ${sourceLabel} stopped. Check the session before continuing.`
 		: sourceRestoreRequired
-			? "switchAgent.sourceRecovery.description"
-			: "switchAgent.recovery.description";
-	const sourceRecoveryActionKey = sourceStopRecoveryRequired
+			? `The switch failed, and AO could not restore ${sourceLabel}. Terminal input remains locked until AO verifies one active owner.`
+			: "AO could not confirm whether the target agent started. Terminal input remains locked to prevent two agents from owning the session.";
+	const sourceRecoveryAction = sourceStopRecoveryRequired
 		? recoverAgentSwitch.isPending
-			? "switchAgent.sourceStopRecovery.checking"
-			: "switchAgent.sourceStopRecovery.action"
+			? `Checking ${sourceLabel}…`
+			: `Check ${sourceLabel}`
 		: recoverAgentSwitch.isPending
-			? "switchAgent.sourceRecovery.restoring"
-			: "switchAgent.sourceRecovery.action";
+			? `Restoring ${sourceLabel}…`
+			: `Restore ${sourceLabel}`;
 	const durableSwitching = Boolean(
 		durableSwitch && !isTerminalAgentSwitch(durableSwitch) && !recoveryRequired,
 	);
@@ -233,7 +231,7 @@ export function SwitchAgentDialog({ agentSwitch, container, open, session, onOpe
 			>
 					<DialogClose asChild>
 						<button
-							aria-label={t("switchAgent.close")}
+							aria-label={"Close switch agent dialog"}
 							className="settings-dialog-close-button settings-close-button"
 							disabled={operationPending}
 							type="button"
@@ -242,10 +240,10 @@ export function SwitchAgentDialog({ agentSwitch, container, open, session, onOpe
 						</button>
 					</DialogClose>
 					<DialogTitle className="settings-dialog-title px-4 pr-12 pt-3">
-						{t("switchAgent.title")}
+						{"Switch agent"}
 					</DialogTitle>
 					<DialogDescription className="px-4 pr-12 pt-0.5 text-caption leading-4 text-muted-foreground">
-						{t("switchAgent.description", { current: agentLabel(session.provider) })}
+						{`Move this session from ${agentLabel(session.provider)} to another agent. AO will preserve the current native session and hand off the work.`}
 					</DialogDescription>
 
 					{recoveryRequired ? (
@@ -254,10 +252,10 @@ export function SwitchAgentDialog({ agentSwitch, container, open, session, onOpe
 								<TriangleAlert aria-hidden="true" className="mt-0.5 size-5 shrink-0 text-warning" />
 								<div className="min-w-0">
 									<p className="font-mono text-control font-medium text-foreground">
-										{t(recoveryTitleKey, { source: sourceLabel })}
+										{recoveryTitle}
 									</p>
 									<p className="mt-1 text-caption leading-4 text-muted-foreground">
-										{t(recoveryDescriptionKey, { source: sourceLabel })}
+										{recoveryDescription}
 									</p>
 									{sourceRecoveryRequired && recoverAgentSwitch.error instanceof Error ? (
 										<p className="mt-2 text-caption leading-4 text-error" role="alert">
@@ -282,7 +280,7 @@ export function SwitchAgentDialog({ agentSwitch, container, open, session, onOpe
 									{recoverAgentSwitch.isPending ? (
 										<LoaderCircle aria-hidden="true" className="size-icon-sm animate-spin" />
 									) : null}
-									{t(sourceRecoveryActionKey, { source: sourceLabel })}
+									{sourceRecoveryAction}
 								</Button>
 							) : (
 								<Button
@@ -293,7 +291,7 @@ export function SwitchAgentDialog({ agentSwitch, container, open, session, onOpe
 									variant="outline"
 								>
 									{refreshingRecovery ? <LoaderCircle aria-hidden="true" className="size-icon-sm animate-spin" /> : null}
-									{t("settings.project.refresh")}
+									{"Refresh"}
 								</Button>
 							)}
 						</div>
@@ -313,7 +311,7 @@ export function SwitchAgentDialog({ agentSwitch, container, open, session, onOpe
 						) : null}
 
 						<div className="composer-toolbar p-0!">
-							<div className="composer-run-controls" role="group" aria-label={t("newTask.runsWith")}>
+							<div className="composer-run-controls" role="group" aria-label={"Runs with"}>
 								<div className="composer-toolbar-slot">
 									<SwitchTargetPicker
 										currentHarness={session.provider}
@@ -349,7 +347,7 @@ export function SwitchAgentDialog({ agentSwitch, container, open, session, onOpe
 								<TooltipTrigger asChild>
 									<span className="inline-flex">
 										<Button
-											aria-label={admissionPending ? t("newTask.starting") : t("switchAgent.confirm")}
+											aria-label={admissionPending ? "Starting..." : "Switch"}
 											className="size-(--size-settings-action-height)"
 											disabled={admissionPending}
 											size="none"
@@ -365,7 +363,7 @@ export function SwitchAgentDialog({ agentSwitch, container, open, session, onOpe
 									</span>
 								</TooltipTrigger>
 								<TooltipContent side="bottom">
-									{admissionPending ? t("newTask.starting") : t("switchAgent.confirm")}
+									{admissionPending ? "Starting..." : "Switch"}
 								</TooltipContent>
 							</Tooltip>
 						</div>

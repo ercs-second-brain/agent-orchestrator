@@ -27,16 +27,16 @@ const STORE_LINKS = [
 		key: "ios",
 		Icon: AppleIcon,
 		url: IOS_APP_STORE_URL,
-		labelKey: "mobile.ios",
-		ariaKey: "mobile.iosStoreAria",
+		labelKey: "iOS",
+		ariaKey: "Open Agent Orchestrator on the App Store",
 		testId: "ios-store-qr",
 	},
 	{
 		key: "android",
 		Icon: AndroidIcon,
 		url: ANDROID_PLAY_STORE_URL,
-		labelKey: "mobile.android",
-		ariaKey: "mobile.androidSignupAria",
+		labelKey: "Android",
+		ariaKey: "Open Agent Orchestrator on Google Play",
 		testId: "android-play-qr",
 	},
 ] as const;
@@ -216,7 +216,6 @@ export async function fetchMobileStatus(): Promise<MobileStatus> {
 }
 
 export function ConnectMobileContent({ active }: { active: boolean }) {
-	const { t } = useTranslation();
 	const queryClient = useQueryClient();
 	const [copied, setCopied] = useState(false);
 	const [optimisticEnabled, setOptimisticEnabled] = useState<boolean | null>(null);
@@ -227,8 +226,8 @@ export function ConnectMobileContent({ active }: { active: boolean }) {
 	const [mode, setMode] = useState<SetupMode>("lan");
 	/*
 	const modeOptions = [
-		{ value: "lan", label: t("mobile.lan") },
-		{ value: "tailscale", label: t("mobile.tailscale") },
+		{ value: "lan", label: "LAN" },
+		{ value: "tailscale", label: "Tailscale" },
 	] satisfies SettingsOption<SetupMode>[];
 	*/
 
@@ -400,12 +399,12 @@ export function ConnectMobileContent({ active }: { active: boolean }) {
 		null;
 
 	if (query.isLoading) {
-		return <p className="py-4 text-center text-xs text-settings-muted">{t("mobile.checkingStatus")}</p>;
+		return <p className="py-4 text-center text-xs text-settings-muted">{"Checking status…"}</p>;
 	}
 	if (query.isError) {
 		return (
 			<p className="py-4 text-center text-xs text-error">
-				{query.error instanceof Error ? query.error.message : t("mobile.loadFailed")}
+				{query.error instanceof Error ? query.error.message : "Failed to load mobile status."}
 			</p>
 		);
 	}
@@ -437,7 +436,7 @@ export function ConnectMobileContent({ active }: { active: boolean }) {
 
 	return (
 		<div className="flex flex-col gap-4">
-			<p className="text-xs leading-4 text-settings-muted">{t("mobile.description")}</p>
+			<p className="text-xs leading-4 text-settings-muted">{"Pair the Agent Orchestrator mobile app with this desktop."}</p>
 
 			<div className="flex flex-col gap-6 sm:flex-row sm:items-start">
 				{/* Left: the walkthrough. */}
@@ -452,7 +451,7 @@ export function ConnectMobileContent({ active }: { active: boolean }) {
 					{/*
 					<div className="flex flex-nowrap items-center gap-2">
 						<SettingsOptionMenu
-							aria-label={t("mobile.connectionMethod")}
+							aria-label={"Connection method"}
 							value={mode}
 							options={modeOptions}
 							onChange={setMode}
@@ -471,10 +470,10 @@ export function ConnectMobileContent({ active }: { active: boolean }) {
 						    both rather than making people pick a platform first — the
 						    choice only ever selected which of these two links to show. */}
 						<li>
-							{t("mobile.getApp.step1")}{" "}
+							{"Install Agent Orchestrator on your phone"}{" "}
 							{STORE_LINKS.map(({ key, Icon, url, labelKey, ariaKey, testId }, index) => (
 								<Fragment key={key}>
-									{index > 0 ? <span className="mx-1 text-settings-muted">{t("mobile.getApp.or")}</span> : null}
+									{index > 0 ? <span className="mx-1 text-settings-muted">{"or"}</span> : null}
 									<Tooltip>
 										<TooltipTrigger asChild>
 											<button
@@ -497,20 +496,20 @@ export function ConnectMobileContent({ active }: { active: boolean }) {
 								</Fragment>
 							))}
 						</li>
-						{mode === "tailscale" ? <li>{t("mobile.tailscale.step1")}</li> : null}
-						<li>{t("mobile.pairStep")}</li>
+						{mode === "tailscale" ? <li>{"Install Tailscale here and on your phone, signed into the same account."}</li> : null}
+						<li>{"Generate and scan the QR from the AO app"}</li>
 						{showRealQR && (
 							<>
 								<li data-testid="mobile-pairing-address">
-									{t("mobile.address")}:{" "}
+									{"Address"}:{" "}
 									<span className="tracking-settings-mono text-settings-label">{`${activeHost}:${activePort}`}</span>
 								</li>
 								<li>
-									{t("mobile.password")}:{" "}
+									{"Password"}:{" "}
 									<span className="tracking-settings-mono text-settings-label">{status.password}</span>
 									<button
 										type="button"
-										aria-label={copied ? t("mobile.passwordCopied") : t("mobile.copyPassword")}
+										aria-label={copied ? "Password copied" : "Copy password"}
 										className="ml-1.5 inline-flex size-5 items-center justify-center align-middle text-settings-muted transition-colors hover:text-settings-label"
 										onClick={() => void copyPassword()}
 									>
@@ -521,7 +520,7 @@ export function ConnectMobileContent({ active }: { active: boolean }) {
 											<span className="inline-flex">
 												<button
 													type="button"
-													aria-label={t("mobile.regenerate")}
+													aria-label={"Regenerate password"}
 													className="ml-0.5 inline-flex size-5 items-center justify-center align-middle text-settings-muted transition-colors hover:text-settings-label disabled:opacity-50"
 													disabled={busy}
 													onClick={() => {
@@ -537,7 +536,7 @@ export function ConnectMobileContent({ active }: { active: boolean }) {
 												</button>
 											</span>
 										</TooltipTrigger>
-										<TooltipContent side="bottom">{t("mobile.regenerate")}</TooltipContent>
+										<TooltipContent side="bottom">{"Regenerate password"}</TooltipContent>
 									</Tooltip>
 								</li>
 							</>
@@ -562,7 +561,7 @@ export function ConnectMobileContent({ active }: { active: boolean }) {
 						<div className="mt-3">
 							<p className="text-xs text-settings-muted" data-testid="mobile-remote-unavailable">
 								{t(
-									"mobile.remoteAccessUnavailable",
+									"Works on this network only — cloudflared isn't installed, so this machine can't be reached from elsewhere.",
 									"Works on this network only — cloudflared isn't installed, so this machine can't be reached from elsewhere.",
 								)}
 							</p>
@@ -590,7 +589,7 @@ export function ConnectMobileContent({ active }: { active: boolean }) {
 								<PairingQr
 									value={generatedQrValue}
 									size={QR_CODE_SIZE}
-									caption={t("mobile.tunnelStarting")}
+									caption={"Preparing remote access — 30-60 seconds"}
 								/>
 							)}
 						</div>
@@ -606,7 +605,7 @@ export function ConnectMobileContent({ active }: { active: boolean }) {
 								{enabled && !activeHost ? (
 									<div className="flex size-full items-center justify-center bg-(--color-bg-settings-input) p-4">
 										<p className="text-center text-caption leading-(--leading-settings-mobile-hint) text-settings-muted">
-											{mode === "tailscale" ? t("mobile.noTailscaleHost") : t("mobile.noPairingHost")}
+											{mode === "tailscale" ? "Tailscale isn't running on this computer. Install it and sign in, then reopen this window." : "No network address found for this computer. Connect to Wi-Fi or Ethernet, or set up Tailscale."}
 										</p>
 									</div>
 								) : (
@@ -627,7 +626,7 @@ export function ConnectMobileContent({ active }: { active: boolean }) {
 												onClick={startBridge}
 												disabled={busy || enabled}
 											>
-												{t("mobile.generate")}
+												{"Generate"}
 											</Button>
 										</div>
 									</>
@@ -647,7 +646,7 @@ export function ConnectMobileContent({ active }: { active: boolean }) {
 								disable.mutate();
 							}}
 						>
-							{t("mobile.disable", "Turn off mobile connection")}
+							{"Turn off mobile connection"}
 						</Button>
 					)}
 					</div>

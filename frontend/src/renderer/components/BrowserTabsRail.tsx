@@ -81,7 +81,6 @@ export const BrowserTabsRail = forwardRef<BrowserTabsRailHandle, BrowserTabsRail
 	},
 	ref,
 ) {
-	const { t } = useTranslation();
 	const [flyoutOpen, setFlyoutOpen] = useState(false);
 	const openTimerRef = useRef<number | null>(null);
 	const closeTimerRef = useRef<number | null>(null);
@@ -233,7 +232,7 @@ export const BrowserTabsRail = forwardRef<BrowserTabsRailHandle, BrowserTabsRail
 
 	const onlyTab = tabs.length === 1;
 	const tabIds = tabs.map((tab) => tab.id);
-	const closeTitle = t("browser.onlyTab");
+	const closeTitle = "The only tab cannot be closed";
 
 	return (
 		<div
@@ -267,7 +266,7 @@ export const BrowserTabsRail = forwardRef<BrowserTabsRailHandle, BrowserTabsRail
 			    sync, so it's free to live here instead, full-width like a tab row. */}
 			{expanded ? (
 				<button
-					aria-label={t("browser.openNewTab")}
+					aria-label={"Open new tab"}
 					className={cn(
 						"flex h-8 w-full shrink-0 items-center gap-1.5 border-b border-border p-1.5 text-left text-sm transition-colors",
 						"text-muted-foreground hover:bg-interactive-hover hover:text-foreground",
@@ -277,13 +276,13 @@ export const BrowserTabsRail = forwardRef<BrowserTabsRailHandle, BrowserTabsRail
 					type="button"
 				>
 					<Plus aria-hidden="true" className="size-icon-base shrink-0" />
-					<span className="truncate">{t("browser.newTab")}</span>
+					<span className="truncate">{"New tab"}</span>
 				</button>
 			) : pinned ? (
 				<Tooltip>
 					<TooltipTrigger asChild>
 						<button
-							aria-label={t("browser.unpinTabs")}
+							aria-label={"Unpin tabs list"}
 							className={cn(
 								"flex h-8 w-full shrink-0 items-center justify-center border-b border-border p-1.5 transition-colors",
 								"text-muted-foreground hover:bg-interactive-hover hover:text-foreground",
@@ -294,11 +293,11 @@ export const BrowserTabsRail = forwardRef<BrowserTabsRailHandle, BrowserTabsRail
 							<PinOff aria-hidden="true" className="size-icon-base" />
 						</button>
 					</TooltipTrigger>
-					<TooltipContent data-browser-native-overlay="true" side="bottom">{t("browser.unpinTabs")}</TooltipContent>
+					<TooltipContent data-browser-native-overlay="true" side="bottom">{"Unpin tabs list"}</TooltipContent>
 				</Tooltip>
 			) : null}
 			<nav
-				aria-label={t("browser.tabsAria", { count: tabs.length })}
+				aria-label={`Browser tabs (${tabs.length})`}
 				className={cn(
 					"min-h-0 flex-1 overflow-y-auto",
 					pinned && !expanded && "w-15 -translate-x-7",
@@ -397,7 +396,7 @@ export const BrowserTabsRail = forwardRef<BrowserTabsRailHandle, BrowserTabsRail
 							) : (
 								<Pin aria-hidden="true" className="size-icon-base shrink-0" />
 							)}
-							<span className="truncate">{pinned ? t("browser.tabsPinned") : t("browser.pinTabs")}</span>
+							<span className="truncate">{pinned ? "Pinned" : "Pin tabs list"}</span>
 						</button>
 						{tabs.map((tab) => (
 							<ExpandedTabRow
@@ -453,16 +452,15 @@ function ClosedTabsSection({
 	closedTabs: ClosedBrowserTab[];
 	onReopen: (tabId: string) => void;
 }) {
-	const { t } = useTranslation();
 	if (closedTabs.length === 0) return null;
 	return (
 		<div className="border-t border-border">
 			<div className="flex h-6 shrink-0 items-center px-1.5 font-mono text-[10px] font-semibold uppercase tracking-wide text-passive">
-				{t("browser.recentlyClosed")}
+				{"Recently closed"}
 			</div>
 			{closedTabs.map((tab) => {
 				const label = browserTabLabel(tab.title, tab.url);
-				const reopenLabel = t("browser.reopenTab", { title: label.title });
+				const reopenLabel = `Reopen ${label.title}`;
 				return (
 					<button
 						aria-label={reopenLabel}
@@ -490,11 +488,10 @@ function ClosedTabsSection({
 }
 
 function IconTabRow({ active, chrome, closeTitle, onClose, onSelect, onlyTab, tab }: TabRowProps) {
-	const { t } = useTranslation();
 	const [hovered, setHovered] = useState(false);
 	const [focused, setFocused] = useState(false);
 	const label = browserTabLabel(tab.title, tab.url);
-	const closeLabel = t("browser.closeTab", { title: label.title });
+	const closeLabel = `Close tab ${label.title}`;
 	const closeVisible = hovered || focused;
 	return (
 		<div
@@ -552,9 +549,8 @@ function IconTabRow({ active, chrome, closeTitle, onClose, onSelect, onlyTab, ta
 }
 
 function ExpandedTabRow({ active, chrome, closeTitle, onClose, onSelect, onlyTab, tab }: TabRowProps) {
-	const { t } = useTranslation();
 	const label = browserTabLabel(tab.title, tab.url);
-	const closeLabel = t("browser.closeTab", { title: label.title });
+	const closeLabel = `Close tab ${label.title}`;
 	return (
 		<div
 			className={cn(

@@ -6,19 +6,19 @@ import {
 } from "../../shared/shortcuts";
 import { useTranslation } from "react-i18next";
 import type { TFunction } from "i18next";
-import { shortcutCategoryLabelKeys, shortcutLabelKeys } from "../i18n/key-maps";
+import { shortcutCategoryLabels, shortcutLabels } from "../lib/shortcut-labels";
 import type { AppShortcutId, ShortcutCategory } from "../../shared/shortcuts";
 import { useCommandPaletteEnabled } from "../hooks/useCommandPaletteEnabled";
 import { useKeybindingsStore } from "../stores/keybindings-store";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "./ui/dialog";
 import { Button } from "./ui/button";
 
-function shortcutLabel(id: AppShortcutId, t: TFunction): string {
-	return t(shortcutLabelKeys[id]);
+function shortcutLabel(id: AppShortcutId): string {
+	return shortcutLabels[id];
 }
 
-function shortcutCategoryLabel(category: ShortcutCategory, t: TFunction): string {
-	return t(shortcutCategoryLabelKeys[category]);
+function shortcutCategoryLabel(category: ShortcutCategory): string {
+	return shortcutCategoryLabels[category];
 }
 
 
@@ -42,7 +42,6 @@ export function KeyboardShortcutsDialog({
 	onCustomize,
 	isMac = isMacPlatform(),
 }: KeyboardShortcutsDialogProps) {
-	const { t } = useTranslation();
 	const isCommandPaletteEnabled = useCommandPaletteEnabled();
 	const overrides = useKeybindingsStore((state) => state.overrides);
 	const availableShortcuts = APP_SHORTCUTS.filter(
@@ -53,9 +52,9 @@ export function KeyboardShortcutsDialog({
 		<Dialog open={open} onOpenChange={onOpenChange}>
 			<DialogContent className="max-h-[min(680px,calc(100svh-32px))] max-w-xl gap-0 overflow-hidden border-[var(--color-border-settings-dialog)] bg-popover p-0 text-popover-foreground shadow-[var(--shadow-settings-dialog)] sm:rounded-(--radius-settings-dialog-lg)">
 				<DialogHeader className="border-b border-[var(--color-border-settings-dialog-header)] p-(--size-modal-padding)">
-					<DialogTitle className="settings-dialog-title">{t("shortcut.dialogTitle")}</DialogTitle>
+					<DialogTitle className="settings-dialog-title">{"Keyboard shortcuts"}</DialogTitle>
 					<DialogDescription className="text-xs text-settings-muted">
-						{t("shortcut.dialogDescription")}
+						{"Move around Agent Orchestrator without leaving the keyboard."}
 					</DialogDescription>
 				</DialogHeader>
 
@@ -64,14 +63,14 @@ export function KeyboardShortcutsDialog({
 						const shortcuts = availableShortcuts.filter((shortcut) => shortcut.category === category);
 						if (shortcuts.length === 0) return null;
 						return (
-							<section className="border-b border-border py-4 last:border-b-0" key={shortcutCategoryLabel(category, t)}>
+							<section className="border-b border-border py-4 last:border-b-0" key={shortcutCategoryLabel(category)}>
 								<h2 className="mb-2 font-mono text-micro font-semibold uppercase tracking-wide-lg text-passive">
-									{shortcutCategoryLabel(category, t)}
+									{shortcutCategoryLabel(category)}
 								</h2>
 								<div className="flex flex-col">
 									{shortcuts.map((shortcut) => (
 										<div className="flex min-h-11 items-center justify-between gap-5 py-1.5" key={shortcut.id}>
-											<p className="min-w-0 text-control font-medium text-foreground">{shortcutLabel(shortcut.id, t)}</p>
+											<p className="min-w-0 text-control font-medium text-foreground">{shortcutLabel(shortcut.id)}</p>
 											<div className="flex shrink-0 flex-col items-end gap-1">
 												{effectiveShortcutBindings(shortcut.id, isMac, overrides).map((binding, bindingIndex) => {
 													const keys = shortcutBindingKeys(binding, isMac);
@@ -103,7 +102,7 @@ export function KeyboardShortcutsDialog({
 				{onCustomize ? (
 					<div className="flex justify-end border-t border-[var(--color-border-settings-dialog-header)] p-(--size-modal-padding)">
 						<Button type="button" variant="footer-primary" onClick={onCustomize}>
-							{t("shortcut.customize")}
+							{"Customize"}
 						</Button>
 					</div>
 				) : null}

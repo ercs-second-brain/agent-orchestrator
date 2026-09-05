@@ -70,30 +70,30 @@ function projectSheetError(error: string, action: "create" | "clone"): SheetErro
 	switch (code) {
 		case "PROJECT_PATH_NOT_REPO_ROOT":
 			return {
-				title: appI18n.t("createProject.error.notRepoRootTitle"),
-				message: appI18n.t("createProject.error.notRepoRootBody"),
+				title: "Select the repository root",
+				message: "This folder is inside another Git repository. Choose the top-level folder and try again.",
 				tone: "warning",
 			};
 		case "PROJECT_BARE_REPOSITORY":
 			return {
-				title: appI18n.t("createProject.error.bareTitle"),
-				message: appI18n.t("createProject.error.bareBody"),
+				title: "Choose a normal checkout",
+				message: "AO needs a regular working folder, not a bare Git repository.",
 				tone: "warning",
 			};
 		case "UNSUPPORTED_GIT_REPO":
 			return {
-				title: appI18n.t("createProject.error.unsupportedTitle"),
-				message: appI18n.t("createProject.error.unsupportedBody"),
+				title: "Choose a valid Git folder",
+				message: "AO could not read the Git metadata here. Repair the repository or choose a plain folder.",
 				tone: "warning",
 			};
 		default:
 			return {
 				title: error.toLowerCase().startsWith("setup failed:")
-					? appI18n.t("createProject.error.setupFailedTitle")
+					? "Repository setup failed"
 					: action === "clone"
-						? appI18n.t("createProject.cloneFailedTitle")
-						: appI18n.t("createProject.error.createFailedTitle"),
-				message: message || appI18n.t("createProject.error.tryAgain"),
+						? "Could not clone repository"
+						: "Could not create project",
+				message: message || "Try again, or choose a different folder.",
 				tone: "error",
 			};
 	}
@@ -113,7 +113,6 @@ export function CreateProjectAgentSheet({
 	repositorySetupNeeded = false,
 	repositorySetupWarning = null,
 }: CreateProjectAgentSheetProps) {
-	const { t } = useTranslation();
 	const [isExiting, setIsExiting] = useState(false);
 	const contentOpen = open || isExiting;
 	const displayedAction = useRef(action);
@@ -139,7 +138,7 @@ export function CreateProjectAgentSheet({
 	const agentsError = agentsQuery.isError
 		? agentsQuery.error instanceof Error
 			? agentsQuery.error.message
-			: t("createProject.couldNotLoadAgents")
+			: "Could not load agent catalog."
 		: null;
 	const displayError = agentsError;
 	const [workerAgent, setWorkerAgent] = useState("");
@@ -207,7 +206,7 @@ export function CreateProjectAgentSheet({
 						Description={Dialog.Description}
 						Title={Dialog.Title}
 						closeIcon={<X className="size-icon-base" aria-hidden="true" />}
-						closeLabel={t("createProject.closeAgents")}
+						closeLabel={"Close project agents dialog"}
 						disabled={isBusy}
 						leadingAction={
 							displayedOnBack.current ? (
@@ -215,7 +214,7 @@ export function CreateProjectAgentSheet({
 									type="button"
 									variant="outline"
 									size="icon"
-									aria-label={t("createProject.cloneBackToDetails")}
+									aria-label={"Back to clone details"}
 									disabled={isBusy}
 								onClick={displayedOnBack.current}
 								>
@@ -227,8 +226,8 @@ export function CreateProjectAgentSheet({
 						showPath={false}
 						title={
 							kind === "workspace"
-								? t("createProject.setupWorkspace")
-								: t("createProject.setupProject")
+								? "Set up workspace"
+								: "Set up project"
 						}
 					/>
 					<ProjectSetupFormView
@@ -236,8 +235,8 @@ export function CreateProjectAgentSheet({
 							worker: (
 								<RequiredAgentField
 									id="newProjectWorkerAgent"
-									label={t("createProject.workerAgent")}
-									placeholder={t("createProject.selectWorker")}
+									label={"Worker agent"}
+									placeholder={"Select worker agent"}
 									value={workerAgent}
 									agents={agentOptions}
 									disabled={isLoadingAgents}
@@ -253,8 +252,8 @@ export function CreateProjectAgentSheet({
 							orchestrator: (
 								<RequiredAgentField
 									id="newProjectOrchestratorAgent"
-									label={t("createProject.orchestratorAgent")}
-									placeholder={t("createProject.selectOrchestrator")}
+									label={"Orchestrator agent"}
+									placeholder={"Select orchestrator agent"}
 									value={orchestratorAgent}
 									agents={agentOptions}
 									disabled={isLoadingAgents}
@@ -271,10 +270,10 @@ export function CreateProjectAgentSheet({
 						agents={{
 							error: displayError,
 							loading: isLoadingAgents,
-							loadingMessage: t("createProject.loadingAgents"),
+							loadingMessage: "Loading agents...",
 							onRetry: () => void agentsQuery.refetch(),
 							retrying: agentsQuery.isFetching,
-							retryLabel: t("createProject.retry"),
+							retryLabel: "Retry",
 						}}
 						alert={
 							sheetError
@@ -310,21 +309,21 @@ export function CreateProjectAgentSheet({
 						}
 						setupNotice={
 							repositorySetupNeeded
-								? { message: t("createProject.gitSetupNotice"), warning: repositorySetupWarning }
+								? { message: "If this folder needs Git setup, AO will initialize it and create the first commit before starting.", warning: repositorySetupWarning }
 								: null
 						}
 						submitLabel={
 							isInitializing
-								? t("createProject.settingUp")
+								? "Setting up..."
 								: isCreating
 									? action === "clone"
-										? t("createProject.cloning")
-										: t("createProject.creating")
+										? "Cloning..."
+										: "Creating..."
 									: action === "clone"
-										? t("createProject.clone")
+										? "Clone"
 										: kind === "workspace"
-											? t("createProject.createWorkspaceAndStart")
-											: t("createProject.createAndStart")
+											? "Create workspace and start"
+											: "Create and start"
 						}
 						submitClassName="h-control-form rounded-md bg-primary px-3 text-sm text-primary-foreground hover:bg-primary/80"
 					/>

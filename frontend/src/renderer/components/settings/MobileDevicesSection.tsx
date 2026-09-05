@@ -45,7 +45,6 @@ export async function fetchDevices(): Promise<MobileDevice[]> {
 // now, a per-device mute switch, and a remove action. Live status comes from the
 // daemon's presence tracker, which is fed by each phone's own REST poll.
 export function MobileDevicesSection() {
-	const { t } = useTranslation();
 	const queryClient = useQueryClient();
 	const [confirmingRemoval, setConfirmingRemoval] = useState<string | null>(null);
 
@@ -112,24 +111,24 @@ export function MobileDevicesSection() {
 
 	return (
 		<section className="mt-6">
-			<h3 className="text-sm font-medium text-settings-label">{t("mobile.devices.title")}</h3>
+			<h3 className="text-sm font-medium text-settings-label">{"Connected devices"}</h3>
 
 			{query.isLoading ? (
 				<div className="mt-3 flex items-center gap-2 text-caption text-settings-muted">
-					<Loader2 className="size-3 animate-spin" /> {t("mobile.devices.loading")}
+					<Loader2 className="size-3 animate-spin" /> {"Loading devices…"}
 				</div>
 			) : registryUnavailable ? (
-				<p className="mt-3 text-caption text-error">{t("mobile.devices.registryUnavailable")}</p>
+				<p className="mt-3 text-caption text-error">{"Device registry unavailable — AO could not read your saved devices."}</p>
 			) : queryError && !hasData ? (
 				<p className="mt-3 text-caption text-error">{queryError.message}</p>
 			) : devices.length === 0 ? (
-				<p className="mt-3 text-caption text-settings-muted">{t("mobile.devices.empty")}</p>
+				<p className="mt-3 text-caption text-settings-muted">{"No devices paired yet."}</p>
 			) : (
 				<>
 					{queryError && <p className="mt-3 text-caption text-error">{queryError.message}</p>}
 					<ul className="mt-2 divide-y divide-[var(--color-border-settings-input)]">
 						{sortedDevices.map((device) => {
-							const name = device.deviceName || t("mobile.devices.unnamed");
+							const name = device.deviceName || "Unnamed device";
 							return (
 								<li
 									key={device.installId}
@@ -140,12 +139,12 @@ export function MobileDevicesSection() {
 										<div className="truncate text-sm">{name}</div>
 									</div>
 
-									<div className="flex items-center gap-2" title={t("mobile.devices.notificationsFor", { name })}>
+									<div className="flex items-center gap-2" title={`Notifications for ${name}`}>
 										<Bell className="size-4 text-settings-muted" aria-hidden="true" data-testid="bell" />
 										<Switch
 											checked={device.notificationsEnabled && !device.muted}
 											disabled={mute.isPending || !device.notificationsEnabled}
-											aria-label={t("mobile.devices.notificationsFor", { name })}
+											aria-label={`Notifications for ${name}`}
 											onCheckedChange={(next) =>
 												mute.mutate({ installId: device.installId, muted: !next })
 											}
@@ -159,12 +158,12 @@ export function MobileDevicesSection() {
 											disabled={remove.isPending}
 											onClick={() => remove.mutate(device.installId)}
 										>
-											{t("mobile.devices.confirmRemove")}
+											{"Confirm remove"}
 										</button>
 									) : (
 										<button
 											type="button"
-											aria-label={t("mobile.devices.removeAria", { name })}
+											aria-label={`Remove ${name}`}
 											className="grid size-10 place-items-center rounded-md text-settings-muted transition-colors hover:bg-interactive-hover hover:text-settings-label focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
 											onClick={() => setConfirmingRemoval(device.installId)}
 										>

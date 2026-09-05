@@ -174,7 +174,7 @@ export function useBrowserAnnotationQueue({
 
 		void (async () => {
 			let sent = false;
-			let failureMessage = appI18n.t("browser.unableSendAnnotation");
+			let failureMessage = "Unable to send annotation.";
 			try {
 				const message = formatBrowserAnnotationMessage(payload);
 				const { error } = await apiClient.POST("/api/v1/sessions/{sessionId}/send", {
@@ -182,12 +182,12 @@ export function useBrowserAnnotationQueue({
 					body: { message, attachment: payload.snapshot },
 				});
 				if (error) {
-					failureMessage = apiErrorMessage(error, appI18n.t("browser.unableSendAnnotation"));
+					failureMessage = apiErrorMessage(error, "Unable to send annotation.");
 					return;
 				}
 				sent = true;
 			} catch (error) {
-				failureMessage = apiErrorMessage(error, appI18n.t("browser.unableSendAnnotation"));
+				failureMessage = apiErrorMessage(error, "Unable to send annotation.");
 			} finally {
 				if (sendGeneration !== generationRef.current || sendSessionId !== sessionIdRef.current) return;
 				annotationSendingRef.current = false;
@@ -314,7 +314,6 @@ export function BrowserPanelView({
 	browserView,
 	annotationQueue,
 }: BrowserPanelProps & { annotationQueue: BrowserAnnotationQueueModel; browserView: BrowserViewModel }) {
-	const { t } = useTranslation();
 	const {
 		viewId,
 		navState,
@@ -550,7 +549,7 @@ export function BrowserPanelView({
 				cancelPicking();
 			}
 		} catch (error) {
-			failPicking(error instanceof Error ? error.message : appI18n.t("browser.unableStartAnnotation"));
+			failPicking(error instanceof Error ? error.message : "Unable to start annotation.");
 		}
 	};
 
@@ -585,15 +584,15 @@ export function BrowserPanelView({
 
 	const annotationStatusLabel =
 		status === "picking"
-			? t("browser.pickElement")
+			? "Pick element"
 			: status === "queued"
 				? queuedCount > 1
-					? t("browser.queuedCount", { count: queuedCount })
-					: t("browser.queued")
+					? `Queued (${queuedCount})`
+					: "Queued"
 				: status === "sending"
-					? t("browser.sending")
+					? "Sending"
 					: status === "sent"
-						? t("browser.sent")
+						? "Sent"
 						: status === "error"
 							? error
 							: "";
@@ -633,7 +632,7 @@ export function BrowserPanelView({
 					>
 						<SortableContext items={tabs.map((tab) => tab.id)} strategy={horizontalListSortingStrategy}>
 							<div
-								aria-label={t("browser.tabs")}
+								aria-label={"Browser tabs"}
 								className="browser-panel__tab-strip"
 								onKeyDown={topTabDragActive ? undefined : handleTabListKeyDown}
 								role="tablist"
@@ -652,10 +651,10 @@ export function BrowserPanelView({
 						</SortableContext>
 					</DndContext>
 					<button
-						aria-label={t("browser.openNewTab")}
+						aria-label={"Open new tab"}
 						className="browser-panel__tab-new"
 						onClick={() => void handleOpenTab()}
-						title={t("browser.openNewTab")}
+						title={"Open new tab"}
 						type="button"
 					>
 						<Plus aria-hidden="true" className="size-icon-base" />
@@ -674,7 +673,7 @@ export function BrowserPanelView({
 					<TooltipTrigger asChild>
 						<span className="browser-panel__navigation-control inline-flex">
 							<Button
-								aria-label={t("browser.back")}
+								aria-label={"Back"}
 								className="browser-panel__navigation-btn"
 								disabled={!navState.canGoBack}
 								onClick={() => void goBack()}
@@ -686,13 +685,13 @@ export function BrowserPanelView({
 							</Button>
 						</span>
 					</TooltipTrigger>
-					<TooltipContent data-browser-native-overlay="true" side="bottom">{t("browser.back")}</TooltipContent>
+					<TooltipContent data-browser-native-overlay="true" side="bottom">{"Back"}</TooltipContent>
 				</Tooltip>
 				<Tooltip>
 					<TooltipTrigger asChild>
 						<span className="browser-panel__navigation-control inline-flex">
 							<Button
-								aria-label={t("browser.forward")}
+								aria-label={"Forward"}
 								className="browser-panel__navigation-btn"
 								disabled={!navState.canGoForward}
 								onClick={() => void goForward()}
@@ -704,12 +703,12 @@ export function BrowserPanelView({
 							</Button>
 						</span>
 					</TooltipTrigger>
-					<TooltipContent data-browser-native-overlay="true" side="bottom">{t("browser.forward")}</TooltipContent>
+					<TooltipContent data-browser-native-overlay="true" side="bottom">{"Forward"}</TooltipContent>
 				</Tooltip>
 				<Tooltip>
 					<TooltipTrigger asChild>
 						<Button
-							aria-label={navState.isLoading ? t("browser.stop") : t("browser.reload")}
+							aria-label={navState.isLoading ? "Stop" : "Reload"}
 							className="browser-panel__navigation-btn"
 							onClick={() => void (navState.isLoading ? stop() : reload())}
 							size="icon-sm"
@@ -723,7 +722,7 @@ export function BrowserPanelView({
 							)}
 						</Button>
 					</TooltipTrigger>
-					<TooltipContent data-browser-native-overlay="true" side="bottom">{navState.isLoading ? t("browser.stop") : t("browser.reload")}</TooltipContent>
+					<TooltipContent data-browser-native-overlay="true" side="bottom">{navState.isLoading ? "Stop" : "Reload"}</TooltipContent>
 				</Tooltip>
 				<Tooltip>
 					<TooltipTrigger asChild>
@@ -731,10 +730,10 @@ export function BrowserPanelView({
 							<Button
 								aria-label={
 									canRetryAnnotation
-										? t("browser.retryAnnotation")
+										? "Retry annotation"
 										: annotationMode || status === "picking"
-											? t("browser.cancelAnnotation")
-											: t("browser.annotate")
+											? "Cancel annotation"
+											: "Annotate page"
 								}
 								aria-pressed={annotationMode || status === "picking"}
 								className="browser-panel__annotate-btn relative"
@@ -760,7 +759,7 @@ export function BrowserPanelView({
 						</span>
 					</TooltipTrigger>
 					<TooltipContent data-browser-native-overlay="true" side="bottom">
-						{annotationStatusLabel || agentStatusLabel || (canRetryAnnotation ? t("browser.retryAnnotation") : t("browser.annotate"))}
+						{annotationStatusLabel || agentStatusLabel || (canRetryAnnotation ? "Retry annotation" : "Annotate page")}
 					</TooltipContent>
 				</Tooltip>
 				{annotationStatusLabel ? (
@@ -774,13 +773,13 @@ export function BrowserPanelView({
 				) : null}
 					<div className="browser-panel__url-wrap relative min-w-0 flex-1">
 					<Input
-						aria-label={t("browser.url")}
+						aria-label={"Browser URL"}
 						className="browser-panel__url-input h-browser-url font-mono text-xs"
 						list={historySuggestions.length > 0 ? historyListId : undefined}
 						onBlur={endUrlEditing}
 						onChange={(event) => handleURLChange(event.target.value)}
 						onFocus={beginUrlEditing}
-						placeholder={t("browser.urlPlaceholder")}
+						placeholder={"localhost:5173"}
 						ref={urlInputRef}
 						value={urlEditing || poppedOut ? urlInput : compactBrowserAddress(navState.url)}
 					/>
@@ -803,7 +802,7 @@ export function BrowserPanelView({
 						<TooltipTrigger asChild>
 							<DropdownMenuTrigger asChild>
 								<Button
-									aria-label={t("browser.devicePreset")}
+									aria-label={"Device preset"}
 									aria-pressed={devicePreset !== null}
 									className={cn(
 										devicePreset !== null &&
@@ -821,7 +820,7 @@ export function BrowserPanelView({
 								</Button>
 							</DropdownMenuTrigger>
 						</TooltipTrigger>
-						<TooltipContent data-browser-native-overlay="true" side="bottom">{t("browser.devicePreset")}</TooltipContent>
+						<TooltipContent data-browser-native-overlay="true" side="bottom">{"Device preset"}</TooltipContent>
 					</Tooltip>
 					{/* Opens directly over the live page (the toolbar sits right above the
 					    native browser view), so without this it renders behind the native
@@ -835,7 +834,7 @@ export function BrowserPanelView({
 							<span className="flex size-4 shrink-0 items-center justify-center">
 								{devicePreset === null ? <Check aria-hidden="true" className="text-accent" /> : null}
 							</span>
-							{t("browser.deviceFit")}
+							{"Fit panel"}
 						</DropdownMenuItem>
 						<div className="my-1 h-px bg-border" role="separator" />
 						<div className="flex max-h-72 flex-col gap-px overflow-y-auto">
@@ -864,7 +863,7 @@ export function BrowserPanelView({
 							<span className="flex size-4 shrink-0 items-center justify-center">
 								{devicePreset === CUSTOM_DEVICE_PRESET_ID ? <Check aria-hidden="true" className="text-accent" /> : null}
 							</span>
-							<span className="flex-1">{t("browser.deviceCustomWidth")}</span>
+							<span className="flex-1">{"Custom width"}</span>
 							<Input
 								className="h-6 w-16 shrink-0 px-1.5 text-right font-mono text-caption"
 								inputMode="numeric"
@@ -885,7 +884,7 @@ export function BrowserPanelView({
 					<TooltipTrigger asChild>
 						<span className="inline-flex">
 							<Button
-								aria-label={t(devtoolsState.open ? "browser.closeDevTools" : "browser.openDevTools")}
+								aria-label={(devtoolsState.open ? "Close DevTools" : "Open DevTools")}
 								aria-pressed={devtoolsState.open}
 								className={cn(
 									devtoolsState.open &&
@@ -902,13 +901,13 @@ export function BrowserPanelView({
 						</span>
 					</TooltipTrigger>
 					<TooltipContent data-browser-native-overlay="true" side="bottom">
-						{t(devtoolsState.open ? "browser.closeDevTools" : "browser.openDevTools")}
+						{(devtoolsState.open ? "Close DevTools" : "Open DevTools")}
 					</TooltipContent>
 				</Tooltip>
 				<Tooltip>
 					<TooltipTrigger asChild>
 						<Button
-							aria-label={poppedOut ? t("browser.returnToPanel") : t("browser.popOut")}
+							aria-label={poppedOut ? "Return to panel" : "Pop out"}
 							onClick={() => onTogglePopOut(!poppedOut, panelRef.current?.getBoundingClientRect())}
 							size="icon-sm"
 							type="button"
@@ -921,7 +920,7 @@ export function BrowserPanelView({
 							)}
 						</Button>
 					</TooltipTrigger>
-					<TooltipContent data-browser-native-overlay="true" side="bottom">{poppedOut ? t("browser.returnToPanel") : t("browser.popOut")}</TooltipContent>
+					<TooltipContent data-browser-native-overlay="true" side="bottom">{poppedOut ? "Return to panel" : "Pop out"}</TooltipContent>
 				</Tooltip>
 				{/* Docked mode has no reserved rail column by default (see
 				    BrowserTabsRail.tsx) — this trigger is the only way to reach the tab
@@ -933,14 +932,14 @@ export function BrowserPanelView({
 				{showTabsTrigger ? (
 					<div className="browser-panel__toolbar-tabs-trigger flex w-8 shrink-0 items-center justify-center self-stretch border-l border-border">
 						<Button
-							aria-label={t("browser.tabsTitle", { count: tabs.length })}
+							aria-label={(tabs.length) === 1 ? `${tabs.length} browser tab` : `${tabs.length} browser tabs`}
 							className="relative"
 							onBlur={() => railRef.current?.closeFlyout()}
 							onFocus={() => railRef.current?.openFlyout(true)}
 							onPointerEnter={() => railRef.current?.openFlyout()}
 							onPointerLeave={() => railRef.current?.closeFlyout()}
 							size="icon-sm"
-							title={t("browser.tabsTitle", { count: tabs.length })}
+							title={(tabs.length) === 1 ? `${tabs.length} browser tab` : `${tabs.length} browser tabs`}
 							type="button"
 							variant="ghost"
 						>
@@ -963,7 +962,7 @@ export function BrowserPanelView({
 						<Tooltip>
 							<TooltipTrigger asChild>
 								<Button
-									aria-label={t("browser.openNewTab")}
+									aria-label={"Open new tab"}
 									onClick={() => void handleOpenTab()}
 									size="icon-sm"
 									type="button"
@@ -972,7 +971,7 @@ export function BrowserPanelView({
 									<Plus aria-hidden="true" className="size-icon-base" />
 								</Button>
 							</TooltipTrigger>
-							<TooltipContent data-browser-native-overlay="true" side="bottom">{t("browser.openNewTab")}</TooltipContent>
+							<TooltipContent data-browser-native-overlay="true" side="bottom">{"Open new tab"}</TooltipContent>
 						</Tooltip>
 					</div>
 				) : null}
@@ -1012,7 +1011,7 @@ export function BrowserPanelView({
 					{showStaticPreview ? <StaticPreview url={navState.url} /> : null}
 					{navState.url === "" ? (
 						<div className="pointer-events-none absolute inset-0 grid place-items-center p-5 text-center font-mono text-xs text-passive">
-							<p>{t("browser.emptyUrl")}</p>
+							<p>{"Enter a URL or click one in the terminal."}</p>
 						</div>
 					) : null}
 					{navState.error ? (
@@ -1061,10 +1060,9 @@ const SortableBrowserTopTab = memo(function SortableBrowserTopTab({
 	onSelect: (tabId: string) => void;
 	onClose: (tabId: string) => void;
 }) {
-	const { t } = useTranslation();
 	const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: tab.id });
 	const label = browserTabLabel(tab.title, tab.url);
-	const closeLabel = t("browser.closeTab", { title: label.title });
+	const closeLabel = `Close tab ${label.title}`;
 	return (
 		<div
 			className={cn(
@@ -1098,7 +1096,7 @@ const SortableBrowserTopTab = memo(function SortableBrowserTopTab({
 				className="browser-panel__tab-close"
 				disabled={onlyTab}
 				onClick={() => onClose(tab.id)}
-				title={onlyTab ? t("browser.onlyTab") : closeLabel}
+				title={onlyTab ? "The only tab cannot be closed" : closeLabel}
 				type="button"
 			>
 				<X aria-hidden="true" className="size-icon-sm" />
@@ -1127,44 +1125,44 @@ function compactBrowserAddress(url: string): string {
 function agentActivityLabel(activity: BrowserViewModel["agentBrowserActivity"], active: boolean): string {
 	if (!active && !activity?.active) return "";
 	const action = activity?.active ? activity.action : "";
-	if (!action) return appI18n.t("browser.agentUsing");
-	return appI18n.t("browser.agentAction", { verb: browserActionVerb(action) });
+	if (!action) return "Agent using browser";
+	return `Agent ${browserActionVerb(action)}`;
 }
 
 function browserActionVerb(action: string): string {
 	const key = ((): MessageKey => {
 		switch (action) {
 			case "click":
-				return "browser.verb.click";
+				return "clicking";
 			case "fill":
 			case "type":
-				return "browser.verb.type";
+				return "typing";
 			case "press":
-				return "browser.verb.press";
+				return "pressing";
 			case "hover":
-				return "browser.verb.hover";
+				return "hovering";
 			case "scroll":
-				return "browser.verb.scroll";
+				return "scrolling";
 			case "open":
-				return "browser.verb.open";
+				return "opening";
 			case "wait":
-				return "browser.verb.wait";
+				return "waiting";
 			case "snapshot":
-				return "browser.verb.read";
+				return "reading";
 			case "highlight":
-				return "browser.verb.highlight";
+				return "highlighting";
 			case "unhighlight":
-				return "browser.verb.clearHighlight";
+				return "clearing highlight";
 			case "tab-new":
-				return "browser.verb.openTab";
+				return "opening tab";
 			case "tab-select":
-				return "browser.verb.switchTab";
+				return "switching tabs";
 			case "tab-close":
-				return "browser.verb.closeTab";
+				return "closing tab";
 			case "tabs":
-				return "browser.verb.checkTabs";
+				return "checking tabs";
 			default:
-				return "browser.verb.using";
+				return "using browser";
 		}
 	})();
 	return appI18n.t(key);

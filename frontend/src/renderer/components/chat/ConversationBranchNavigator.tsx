@@ -14,7 +14,6 @@ export function ConversationBranchNavigator({
 	error?: string;
 	onActivate: (branchId: string) => Promise<unknown> | void;
 }) {
-	const { t } = useTranslation();
 	if (point.total <= 1) return null;
 	return (
 		<div className="flex min-w-0 items-center gap-0.5 text-[10.5px] text-muted-foreground">
@@ -28,19 +27,19 @@ export function ConversationBranchNavigator({
 							onClick={() => {
 								void Promise.resolve(onActivate(point.previousBranchId as string)).catch(() => {});
 							}}
-							aria-label={t("chat.branch.previous")}
+							aria-label={"Previous conversation branch"}
 							className="flex size-7 items-center justify-center rounded-md transition-[background-color,color,transform] hover:bg-interactive-hover hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-logo-accent/40 disabled:opacity-45"
 						>
 							<ChevronLeft aria-hidden="true" className="size-3.5" />
 						</button>
 					</span>
 				</TooltipTrigger>
-				<TooltipContent side="bottom">{t("chat.branch.previous")}</TooltipContent>
+				<TooltipContent side="bottom">{"Previous conversation branch"}</TooltipContent>
 			</Tooltip>
 		) : null}
 		<span
 			className="px-0.5 tabular-nums"
-			aria-label={t("chat.branch.position", { position: point.position, total: point.total })}
+			aria-label={`Conversation branch ${point.position} of ${point.total}`}
 		>
 			{point.position} / {point.total}
 		</span>
@@ -54,14 +53,14 @@ export function ConversationBranchNavigator({
 							onClick={() => {
 								void Promise.resolve(onActivate(point.nextBranchId as string)).catch(() => {});
 							}}
-							aria-label={t("chat.branch.next")}
+							aria-label={"Next conversation branch"}
 							className="flex size-7 items-center justify-center rounded-md transition-[background-color,color,transform] hover:bg-interactive-hover hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-logo-accent/40 disabled:opacity-45"
 						>
 							<ChevronRight aria-hidden="true" className="size-3.5" />
 						</button>
 					</span>
 				</TooltipTrigger>
-				<TooltipContent side="bottom">{t("chat.branch.next")}</TooltipContent>
+				<TooltipContent side="bottom">{"Next conversation branch"}</TooltipContent>
 			</Tooltip>
 		) : null}
 		{error ? <span role="alert" className="ml-1 truncate text-destructive">{error}</span> : null}

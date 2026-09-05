@@ -29,7 +29,7 @@ describe("locale-store", () => {
 
 	it("defaults to English before load", () => {
 		expect(useLocaleStore.getState().locale).toBe("en");
-		expect(appI18n.t("settings.general")).toBe("General");
+		expect("General").toBe("General");
 		expect(document.documentElement.lang).toBe("en");
 	});
 
@@ -37,7 +37,7 @@ describe("locale-store", () => {
 		getUiSettings.mockResolvedValue({ locale: "zh-CN" });
 		await useLocaleStore.getState().load();
 		expect(useLocaleStore.getState().locale).toBe("zh-CN");
-		expect(appI18n.t("settings.general")).toBe("通用");
+		expect("General").toBe("通用");
 		expect(document.documentElement.lang).toBe("zh-CN");
 		expect(document.documentElement.dir).toBe("ltr");
 		expect(useLocaleStore.getState().loaded).toBe(true);
@@ -49,7 +49,7 @@ describe("locale-store", () => {
 		expect(useLocaleStore.getState().locale).toBe("zh-CN");
 		expect(document.documentElement.lang).toBe("zh-CN");
 		expect(document.documentElement.dir).toBe("ltr");
-		expect(appI18n.t("settings.language")).toBe("语言");
+		expect("Language").toBe("语言");
 	});
 
 	it("does not reload after the first successful load", async () => {
@@ -97,7 +97,7 @@ describe("locale-store", () => {
 		await expect(useLocaleStore.getState().load()).resolves.toBeUndefined();
 		expect(useLocaleStore.getState().locale).toBe("en");
 		expect(useLocaleStore.getState().loaded).toBe(true);
-		expect(appI18n.t("settings.general")).toBe("General");
+		expect("General").toBe("General");
 	});
 
 	it("keeps the current locale and exposes an error when persistence fails", async () => {

@@ -85,7 +85,6 @@ export function FileTree({
 	selectedPath: string | null;
 	onSelectPath: (node: TreeNode) => void;
 }) {
-	const { t } = useTranslation();
 	const queryClient = useQueryClient();
 	const treeApiRef = useRef<TreeApi<TreeNode> | null>(null);
 	const loadedDirsRef = useRef<Set<string>>(new Set());
@@ -114,7 +113,7 @@ export function FileTree({
 					const node = entryToNode(entry);
 					if (node.type !== "dir") return node;
 					const result = await queryClient.fetchQuery(
-						sessionWorkspaceTreeQueryOptions(sessionId, node.path, t("files.error.loadWorkspaceTree")),
+						sessionWorkspaceTreeQueryOptions(sessionId, node.path, "Unable to load workspace tree"),
 					);
 					loadedDirsRef.current.add(node.path);
 					return { ...node, children: await loadDirectory(result.entries) };
@@ -131,7 +130,7 @@ export function FileTree({
 		return () => {
 			cancelled = true;
 		};
-	}, [changedOnly, filterText, queryClient, rootQuery.data, sessionId, t]);
+	}, [changedOnly, filterText, queryClient, rootQuery.data, sessionId]);
 
 	const loadChildren = useCallback(
 		async (dir: string) => {
@@ -139,7 +138,7 @@ export function FileTree({
 			loadedDirsRef.current.add(dir);
 			try {
 				const result = await queryClient.fetchQuery(
-					sessionWorkspaceTreeQueryOptions(sessionId, dir, t("files.error.loadWorkspaceTree")),
+					sessionWorkspaceTreeQueryOptions(sessionId, dir, "Unable to load workspace tree"),
 				);
 				setLazyData((current) => withChildrenAt(current, dir, result.entries.map(entryToNode)));
 			} catch {
@@ -148,7 +147,7 @@ export function FileTree({
 				loadedDirsRef.current.delete(dir);
 			}
 		},
-		[queryClient, sessionId, t],
+		[queryClient, sessionId],
 	);
 
 	const handleToggle = useCallback(
@@ -173,12 +172,12 @@ export function FileTree({
 	return (
 		<div className="flex h-full min-h-0 min-w-0 flex-col bg-background" ref={containerRef}>
 			{rootQuery.isPending && !changedOnly ? (
-				<p className="p-3 text-xs text-muted-foreground">{t("files.loading")}</p>
+				<p className="p-3 text-xs text-muted-foreground">{"Loading files..."}</p>
 			) : null}
 			{rootQuery.isError && !changedOnly ? (
-				<p className="p-3 text-xs text-error">{rootQuery.error.message || t("files.error.loadWorkspaceTree")}</p>
+				<p className="p-3 text-xs text-error">{rootQuery.error.message || "Unable to load workspace tree"}</p>
 			) : null}
-			{isEmpty ? <p className="p-3 text-xs text-muted-foreground">{t("files.explorer.empty")}</p> : null}
+			{isEmpty ? <p className="p-3 text-xs text-muted-foreground">{"This folder is empty."}</p> : null}
 			{size.width > 0 && size.height > 0 ? (
 				<Tree<TreeNode>
 					data={data}
@@ -198,7 +197,7 @@ export function FileTree({
 					width={size.width}
 					height={size.height}
 					padding={4}
-					aria-label={t("files.explorer.tree")}
+					aria-label={"File tree"}
 					outerElementType={FileTreeScrollElement}
 					renderRow={FileTreeRowContainer}
 				>
@@ -232,7 +231,6 @@ function FileTreeRowContainer<T>({ node, attrs, innerRef, children }: RowRendere
 }
 
 function FileTreeRow({ node, style, dragHandle }: NodeRendererProps<TreeNode>) {
-	const { t } = useTranslation();
 	const entry = node.data;
 	const isDir = entry.type === "dir";
 	return (

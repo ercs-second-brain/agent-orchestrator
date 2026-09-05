@@ -20,7 +20,6 @@ function workspaceRawImageUrl(sessionId: string, path: string): string {
 // this one, so there's no diff to show, just its current content. Binary and
 // oversized files short-circuit before any tokenization is attempted.
 export function ReadOnlyFileView({ detail, sessionId }: { detail: WorkspaceFileDetail; sessionId: string }) {
-	const { t } = useTranslation();
 	if (detail.binary) {
 		if (detail.imageMediaType) {
 			return (
@@ -33,10 +32,10 @@ export function ReadOnlyFileView({ detail, sessionId }: { detail: WorkspaceFileD
 				</div>
 			);
 		}
-		return <PanelMessage>{t("files.binaryUnavailable")}</PanelMessage>;
+		return <PanelMessage>{"Binary file preview is not available."}</PanelMessage>;
 	}
 	if (detail.contentTruncated) {
-		return <PanelMessage>{t("files.explorer.tooLarge", { size: formatBytes(detail.size) })}</PanelMessage>;
+		return <PanelMessage>{`File is too large to preview (${formatBytes(detail.size)}).`}</PanelMessage>;
 	}
 	return <HighlightedContent content={detail.content} path={detail.path} />;
 }

@@ -38,7 +38,6 @@ export function SessionFileExplorer({
 	onToggleMaximized,
 	revealRequest,
 }: SessionFileExplorerProps) {
-	const { t } = useTranslation();
 	const [filter, setFilter] = useState("");
 	const [split, setSplit] = useState(false);
 	const [selectedPath, setSelectedPath] = useState<string | null>(null);
@@ -49,7 +48,7 @@ export function SessionFileExplorer({
 	const setFilesChangedOnly = useUiStore((state) => state.setFilesChangedOnly);
 
 	const filesQuery = useQuery({
-		...sessionWorkspaceFilesQueryOptions(sessionId, t("files.error.loadWorkspace")),
+		...sessionWorkspaceFilesQueryOptions(sessionId, "Unable to load workspace files"),
 		enabled: changedOnly,
 	});
 	const changedOnlyData = useMemo(
@@ -101,31 +100,31 @@ export function SessionFileExplorer({
 		<section
 			ref={rootRef}
 			className="flex h-full min-h-0 flex-col bg-background text-foreground"
-			aria-label={t("files.sessionFiles")}
+			aria-label={"Session files"}
 		>
 			<header className="flex h-10 shrink-0 items-center gap-0.5 border-b border-border bg-surface px-2">
 				<label className="relative mr-1 min-w-0 flex-1">
 					<Search className="pointer-events-none absolute left-2.5 top-1/2 size-icon-sm -translate-y-1/2 text-passive" />
 					<Input
-						aria-label={t("files.explorer.filter")}
+						aria-label={"Filter files"}
 						className="h-8 pl-8 font-mono text-xs"
 						onChange={(event) => setFilter(event.target.value)}
-						placeholder={t("files.explorer.filterPlaceholder")}
+						placeholder={"Filter files"}
 						value={filter}
 					/>
 				</label>
 				<label className="flex shrink-0 items-center gap-1.5 px-1.5 text-2xs text-muted-foreground">
 					<Switch
-						aria-label={t("files.explorer.changedOnly")}
+						aria-label={"Changed only"}
 						checked={changedOnly}
 						onCheckedChange={(next) => setFilesChangedOnly(sessionId, next)}
 					/>
-					{t("files.explorer.changedOnly")}
+					{"Changed only"}
 				</label>
 				<Tooltip>
 					<TooltipTrigger asChild>
 						<Button
-							aria-label={split ? t("files.unifiedDiff") : t("files.splitDiff")}
+							aria-label={split ? "Unified diff view" : "Split diff view"}
 							aria-pressed={split}
 							className="shrink-0"
 							onClick={() => setSplit((current) => !current)}
@@ -140,13 +139,13 @@ export function SessionFileExplorer({
 							)}
 						</Button>
 					</TooltipTrigger>
-					<TooltipContent side="bottom">{split ? t("files.unifiedDiff") : t("files.splitDiff")}</TooltipContent>
+					<TooltipContent side="bottom">{split ? "Unified diff view" : "Split diff view"}</TooltipContent>
 				</Tooltip>
 				{onToggleMaximized ? (
 					<Tooltip>
 						<TooltipTrigger asChild>
 							<Button
-								aria-label={isMaximized ? t("files.minimize") : t("files.maximize")}
+								aria-label={isMaximized ? "Minimize files" : "Maximize files"}
 								className="shrink-0"
 								onClick={() => onToggleMaximized(!isMaximized)}
 								size="icon-sm"
@@ -160,7 +159,7 @@ export function SessionFileExplorer({
 								)}
 							</Button>
 						</TooltipTrigger>
-						<TooltipContent side="bottom">{isMaximized ? t("files.minimize") : t("files.maximize")}</TooltipContent>
+						<TooltipContent side="bottom">{isMaximized ? "Minimize files" : "Maximize files"}</TooltipContent>
 					</Tooltip>
 				) : null}
 			</header>
@@ -207,7 +206,7 @@ export function SessionFileExplorer({
 						<div className="flex min-h-0 flex-1 flex-col">
 							<div className="flex h-8 shrink-0 items-center gap-1 border-b border-border bg-surface px-1">
 								<Button
-									aria-label={t("files.explorer.backToTree")}
+									aria-label={"Back to file tree"}
 									onClick={() => setSelectedPath(null)}
 									size="icon-sm"
 									type="button"
@@ -222,7 +221,7 @@ export function SessionFileExplorer({
 									<Tooltip>
 										<TooltipTrigger asChild>
 											<Button
-												aria-label={t("files.openInCenter", { path: selectedPath })}
+												aria-label={`Open in center: ${selectedPath}`}
 												onClick={() => onOpenFile(selectedPath)}
 												size="icon-sm"
 												type="button"
@@ -232,7 +231,7 @@ export function SessionFileExplorer({
 											</Button>
 										</TooltipTrigger>
 										<TooltipContent side="bottom">
-											{t("files.openInCenter", { path: selectedPath })}
+											{`Open in center: ${selectedPath}`}
 										</TooltipContent>
 									</Tooltip>
 								) : null}

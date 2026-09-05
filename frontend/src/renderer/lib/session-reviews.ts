@@ -1,6 +1,5 @@
 import { queryOptions } from "@tanstack/react-query";
 import type { components } from "../../api/schema";
-import { appI18n } from "../i18n";
 import { sortedPRs, type WorkspaceSession } from "../types/workspace";
 import { apiClient, apiErrorMessage } from "./api-client";
 import { usesPreviewWorkspaceData as usePreviewData } from "./preview-mode";
@@ -60,15 +59,15 @@ export function reviewRunDisabled(openReviewStates: PRReviewState[], isTriggerin
 
 export function reviewSessionRunAction(reviewStates: PRReviewState[], isTriggering: boolean): string {
 	if (isTriggering || reviewStates.some((reviewState) => reviewState.status === "running")) {
-		return appI18n.t("inspector.review.reviewing");
+		return "Reviewing...";
 	}
 	if (reviewStates.some((reviewState) => reviewState.status === "needs_review")) {
-		return appI18n.t("inspector.review.runLatest");
+		return "Review latest commit";
 	}
 	if (reviewStates.some((reviewState) => reviewState.status === "changes_requested" || reviewState.latestRun)) {
-		return appI18n.t("inspector.review.rerun");
+		return "Re-run review";
 	}
-	return appI18n.t("inspector.review.run");
+	return "Run review";
 }
 
 // Preview-only pins so the reviews section can be seen mid-run and with a verdict

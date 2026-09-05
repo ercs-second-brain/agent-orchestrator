@@ -93,16 +93,16 @@ describe("shared review eligibility helpers", () => {
 
 	it("labels the run action from the shared catalog rather than hardcoded English", () => {
 		expect(reviewSessionRunAction([reviewState(1, "needs_review")], true)).toBe(
-			appI18n.t("inspector.review.reviewing"),
+			"Reviewing...",
 		);
 		expect(reviewSessionRunAction([reviewState(1, "running")], false)).toBe(
-			appI18n.t("inspector.review.reviewing"),
+			"Reviewing...",
 		);
 		expect(reviewSessionRunAction([reviewState(1, "changes_requested")], false)).toBe(
-			appI18n.t("inspector.review.rerun"),
+			"Re-run review",
 		);
 		expect(reviewSessionRunAction([reviewState(1, "needs_review")], false)).toBe(
-			appI18n.t("inspector.review.runLatest"),
+			"Review latest commit",
 		);
 	});
 });

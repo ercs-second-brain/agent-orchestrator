@@ -41,9 +41,8 @@ class AppErrorBoundaryClass extends React.Component<BoundaryProps, State> {
 }
 
 export function AppErrorBoundary({ children }: Props) {
-	const { t } = useTranslation();
 	return (
-		<AppErrorBoundaryClass fallbackBody={t("appError.body")} fallbackTitle={t("appError.title")}>
+		<AppErrorBoundaryClass fallbackBody={"Restart the app or check the daemon logs if this keeps happening."} fallbackTitle={"The app hit an unexpected error."}>
 			{children}
 		</AppErrorBoundaryClass>
 	);

@@ -48,7 +48,6 @@ function DialogContent({
 	portalContainer?: HTMLElement | null;
 	showCloseButton?: boolean;
 }) {
-	const { t } = useTranslation();
 	return (
 		<DialogPortal container={portalContainer}>
 			{overlay === undefined ? <DialogOverlay /> : overlay}
@@ -64,7 +63,7 @@ function DialogContent({
 				{showCloseButton && (
 					<DialogPrimitive.Close className="absolute top-4 right-4 rounded-xs opacity-70 transition-opacity hover:opacity-100 focus:outline-hidden disabled:pointer-events-none data-[state=open]:bg-secondary">
 						<XIcon className="size-4" />
-						<span className="sr-only">{t("common.close")}</span>
+						<span className="sr-only">{"Close"}</span>
 					</DialogPrimitive.Close>
 				)}
 			</DialogPrimitive.Content>

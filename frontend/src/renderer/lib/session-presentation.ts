@@ -16,45 +16,26 @@ import {
 	type AttentionZoneView,
 	type KanbanColumn,
 	type KanbanColumnView,
-	type ProductUITranslator,
 	type SessionStatusView,
 	type SessionTimelinePillStatus,
 	type SessionTimelinePillView,
 } from "@ercs-second-brain/product-ui";
-import type { TFunction } from "i18next";
-import { appI18n, type MessageKey } from "../i18n";
 import type { SessionActivity, SessionStatus } from "../types/workspace";
 
-function translator(t: TFunction): ProductUITranslator {
-	return (key, values) => t(key as MessageKey, values);
+export function getAgentActivityView(activity?: SessionActivity | null): AgentActivityView {
+	return getPortableAgentActivityView(activity);
 }
 
-export function getAgentActivityView(
-	activity?: SessionActivity | null,
-	t: TFunction = appI18n.t,
-): AgentActivityView {
-	return getPortableAgentActivityView(activity, translator(t));
+export function getSessionStatusView(status: SessionStatus): SessionStatusView {
+	return getPortableSessionStatusView(status);
 }
 
-export function getSessionStatusView(
-	status: SessionStatus,
-	t: TFunction = appI18n.t,
-): SessionStatusView {
-	return getPortableSessionStatusView(status, translator(t));
+export function getAttentionZoneView(status: SessionStatus): AttentionZoneView {
+	return getPortableAttentionZoneView(status);
 }
 
-export function getAttentionZoneView(
-	status: SessionStatus,
-	t: TFunction = appI18n.t,
-): AttentionZoneView {
-	return getPortableAttentionZoneView(status, translator(t));
-}
-
-export function getAttentionZoneViewForZone(
-	zone: AttentionZone,
-	t: TFunction = appI18n.t,
-): AttentionZoneView {
-	return getPortableAttentionZoneViewForZone(zone, translator(t));
+export function getAttentionZoneViewForZone(zone: AttentionZone): AttentionZoneView {
+	return getPortableAttentionZoneViewForZone(zone);
 }
 
 export type SessionStatusDotView = {
@@ -70,17 +51,18 @@ export type SessionStatusDotView = {
 //
 // Motion stays on raw agent activity. A no-PR idle session is the exception to
 // the preserved section colour: when its agent starts working it blinks blue.
-export function getSessionStatusDotView(
-	session: { activity?: SessionActivity | null; scmStatus?: SessionStatus; status: SessionStatus },
-	t: TFunction = appI18n.t,
-): SessionStatusDotView {
+export function getSessionStatusDotView(session: {
+	activity?: SessionActivity | null;
+	scmStatus?: SessionStatus;
+	status: SessionStatus;
+}): SessionStatusDotView {
 	const working = isAgentActivityWorking(session.activity);
 	const sectionStatus = session.scmStatus ?? session.status;
 	const toneStatus = sectionStatus === "idle" && working ? "working" : sectionStatus;
 	const className =
 		toneStatus === "idle" || toneStatus === "merged"
-			? getSessionStatusView(toneStatus, t).dotClassName
-			: getAttentionZoneView(toneStatus, t).dotClassName;
+			? getSessionStatusView(toneStatus).dotClassName
+			: getAttentionZoneView(toneStatus).dotClassName;
 
 	return {
 		className,
@@ -88,21 +70,14 @@ export function getSessionStatusDotView(
 	};
 }
 
-export function getKanbanColumnView(
-	column: KanbanColumn,
-	t: TFunction = appI18n.t,
-): KanbanColumnView {
-	return getPortableKanbanColumnView(column, translator(t));
+export function getKanbanColumnView(column: KanbanColumn): KanbanColumnView {
+	return getPortableKanbanColumnView(column);
 }
 
-export function getSessionTimelinePillView(
-	status: SessionTimelinePillStatus,
-	t: TFunction = appI18n.t,
-): SessionTimelinePillView {
-	return getPortableSessionTimelinePillView(status, translator(t));
+export function getSessionTimelinePillView(status: SessionTimelinePillStatus): SessionTimelinePillView {
+	return getPortableSessionTimelinePillView(status);
 }
 
-/** Live labels for the current locale (getters re-resolve on each access). */
 export const attentionZoneLabel: Record<AttentionZone, string> = {
 	get merge() {
 		return getAttentionZoneViewForZone("merge").label;

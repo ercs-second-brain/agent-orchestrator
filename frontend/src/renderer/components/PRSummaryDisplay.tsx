@@ -12,7 +12,6 @@ import { prCardPresentation, prNounKeys, prSummaryParts } from "../lib/pr-displa
 import { ProductExternalLink } from "./ProductExternalLink";
 
 function useCountNounLabel(): CountNounLabel {
-	const { t } = useTranslation();
 	return (count, noun) => `${count} ${t(prNounKeys[noun], { count })}`;
 }
 

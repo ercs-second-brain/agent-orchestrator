@@ -1,6 +1,4 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useTranslation } from "react-i18next";
-import type { TFunction } from "i18next";
 import { useNavigate, useParams, useRouterState } from "@tanstack/react-router";
 import {
 	DndContext,
@@ -419,7 +417,6 @@ export function Sidebar({
 	onInitializeProject,
 	onRemoveProject,
 }: SidebarProps) {
-	const { t } = useTranslation();
 	const selection = useSelection();
 	const { state, setOpen, toggleSidebar } = useSidebar();
 	const isCollapsed = state === "collapsed";
@@ -678,14 +675,14 @@ export function Sidebar({
 					)}
 					{isNightly && (
 						<span className="sidebar-expanded-chrome shrink-0 rounded-full bg-purple-subtle px-1.5 py-0.5 text-micro font-semibold leading-none text-purple-accent group-data-[collapsible=icon]:hidden">
-							{t("shell.nightly")}
+							{"nightly"}
 						</span>
 					)}
 				</div>
 				<Tooltip>
 					<TooltipTrigger asChild>
 						<button
-							aria-label={isCollapsed ? t("shell.expandSidebar") : t("shell.collapseSidebar")}
+							aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
 							className="hidden size-control-board place-items-center rounded-lg text-muted-foreground transition-colors hover:bg-interactive-hover hover:text-foreground group-data-[collapsible=icon]:grid [&_svg]:size-icon-base"
 							onClick={toggleSidebar}
 							type="button"
@@ -694,7 +691,7 @@ export function Sidebar({
 						</button>
 					</TooltipTrigger>
 					<TooltipContent side="right">
-						{isCollapsed ? t("shell.expandSidebar") : t("shell.collapseSidebar")}
+						{isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
 					</TooltipContent>
 				</Tooltip>
 			</SidebarHeader>
@@ -715,7 +712,7 @@ export function Sidebar({
 				    a labeled nav row; the collapsed rail gets an icon button. */}
 				<div className="sidebar-expanded-chrome flex shrink-0 pb-2 group-data-[collapsible=icon]:hidden">
 					<button
-						aria-label={t("shell.kanban")}
+						aria-label={"Kanban"}
 						className={cn(NAV_ROW_CLASS, "h-8 [&_svg]:size-icon-md [&_svg]:shrink-0")}
 						data-active={selection.isBoard || undefined}
 						data-testid="sidebar-kanban"
@@ -724,14 +721,14 @@ export function Sidebar({
 						type="button"
 					>
 						<LayoutDashboard aria-hidden="true" />
-						<span className="tracking-tight">{t("shell.kanban")}</span>
+						<span className="tracking-tight">{"Kanban"}</span>
 					</button>
 				</div>
 				<div className="hidden shrink-0 pb-2 group-data-[collapsible=icon]:block">
 					<Tooltip>
 						<TooltipTrigger asChild>
 							<button
-								aria-label={t("shell.kanban")}
+								aria-label={"Kanban"}
 								className="grid size-control-board place-items-center rounded-lg text-muted-foreground transition-colors hover:bg-interactive-hover hover:text-foreground data-[active=true]:bg-interactive-active data-[active=true]:text-foreground [&_svg]:size-icon-base"
 								data-active={selection.isBoard || undefined}
 								data-testid="sidebar-kanban-rail"
@@ -742,7 +739,7 @@ export function Sidebar({
 								<LayoutDashboard aria-hidden="true" />
 							</button>
 						</TooltipTrigger>
-						<TooltipContent side="right">{t("shell.kanban")}</TooltipContent>
+						<TooltipContent side="right">{"Kanban"}</TooltipContent>
 					</Tooltip>
 				</div>
 
@@ -750,7 +747,7 @@ export function Sidebar({
 				{pinnedSessions.length > 0 && (
 					<div className="sidebar-expanded-chrome flex shrink-0 flex-col group-data-[collapsible=icon]:hidden">
 						<SectionDisclosure
-							label={t("shell.pinned")}
+							label={"Pinned"}
 							open={pinnedOpen}
 							onToggle={() => setPinnedOpen((v) => !v)}
 							className="mb-1"
@@ -776,7 +773,7 @@ export function Sidebar({
 				{/* Projects — always open; only the trailing "+" is interactive. */}
 				<div className="sidebar-expanded-chrome flex shrink-0 pb-1.5 group-data-[collapsible=icon]:hidden">
 					<SectionDisclosure
-						label={t("shell.projects")}
+						label={"Projects"}
 						collapsible={false}
 						trailing={
 							<CreateProjectButton
@@ -797,7 +794,7 @@ export function Sidebar({
 					<SidebarGroupContent className="min-h-full">
 						{workspaceError ? (
 							<div className="sidebar-expanded-chrome px-2.5 py-3 group-data-[collapsible=icon]:hidden">
-								<p className="text-sm text-foreground">{t("shell.couldNotLoadProjects")}</p>
+								<p className="text-sm text-foreground">{"Could not load projects."}</p>
 								<p className="mt-1 text-caption text-passive">{workspaceError}</p>
 							</div>
 						) : workspaces.length === 0 ? null : (
@@ -876,7 +873,7 @@ export function Sidebar({
 						tabIndex={isCollapsed ? -1 : 0}
 					/>
 					<button
-						aria-label={t("settings.connectMobile")}
+						aria-label={"Connect Mobile"}
 						className={cn(
 							NAV_ROW_CLASS,
 							"flex h-9 w-full items-center text-left [&_svg]:size-icon-md [&_svg]:shrink-0",
@@ -886,10 +883,10 @@ export function Sidebar({
 						type="button"
 					>
 						<Smartphone aria-hidden="true" />
-						<span className="tracking-tight">{t("settings.connectMobile")}</span>
+						<span className="tracking-tight">{"Connect Mobile"}</span>
 					</button>
 					<button
-						aria-label={t("shell.settings")}
+						aria-label={"Settings"}
 						className={cn(
 							NAV_ROW_CLASS,
 							"flex h-[42px] w-full items-center text-left [&_svg]:size-icon-md [&_svg]:shrink-0",
@@ -899,7 +896,7 @@ export function Sidebar({
 						type="button"
 					>
 						<Settings aria-hidden="true" />
-						<span className="tracking-tight">{t("shell.settings")}</span>
+						<span className="tracking-tight">{"Settings"}</span>
 					</button>
 				</div>
 				<div
@@ -915,7 +912,7 @@ export function Sidebar({
 					<Tooltip>
 						<TooltipTrigger asChild>
 							<button
-								aria-label={t("settings.connectMobile")}
+								aria-label={"Connect Mobile"}
 								className="grid size-control-board place-items-center rounded-lg text-muted-foreground transition-colors hover:bg-interactive-hover hover:text-foreground [&_svg]:size-icon-base"
 								onClick={() => selection.goConnectMobile()}
 								tabIndex={isCollapsed ? 0 : -1}
@@ -924,12 +921,12 @@ export function Sidebar({
 								<Smartphone aria-hidden="true" />
 							</button>
 						</TooltipTrigger>
-						<TooltipContent side="right">{t("settings.connectMobile")}</TooltipContent>
+						<TooltipContent side="right">{"Connect Mobile"}</TooltipContent>
 					</Tooltip>
 					<Tooltip>
 						<TooltipTrigger asChild>
 							<button
-								aria-label={t("shell.settings")}
+								aria-label={"Settings"}
 								className="grid size-control-board place-items-center rounded-lg text-muted-foreground transition-colors hover:bg-interactive-hover hover:text-foreground [&_svg]:size-icon-base"
 								onClick={() => selection.goGlobalSettings()}
 								tabIndex={isCollapsed ? 0 : -1}
@@ -938,7 +935,7 @@ export function Sidebar({
 								<Settings aria-hidden="true" />
 							</button>
 						</TooltipTrigger>
-						<TooltipContent side="right">{t("shell.settings")}</TooltipContent>
+						<TooltipContent side="right">{"Settings"}</TooltipContent>
 					</Tooltip>
 				</div>
 			</SidebarFooter>
@@ -951,7 +948,7 @@ export function Sidebar({
 				style={noDragStyle}
 			/>
 			<SidebarRail
-				aria-label={t("shell.expandSidebar")}
+				aria-label={"Expand sidebar"}
 				className="group-data-[state=expanded]:hidden hover:after:bg-transparent"
 				onClick={() => setOpen(true)}
 				onPointerDown={onCollapsedResizePointerDown}
@@ -1043,7 +1040,6 @@ const ProjectItemContent = memo(function ProjectItemContent({
 	setDraggableNodeRef,
 	setDroppableNodeRef,
 }: ProjectItemProps & ProjectItemDndProps) {
-	const { t } = useTranslation();
 	const prefersReducedMotion = useReducedMotion();
 	const activeProjectMatches = selection.activeProjectId === workspace.id;
 	const dashboardActive = activeProjectMatches && !selection.activeSessionId;
@@ -1223,7 +1219,7 @@ const ProjectItemContent = memo(function ProjectItemContent({
 		try {
 			await onRemoveProject(workspace.id);
 		} catch (err) {
-			const message = err instanceof Error ? err.message : t("shell.couldNotRemoveProject");
+			const message = err instanceof Error ? err.message : "Could not remove project";
 			setRemoveError(message);
 		} finally {
 			setIsRemoving(false);
@@ -1342,9 +1338,7 @@ const ProjectItemContent = memo(function ProjectItemContent({
 								{/* Folder disclosure toggle: sibling of the nav button, absolutely positioned over
 	    the icon area so it intercepts clicks there without nesting buttons. */}
 								<button
-									aria-label={t("shell.toggleProject", {
-										name: workspace.name,
-									})}
+									aria-label={`Toggle ${workspace.name} sessions`}
 									aria-expanded={expanded}
 									className="absolute inset-y-0 left-0 z-10 w-9 cursor-pointer group-data-[collapsible=icon]:hidden"
 									data-project-folder=""
@@ -1373,12 +1367,8 @@ const ProjectItemContent = memo(function ProjectItemContent({
 												aria-current={orchestratorActive ? "page" : undefined}
 												aria-label={
 													orchestrator
-														? t("shell.openProjectOrchestrator", {
-																name: workspace.name,
-															})
-														: t("shell.spawnProjectOrchestrator", {
-																name: workspace.name,
-															})
+														? `Open ${workspace.name} orchestrator`
+														: `Spawn ${workspace.name} orchestrator`
 												}
 												className={cn(HOVER_ACTION_CLASS, orchestratorActive && "text-foreground")}
 												disabled={isSpawning || isProjectRestarting}
@@ -1391,12 +1381,12 @@ const ProjectItemContent = memo(function ProjectItemContent({
 									</TooltipTrigger>
 									<TooltipContent>
 										{isProjectRestarting
-											? t("shell.restarting")
+											? "Restarting…"
 											: isSpawning
-												? t("shell.spawning")
+												? "Spawning…"
 												: orchestrator
-													? t("shell.orchestrator")
-													: t("shell.spawnOrchestratorLower")}
+													? "Orchestrator"
+													: "Spawn orchestrator"}
 									</TooltipContent>
 								</Tooltip>
 								<DropdownMenu>
@@ -1404,9 +1394,7 @@ const ProjectItemContent = memo(function ProjectItemContent({
 										<TooltipTrigger asChild>
 											<DropdownMenuTrigger asChild>
 												<button
-													aria-label={t("shell.projectActions", {
-														name: workspace.name,
-													})}
+													aria-label={`Project actions for ${workspace.name}`}
 													className={HOVER_ACTION_CLASS}
 													type="button"
 												>
@@ -1415,20 +1403,18 @@ const ProjectItemContent = memo(function ProjectItemContent({
 											</DropdownMenuTrigger>
 										</TooltipTrigger>
 										<TooltipContent>
-											{t("shell.projectActions", {
-												name: workspace.name,
-											})}
+											{`Project actions for ${workspace.name}`}
 										</TooltipContent>
 									</Tooltip>
 									<DropdownMenuContent side="right" align="start" className="min-w-44">
 										<DropdownMenuItem disabled={isProjectRestarting} onSelect={() => requestNewTask(workspace.id)}>
 											<Plus aria-hidden="true" />
-											{t("shell.newSession")}
+											{"New session"}
 										</DropdownMenuItem>
 										<DropdownMenuSeparator />
 										<DropdownMenuItem onSelect={() => selection.goSettings(workspace.id)}>
 											<Settings aria-hidden="true" />
-											{t("shell.projectSettings")}
+											{"Project settings"}
 										</DropdownMenuItem>
 										<DropdownMenuSeparator />
 										<DropdownMenuItem
@@ -1437,7 +1423,7 @@ const ProjectItemContent = memo(function ProjectItemContent({
 											onSelect={() => void removeProject()}
 										>
 											<Trash2 aria-hidden="true" />
-											{t("shell.removeProjectTitle")}
+											{"Remove project"}
 										</DropdownMenuItem>
 									</DropdownMenuContent>
 								</DropdownMenu>
@@ -1447,7 +1433,7 @@ const ProjectItemContent = memo(function ProjectItemContent({
 					</div>
 					{isRemoving ? (
 						<div className="sidebar-expanded-chrome px-5 py-1 text-2xs text-muted-foreground" role="status">
-							{t("shell.removingNamed", { name: workspace.name })}
+							{`Removing ${workspace.name}…`}
 						</div>
 					) : removeError ? (
 						<div className="sidebar-expanded-chrome px-5 py-1 text-2xs text-destructive" role="alert">
@@ -1532,14 +1518,14 @@ const ProjectItemContent = memo(function ProjectItemContent({
 					<ConfirmDialog
 						open={confirmOpen}
 						onOpenChange={setConfirmOpen}
-						title={t("shell.removeProjectTitle")}
+						title={"Remove project"}
 						description={
 							<>
-								<p className="text-sm font-medium text-foreground">{t("shell.removeProjectLead", { name: workspace.name })}</p>
-								<p className="mt-1 text-xs text-muted-foreground">{t("shell.removeProjectBody")}</p>
+								<p className="text-sm font-medium text-foreground">{`This will remove ${workspace.name} from AO`}</p>
+								<p className="mt-1 text-xs text-muted-foreground">{"This stops its live sessions and removes it from the sidebar, but keeps the repository folder and stored history on disk."}</p>
 							</>
 						}
-						confirmLabel={t("shell.remove")}
+						confirmLabel={"Remove"}
 						destructive
 						onConfirm={handleConfirmRemove}
 					/>
@@ -1548,12 +1534,12 @@ const ProjectItemContent = memo(function ProjectItemContent({
 			<ContextMenuContent className="min-w-44">
 				<ContextMenuItem disabled={isProjectRestarting} onSelect={() => requestNewTask(workspace.id)}>
 					<Plus aria-hidden="true" />
-					{t("shell.newSession")}
+					{"New session"}
 				</ContextMenuItem>
 				<ContextMenuSeparator />
 				<ContextMenuItem onSelect={() => selection.goSettings(workspace.id)}>
 					<Settings aria-hidden="true" />
-					{t("shell.projectSettings")}
+					{"Project settings"}
 				</ContextMenuItem>
 				<ContextMenuSeparator />
 				<ContextMenuItem
@@ -1562,7 +1548,7 @@ const ProjectItemContent = memo(function ProjectItemContent({
 					onSelect={() => void removeProject()}
 				>
 					<Trash2 aria-hidden="true" />
-					{t("shell.removeProjectTitle")}
+					{"Remove project"}
 				</ContextMenuItem>
 			</ContextMenuContent>
 		</ContextMenu>
@@ -1572,7 +1558,6 @@ const ProjectItemContent = memo(function ProjectItemContent({
 /** Non-interactive drag snapshot: the project row is the anchor, while its
  * visible sessions travel with it without becoming collision targets. */
 const ProjectDragPreview = memo(function ProjectDragPreview({ workspace, expanded, selection, sessions }: { workspace: WorkspaceSummary; expanded: boolean; selection: Selection; sessions: WorkspaceSession[] }) {
-	const { t } = useTranslation();
 	const activeProjectMatches = selection.activeProjectId === workspace.id;
 	const projectActive =
 		(activeProjectMatches && !selection.activeSessionId) ||
@@ -1593,7 +1578,7 @@ const ProjectDragPreview = memo(function ProjectDragPreview({ workspace, expande
 				<div className="ml-3.5 py-1">
 					{sessions.map((session) => {
 						const switchPresentation = deriveSessionAgentSwitchPresentation(session);
-						const switchLabel = switchPresentation ? t(switchPresentation.compactLabelKey, switchPresentation.values) : undefined;
+						const switchLabel = switchPresentation?.compactLabel;
 						const active = selection.activeSessionId === session.id;
 						return (
 							<div className="pl-0.5" data-project-drag-preview-session="" key={session.id}>
@@ -1704,13 +1689,10 @@ function SessionRow({
 	/** Present only for rows inside a reorderable project list. */
 	reorder?: SessionReorder;
 }) {
-	const { t } = useTranslation();
 	const prefersReducedMotion = useReducedMotion();
 	useGrabbingCursor(Boolean(reorder?.isDragging));
 	const switchPresentation = deriveSessionAgentSwitchPresentation(session);
-	const switchLabel = switchPresentation
-		? t(switchPresentation.compactLabelKey, switchPresentation.values)
-		: undefined;
+	const switchLabel = switchPresentation?.compactLabel;
 	const switchStatusId = useId();
 	const describedBy = switchLabel ? switchStatusId : undefined;
 	const queryClient = useQueryClient();
@@ -1746,7 +1728,7 @@ function SessionRow({
 				>
 					<SessionStatusDot session={session} />
 					<input
-						aria-label={t("shell.renameSession", { title: session.title })}
+						aria-label={`Rename ${session.title}`}
 						autoFocus
 						className={cn(
 							"h-full min-w-0 flex-1 appearance-none border-0 bg-transparent! p-0 text-sm text-foreground outline-none ring-0 focus:outline-none focus:ring-0",
@@ -1809,7 +1791,7 @@ function SessionRow({
 							aria-current={active ? "page" : undefined}
 							aria-describedby={describedBy}
 							aria-keyshortcuts="F2"
-							aria-label={t("shell.openSession", { title: session.title })}
+							aria-label={`Open ${session.title}`}
 							className={cn(
 								"flex h-8 min-w-0 flex-1 items-center gap-1.5 rounded-lg py-0 pl-1.5 text-left text-sm outline-hidden focus-visible:ring-2 focus-visible:ring-sidebar-ring",
 								session.lastUserMessageAt ? "pr-[36px]" : "pr-2.5",
@@ -1893,9 +1875,9 @@ function SessionRow({
 				</SidebarMenuSubItem>
 			</ContextMenuTrigger>
 			<ContextMenuContent className="min-w-44">
-				<ContextMenuItem aria-label={t("shell.renameSession", { title: session.title })} onSelect={beginRename}>
+				<ContextMenuItem aria-label={`Rename ${session.title}`} onSelect={beginRename}>
 					<Pencil aria-hidden="true" />
-					{t("shell.rename")}
+					{"Rename"}
 				</ContextMenuItem>
 			</ContextMenuContent>
 		</ContextMenu>
@@ -1903,7 +1885,6 @@ function SessionRow({
 }
 
 const SessionMessageAge = memo(function SessionMessageAge({ session }: { session: WorkspaceSession }) {
-	const { t } = useTranslation();
 	if (!session.lastUserMessageAt) return null;
 
 	return (
@@ -1911,7 +1892,7 @@ const SessionMessageAge = memo(function SessionMessageAge({ session }: { session
 			className="absolute inset-y-0 right-1.5 flex min-w-0 shrink-0 items-center whitespace-nowrap font-mono text-micro text-passive opacity-100 transition-opacity duration-100 ease-out group-hover/session-row:opacity-0 group-focus-within/session-row:opacity-0"
 			data-session-message-age=""
 			dateTime={session.lastUserMessageAt}
-			title={t("shell.lastMessageAt", { time: formatTimeCompact(session.lastUserMessageAt) })}
+			title={`Last message ${formatTimeCompact(session.lastUserMessageAt)}`}
 		>
 			{formatTimeTerse(session.lastUserMessageAt)}
 		</time>
@@ -1925,7 +1906,6 @@ const SessionActions = memo(function SessionActions({
 	session: WorkspaceSession;
 	isDragging: boolean;
 }) {
-	const { t } = useTranslation();
 	const { mutate: pinSession } = usePinSession();
 	const { mutate: unpinSession } = useUnpinSession();
 	const { mutate: terminateSession, isPending: isKilling } = useTerminateSession();
@@ -1945,7 +1925,7 @@ const SessionActions = memo(function SessionActions({
 				data-session-action-buttons=""
 			>
 				<button
-					aria-label={session.isPinned ? t("shell.unpinSession") : t("shell.pinSession")}
+					aria-label={session.isPinned ? "Unpin session" : "Pin session"}
 					className={cn(SESSION_ACTION_CLASS, session.isPinned && "text-foreground")}
 					onClick={(event) => {
 						event.stopPropagation();
@@ -1956,7 +1936,7 @@ const SessionActions = memo(function SessionActions({
 					{session.isPinned ? <PinOff aria-hidden="true" /> : <Pin aria-hidden="true" />}
 				</button>
 				<button
-					aria-label={t("shell.killSession")}
+					aria-label={"Kill session"}
 					className={cn(SESSION_ACTION_CLASS, "hover:text-destructive")}
 					disabled={isKilling}
 					onClick={(event) => {
@@ -2028,18 +2008,13 @@ function sidebarUpdateAction(status: UpdateStatus, availableDismissed: boolean):
 function updateVersionLabel(
 	version: string | undefined,
 	variant: "available" | "ready",
-	t: TFunction,
-	locale: string,
 ): string | null {
 	if (!version) return null;
 	const nightly = parseNightlyVersion(version);
 	if (nightly) {
-		return t("shell.nightlyBuild", {
-			version: nightly.base,
-			date: new Intl.DateTimeFormat(locale, { month: "short", day: "numeric" }).format(nightly.builtAt),
-		});
+		return `Nightly ${nightly.base} · ${new Intl.DateTimeFormat("en", { month: "short", day: "numeric" }).format(nightly.builtAt)}`;
 	}
-	return t(variant === "ready" ? "shell.versionReady" : "shell.versionAvailable", { version });
+	return variant === "ready" ? `v${version} ready` : `v${version}`;
 }
 
 // UpdateStatusRow makes update activity visible and actionable from the
@@ -2060,13 +2035,11 @@ function UpdateStatusRow({
 	status: UpdateStatus;
 	tabIndex: number;
 }) {
-	const { t, i18n } = useTranslation();
-	const locale = i18n.resolvedLanguage ?? i18n.language;
 	const action = sidebarUpdateAction(status, availableDismissed);
 	if (action === null) return null;
 
 	if (action.kind === "download") {
-		const versionLabel = updateVersionLabel(action.version, "available", t, locale);
+		const versionLabel = updateVersionLabel(action.version, "available");
 		// A manual check leaves autoDownload off, so without this the row would
 		// announce an update and offer nothing to act on.
 		return (
@@ -2074,8 +2047,8 @@ function UpdateStatusRow({
 				<button
 					aria-label={
 						action.version
-							? t("shell.downloadUpdateVersion", { version: action.version })
-							: t("shell.downloadUpdate")
+							? `Download update v${action.version}`
+							: "Download update"
 					}
 					className={cn(NAV_ROW_CLASS, "flex min-w-0 flex-1 items-center text-left [&_svg]:size-icon-md [&_svg]:shrink-0")}
 					onClick={() => void aoBridge.updates.download()}
@@ -2084,7 +2057,7 @@ function UpdateStatusRow({
 				>
 					<Download aria-hidden="true" className="size-icon-lg shrink-0" />
 					<span className="min-w-0 flex-1">
-						<span className="block truncate tracking-tight">{t("shell.updateAvailable")}</span>
+						<span className="block truncate tracking-tight">{"Update available"}</span>
 						{versionLabel && (
 							<span className="block truncate text-caption font-normal text-passive">{versionLabel}</span>
 						)}
@@ -2092,7 +2065,7 @@ function UpdateStatusRow({
 				</button>
 				{action.version && (
 					<button
-						aria-label={t("shell.dismissUpdateVersion", { version: action.version })}
+						aria-label={`Hide update v${action.version} for 24 hours`}
 						className="grid size-8 shrink-0 place-items-center text-muted-foreground transition-colors hover:text-foreground"
 						onClick={onDismissAvailable}
 						tabIndex={tabIndex}
@@ -2115,7 +2088,7 @@ function UpdateStatusRow({
 			>
 				<Download aria-hidden="true" className="size-icon-lg shrink-0" />
 				<span className="min-w-0 flex-1 truncate tabular-nums">
-					{t("settings.updates.downloading", { percent: action.percent })}
+					{`Downloading… ${action.percent}%`}
 				</span>
 			</div>
 		);
@@ -2124,7 +2097,7 @@ function UpdateStatusRow({
 	if (action.kind === "retry") {
 		return (
 			<button
-				aria-label={t("shell.retryUpdateCheck")}
+				aria-label={"Retry update check"}
 				className="flex w-full items-center gap-2.5 rounded-lg border border-warning/35 bg-warning/12 p-2.5 text-left text-control font-medium text-warning transition-colors hover:bg-warning/18 [&_svg]:text-warning"
 				data-testid="sidebar-update-failed"
 				onClick={() => void aoBridge.updates.check()}
@@ -2133,22 +2106,22 @@ function UpdateStatusRow({
 			>
 				<AlertTriangle aria-hidden="true" className="size-icon-lg shrink-0" />
 				<span className="min-w-0 flex-1">
-					<span className="block truncate tracking-tight">{t("shell.updateCheckFailed")}</span>
+					<span className="block truncate tracking-tight">{"Update check failed"}</span>
 					<span className="block truncate text-caption font-normal text-warning">
-						{t("shell.retryUpdateCheck")}
+						{"Retry update check"}
 					</span>
 				</span>
 			</button>
 		);
 	}
 
-	const versionLabel = updateVersionLabel(action.version, "ready", t, locale);
+	const versionLabel = updateVersionLabel(action.version, "ready");
 	return (
 		<button
 			aria-label={
 				action.version
-					? t("shell.restartInstallUpdateVersion", { version: action.version })
-					: t("shell.restartInstallUpdate")
+					? `Restart to install update v${action.version}`
+					: "Restart to install update"
 			}
 			className={cn(
 				"flex w-full items-center gap-2.5 rounded-lg border border-primary/35 bg-primary/12 p-2.5 text-left text-control font-medium text-primary transition-colors hover:bg-primary/18 [&_svg]:text-primary",
@@ -2162,7 +2135,7 @@ function UpdateStatusRow({
 		>
 			<RefreshCw aria-hidden="true" className="size-icon-lg shrink-0" />
 			<span className="min-w-0 flex-1">
-				<span className="block truncate tracking-tight">{t("shell.restartToUpdate")}</span>
+				<span className="block truncate tracking-tight">{"Restart to update"}</span>
 				{versionLabel && <span className="block truncate text-caption font-normal">{versionLabel}</span>}
 			</span>
 		</button>
@@ -2183,21 +2156,19 @@ function UpdateStatusRail({
 	status: UpdateStatus;
 	tabIndex: number;
 }) {
-	const { t, i18n } = useTranslation();
-	const locale = i18n.resolvedLanguage ?? i18n.language;
 	const action = sidebarUpdateAction(status, availableDismissed);
 	if (action === null) return null;
 
 	if (action.kind === "download") {
-		const label = t("settings.updates.available", { version: action.version ? ` (v${action.version})` : "" });
+		const label = `Update available${action.version ? ` (v${action.version})` : ""}.`;
 		return (
 			<Tooltip>
 				<TooltipTrigger asChild>
 					<button
 						aria-label={
 							action.version
-								? t("shell.downloadUpdateVersion", { version: action.version })
-								: t("shell.downloadUpdate")
+								? `Download update v${action.version}`
+								: "Download update"
 						}
 						className="grid size-9 place-items-center rounded-lg text-passive transition-colors hover:bg-interactive-hover hover:text-foreground [&_svg]:size-4"
 						onClick={() => void aoBridge.updates.download()}
@@ -2213,7 +2184,7 @@ function UpdateStatusRail({
 	}
 
 	if (action.kind === "downloading") {
-		const label = t("settings.updates.downloading", { percent: action.percent });
+		const label = `Downloading… ${action.percent}%`;
 		return (
 			<Tooltip>
 				<TooltipTrigger asChild>
@@ -2236,7 +2207,7 @@ function UpdateStatusRail({
 			<Tooltip>
 				<TooltipTrigger asChild>
 					<button
-						aria-label={t("shell.retryUpdateCheck")}
+						aria-label={"Retry update check"}
 						className="grid size-9 place-items-center rounded-lg bg-warning/12 text-warning transition-colors hover:bg-warning/18 [&_svg]:size-4"
 						onClick={() => void aoBridge.updates.check()}
 						tabIndex={tabIndex}
@@ -2246,21 +2217,21 @@ function UpdateStatusRail({
 					</button>
 				</TooltipTrigger>
 				<TooltipContent side="right">
-					{t("shell.updateCheckFailed")} · {t("shell.retryUpdateCheck")}
+					{"Update check failed"} · {"Retry update check"}
 				</TooltipContent>
 			</Tooltip>
 		);
 	}
 
-	const versionLabel = updateVersionLabel(action.version, "ready", t, locale);
+	const versionLabel = updateVersionLabel(action.version, "ready");
 	return (
 		<Tooltip>
 			<TooltipTrigger asChild>
 				<button
 					aria-label={
 						action.version
-							? t("shell.restartInstallUpdateVersion", { version: action.version })
-							: t("shell.restartInstallUpdate")
+							? `Restart to install update v${action.version}`
+							: "Restart to install update"
 					}
 					className={cn(
 						"grid size-9 place-items-center rounded-lg transition-colors [&_svg]:size-4",
@@ -2276,7 +2247,7 @@ function UpdateStatusRail({
 				</button>
 			</TooltipTrigger>
 			<TooltipContent side="right">
-				{t("shell.restartToUpdate")}
+				{"Restart to update"}
 				{versionLabel ? ` · ${versionLabel}` : ""}
 			</TooltipContent>
 		</Tooltip>
@@ -2358,7 +2329,6 @@ function SectionDisclosure({
 }
 
 function SidebarSearchButton({ onOpen }: { onOpen: () => void }) {
-	const { t } = useTranslation();
 	const { state } = useSidebar();
 	const isCollapsed = state === "collapsed";
 	const overrides = useKeybindingsStore((store) => store.overrides);
@@ -2369,7 +2339,7 @@ function SidebarSearchButton({ onOpen }: { onOpen: () => void }) {
 	return (
 		<SidebarMenuItem className="group-data-[collapsible=icon]:mb-0">
 			<SidebarMenuButton
-				aria-label={t("shell.search")}
+				aria-label={"Search"}
 				onClick={() => {
 					// Open on the microtask after this click rather than inside it: mounting
 					// the palette dialog while this button's tooltip layer is still tearing
@@ -2377,7 +2347,7 @@ function SidebarSearchButton({ onOpen }: { onOpen: () => void }) {
 					// "defers opening" test pins the deferral so it is not dropped as noise.
 					queueMicrotask(onOpen);
 				}}
-				tooltip={isCollapsed ? t("shell.search") : undefined}
+				tooltip={isCollapsed ? "Search" : undefined}
 				className={cn(
 					// Filled search trigger (Cursor-style): icon + label.
 					"h-8 gap-2 rounded-lg bg-muted px-2.5 text-sm font-normal text-muted-foreground",
@@ -2387,7 +2357,7 @@ function SidebarSearchButton({ onOpen }: { onOpen: () => void }) {
 			>
 				<Search strokeWidth={1.75} aria-hidden="true" />
 				<span className="sidebar-expanded-chrome min-w-0 flex-1 truncate text-left leading-none group-data-[collapsible=icon]:hidden">
-					{t("shell.search")}
+					{"Search"}
 				</span>
 				<kbd className="sidebar-expanded-chrome ml-auto shrink-0 rounded-sm border border-border-strong/60 bg-surface/50 px-1.5 py-0.5 font-mono text-caption leading-none text-muted-foreground/80 group-data-[collapsible=icon]:hidden">
 					{commandPaletteShortcutLabel}
@@ -2404,7 +2374,6 @@ function CreateProjectButton({
 	onCreateRepository,
 	onInitializeProject,
 }: Pick<SidebarProps, "onCloneProject" | "onCreateProject" | "onCreateRepository" | "onInitializeProject"> & { hideTrigger?: boolean }) {
-	const { t } = useTranslation();
 	// Single CreateProjectFlow owner for the sidebar: the header "+" stays mounted
 	// (CSS-hidden when collapsed or on the empty start page) so it can own
 	// openSignal for ⌘N on every shell route. The collapsed rail button below
@@ -2426,7 +2395,7 @@ function CreateProjectButton({
 					<TooltipTrigger asChild>
 						<span className="inline-flex">
 							<button
-								aria-label={t("shell.newProject")}
+								aria-label={"New project"}
 								className={cn(
 									"grid size-icon-xl shrink-0 place-items-center rounded-sm text-passive transition-colors hover:bg-interactive-hover hover:text-foreground",
 									hideTrigger && "hidden",
@@ -2447,14 +2416,13 @@ function CreateProjectButton({
 }
 
 function CreateProjectListItem() {
-	const { t } = useTranslation();
 	const requestCreateProject = useUiStore((state) => state.requestCreateProject);
 	return (
 		<SidebarMenuItem className="mb-px group-data-[collapsible=icon]:mb-0">
 			<Tooltip>
 				<TooltipTrigger asChild>
 					<button
-						aria-label={t("shell.newProject")}
+						aria-label={"New project"}
 						className="grid h-control-board w-full place-items-center rounded-lg text-passive transition-colors hover:bg-interactive-hover hover:text-muted-foreground"
 						onClick={() => requestCreateProject()}
 						type="button"
@@ -2462,7 +2430,7 @@ function CreateProjectListItem() {
 						<Plus className="size-icon-sm" aria-hidden="true" />
 					</button>
 				</TooltipTrigger>
-				<TooltipContent side="right">{t("shell.newProject")}</TooltipContent>
+				<TooltipContent side="right">{"New project"}</TooltipContent>
 			</Tooltip>
 		</SidebarMenuItem>
 	);
