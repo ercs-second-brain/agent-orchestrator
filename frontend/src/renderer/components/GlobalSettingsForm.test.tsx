@@ -2,9 +2,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { appI18n } from "../i18n";
 import { GlobalSettingsForm, type GlobalSettingsSection } from "./GlobalSettingsForm";
-import { useLocaleStore } from "../stores/locale-store";
 import { useSoundNotificationsStore } from "../stores/sound-notifications-store";
 import { useTerminalShellStore } from "../stores/terminal-shell-store";
 import { useUiStore } from "../stores/ui-store";
@@ -169,9 +167,6 @@ beforeEach(async () => {
 	getTelemetryPolicy.mockResolvedValue({ eventsEnabled: false, consentGeneration: "generation-off", updatedAt: "2026-08-28T10:15:30.000Z", acknowledged: true, state: "applied", environmentVeto: false, durabilitySupported: true });
 	setTelemetryEvents.mockResolvedValue({ eventsEnabled: true, consentGeneration: "generation-on", updatedAt: "2026-08-28T10:15:31.000Z", acknowledged: true, state: "applied", environmentVeto: false, durabilitySupported: true });
 	onTelemetryPolicy.mockReturnValue(() => undefined);
-	// Locale defaults to English so existing copy assertions stay green.
-	await appI18n.changeLanguage("en");
-	useLocaleStore.setState({ locale: "en", loaded: false, saving: false, saveError: false });
 	useSoundNotificationsStore.setState({ enabled: true, loaded: false, saving: false, saveError: false });
 	useTerminalShellStore.setState({
 		preference: { kind: "auto" },
@@ -195,7 +190,6 @@ describe("GlobalSettingsForm", () => {
 		renderForm();
 		expect(await screen.findByLabelText("Settings")).toBeInTheDocument();
 		expect(screen.getByText("Appearance")).toBeInTheDocument();
-		expect(screen.getByText("Language")).toBeInTheDocument();
 		expect(await screen.findByText("Updates")).toBeInTheDocument();
 		expect(screen.getByText("Advanced")).toBeInTheDocument();
 		expect(screen.getByText("Report a problem")).toBeInTheDocument();
@@ -225,22 +219,6 @@ describe("GlobalSettingsForm", () => {
 		await user.click(await screen.findByRole("menuitem", { name: "Feature Releases" }));
 		expect(await screen.findByText("No live feature releases.")).toBeInTheDocument();
 		expect(featListBuilds).toHaveBeenCalled();
-	});
-
-	it("switches settings labels to Simplified Chinese and persists locale", async () => {
-		const user = userEvent.setup();
-		renderForm();
-		expect(await screen.findByLabelText("Settings")).toBeInTheDocument();
-		expect(screen.getByLabelText("Language")).toBeInTheDocument();
-
-		await user.click(screen.getByLabelText("Language"));
-		await user.click(await screen.findByRole("menuitem", { name: "Simplified Chinese" }));
-
-		await waitFor(() => expect(setUiSettings).toHaveBeenCalledWith({ locale: "zh-CN" }));
-		await waitFor(() => expect(screen.getByText("语言")).toBeInTheDocument());
-		expect(screen.getByText("主题")).toBeInTheDocument();
-		expect(document.documentElement.lang).toBe("zh-CN");
-		expect(useLocaleStore.getState().locale).toBe("zh-CN");
 	});
 
 	it("toggles sound notifications on and persists the change", async () => {
@@ -304,20 +282,6 @@ describe("GlobalSettingsForm", () => {
 		expect(await screen.findByRole("alert")).toHaveTextContent("Could not save the sound notifications preference.");
 		expect(useSoundNotificationsStore.getState().enabled).toBe(true);
 		expect(toggle).toBeChecked();
-	});
-
-	it("keeps the current language and reports a persistence failure", async () => {
-		setUiSettings.mockRejectedValue(new Error("disk full"));
-		const user = userEvent.setup();
-		renderForm();
-		await screen.findByLabelText("Settings");
-
-		await user.click(screen.getByLabelText("Language"));
-		await user.click(await screen.findByRole("menuitem", { name: "Simplified Chinese" }));
-
-		expect(await screen.findByRole("alert")).toHaveTextContent("Could not save the language preference.");
-		expect(useLocaleStore.getState().locale).toBe("en");
-		expect(screen.getByText("Appearance")).toBeInTheDocument();
 	});
 
 	it("closes settings with Escape", async () => {

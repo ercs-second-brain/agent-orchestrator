@@ -1,5 +1,4 @@
 import { lazy, Suspense } from "react";
-import { Trans } from "react-i18next";
 import type { GlobalSettingsSection as GlobalSettingsPage } from "../stores/ui-store";
 import { GeneralSettingsSection } from "./settings/GeneralSettingsSection";
 import { HarnessSettingsSection } from "./settings/HarnessSettingsSection";
@@ -61,10 +60,9 @@ export function GlobalSettingsForm({
 			{(all || section === "mobile") && isRemote ? (
 				<SettingsSection title={"Mobile"} titleHidden={titleHidden}>
 					<p className="rounded-md bg-[var(--color-bg-settings-row)] px-4 py-4 text-sm text-muted-foreground">
-						<Trans
-							components={{ code: <code className="font-mono text-xs" /> }}
-							i18nKey="mobile.remoteManaged"
-						/>
+						{"Connect Mobile is managed on the LAN server. Run "}
+						<code className="font-mono text-xs">ao mobile enable</code>
+						{" on that host."}
 					</p>
 				</SettingsSection>
 			) : null}

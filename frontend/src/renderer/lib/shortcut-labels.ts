@@ -2,13 +2,13 @@ import type { AppShortcutId, ShortcutCategory } from "../../shared/shortcuts";
 
 export const shortcutLabels: Record<AppShortcutId, string> = {
 	"new-session": "New session",
-	"new-shell-terminal": "New shell terminal",
+	"new-shell-terminal": "New terminal",
 	"close-shell-terminal": "Close terminal",
-	"keyboard-shortcuts": "Keyboard shortcuts",
-	"command-palette": "Command palette",
+	"keyboard-shortcuts": "Show keyboard shortcuts",
+	"command-palette": "Open command palette",
 	"open-settings": "Open settings",
 	"toggle-sidebar": "Toggle sidebar",
-	"open-project": "Open project",
+	"open-project": "Open project 1–9",
 	"previous-session": "Previous session",
 	"next-session": "Next session",
 	"previous-tab": "Previous tab",

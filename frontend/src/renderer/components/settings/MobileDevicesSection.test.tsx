@@ -2,7 +2,6 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { apiClient } from "../../lib/api-client";
-import { appI18n } from "../../i18n";
 import { MobileDevicesSection, mobileDevicesQueryKey } from "./MobileDevicesSection";
 
 function renderSection() {
@@ -35,7 +34,7 @@ const twoDevices = {
 describe("MobileDevicesSection", () => {
 	afterEach(async () => {
 		vi.restoreAllMocks();
-		await appI18n.changeLanguage("en");
+		
 	});
 
 	it("shows devices as a compact, single-line management list", async () => {

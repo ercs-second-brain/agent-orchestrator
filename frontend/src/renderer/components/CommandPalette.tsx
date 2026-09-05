@@ -2,7 +2,6 @@ import { useQueries, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useParams } from "@tanstack/react-router";
 import { ArrowLeft, Loader2 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState, type AnimationEvent, type MutableRefObject } from "react";
-import { useTranslation } from "react-i18next";
 import { useCommandPaletteEnabled } from "../hooks/useCommandPaletteEnabled";
 import { useRestoreSession } from "../hooks/useRestoreSession";
 import {
@@ -50,7 +49,6 @@ function terminalHasFocus(): boolean {
 }
 
 export function CommandPalette() {
-	const { i18n, t } = useTranslation();
 	const enabled = useCommandPaletteEnabled();
 	const navigate = useNavigate();
 	const queryClient = useQueryClient();
@@ -144,7 +142,7 @@ export function CommandPalette() {
 				restartingProjectIds,
 				reviewStatesBySessionId: reviewStatesSnapshot,
 			}),
-		[workspaces, currentProjectId, params.sessionId, restartingProjectIds, reviewStatesSnapshot, i18n.resolvedLanguage],
+		[workspaces, currentProjectId, params.sessionId, restartingProjectIds, reviewStatesSnapshot],
 	);
 	const scoped = useMemo(
 		() => (view.mode === "session-actions" ? findSession(workspaces, view.sessionId) : undefined),
@@ -271,7 +269,7 @@ export function CommandPalette() {
 			setSelectedValue("");
 			setError("That session is no longer available.");
 		}
-	}, [view, scoped, t]);
+	}, [view, scoped]);
 
 	const toggleTheme = useCallback(() => {
 		setThemePreference(resolvedTheme === "dark" ? "light" : "dark");
@@ -302,7 +300,7 @@ export function CommandPalette() {
 		if (!useUiStore.getState().restartingProjectIds.has(projectId)) return false;
 		setError("Orchestrator restarting");
 		return true;
-	}, [t]);
+	}, []);
 
 	const openOrchestrator = useCallback(
 		async (projectId: string) => {
@@ -356,7 +354,7 @@ export function CommandPalette() {
 			if (result.status === "not_resumable") return "This session has no saved agent session or prompt to resume from.";
 			return result.message;
 		},
-		[restoreSessionById, t],
+		[restoreSessionById],
 	);
 
 	const runAction = useCallback(
@@ -436,7 +434,7 @@ export function CommandPalette() {
 				setPendingId(null);
 			}
 		},
-		[navigateToTarget, closePalette, toggleTheme, openOrchestrator, resumeSession, pushView, blockedByRestart, queryClient, t],
+		[navigateToTarget, closePalette, toggleTheme, openOrchestrator, resumeSession, pushView, blockedByRestart, queryClient],
 	);
 
 	const onSelectItem = useCallback(

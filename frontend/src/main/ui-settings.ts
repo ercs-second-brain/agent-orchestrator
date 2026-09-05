@@ -3,9 +3,9 @@ import path from "node:path";
 import { DEFAULT_UI_SETTINGS, coerceUiSettings, type UiSettings } from "../shared/ui-locale";
 
 export { DEFAULT_UI_SETTINGS, coerceUiSettings } from "../shared/ui-locale";
-export type { AppLocale, UiSettings } from "../shared/ui-locale";
+export type { UiSettings } from "../shared/ui-locale";
 
-/** File holding lightweight UI prefs (locale) under the ~/.ao state dir. */
+/** File holding lightweight UI prefs under the ~/.ao state dir. */
 export const UI_SETTINGS_FILE_NAME = "ui-settings.json";
 
 let settingsOperationQueue: Promise<void> = Promise.resolve();
@@ -25,7 +25,7 @@ async function readUiSettingsUnlocked(stateDir: string): Promise<UiSettings> {
 }
 
 async function writeUiSettingsUnlocked(stateDir: string, patch: Partial<UiSettings>): Promise<UiSettings> {
-	// A caller only sends the field it changed (e.g. just `locale` or just
+	// A caller only sends the field it changed (e.g. just
 	// `soundNotificationsEnabled`); merge onto the persisted settings so one
 	// setting's write never resets the other back to its default.
 	const current = await readUiSettingsUnlocked(stateDir);

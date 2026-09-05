@@ -3,15 +3,12 @@ import React from "react";
 import { createRoot } from "react-dom/client";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { RouterProvider } from "@tanstack/react-router";
-import { I18nextProvider } from "react-i18next";
 import "@xterm/xterm/css/xterm.css";
 import "./styles.css";
 import { queryClient } from "./lib/query-client";
 import { mergeUnreadNotification, unreadNotificationsQueryKey } from "./lib/notifications";
 import { createAppRouter } from "./router";
 import { AppErrorBoundary } from "./components/AppErrorBoundary";
-import { appI18n } from "./i18n";
-import { useLocaleStore } from "./stores/locale-store";
 import { useSoundNotificationsStore } from "./stores/sound-notifications-store";
 import { useTelemetryPolicyStore } from "./stores/telemetry-policy-store";
 
@@ -68,22 +65,16 @@ declare module "@tanstack/react-router" {
 
 async function renderApp(): Promise<void> {
 	void useTelemetryPolicyStore.getState().load();
-	// The persisted locale is cosmetic; do not leave a newly opened native
-	// window blank while its IPC read completes. The router's pending screen
-	// renders immediately, then i18n updates if the user chose another locale.
-	void useLocaleStore.getState().load();
 	// The sound-notifications toggle only needs to be right by the time
 	// Settings renders, so it loads in the background rather than blocking mount.
 	void useSoundNotificationsStore.getState().load();
 	createRoot(document.getElementById("root") as HTMLElement).render(
 		<React.StrictMode>
-			<I18nextProvider i18n={appI18n}>
-				<AppErrorBoundary>
-					<QueryClientProvider client={queryClient}>
-						<RouterProvider router={router} />
-					</QueryClientProvider>
-				</AppErrorBoundary>
-			</I18nextProvider>
+			<AppErrorBoundary>
+				<QueryClientProvider client={queryClient}>
+					<RouterProvider router={router} />
+				</QueryClientProvider>
+			</AppErrorBoundary>
 		</React.StrictMode>,
 	);
 }

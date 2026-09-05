@@ -1,7 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { AlertTriangle, CheckCircle2, Clock3, Download, Info, Loader2, RefreshCw } from "lucide-react";
-import { useTranslation } from "react-i18next";
 import { aoBridge } from "../../lib/bridge";
 import { cn } from "../../lib/utils";
 import { parseNightlyVersion } from "../../lib/build-channel";
@@ -371,8 +370,7 @@ function UpdateActions({
 	finishManualCheck: (requestId: string) => void;
 	channelSwitch: { channel: UpdateChannel; requestId: string } | null;
 }) {
-	const { i18n } = useTranslation();
-	const locale = i18n.resolvedLanguage ?? i18n.language;
+	const locale = "en";
 	const version = useQuery({ queryKey: ["app-version"], queryFn: () => aoBridge.app.getVersion() });
 	const openUpdateInstallPrompt = useUiStore((state) => state.openUpdateInstallPrompt);
 	const installedChannel = installedUpdateChannel(version.data);

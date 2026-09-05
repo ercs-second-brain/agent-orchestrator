@@ -1,7 +1,5 @@
 import { describe, expect, it } from "vitest";
 import type { CodexAccountsResponse } from "./useCodexAccountsQuery";
-import { catalogFor } from "../i18n/messages";
-import type { AppLocale } from "../i18n/locales";
 import { codexAccountReasonCodes, codexAccountReasonKey, codexSwitchDisplay, mergeCodexAccounts } from "./codex-accounts-state";
 import type { CodexAccountSwitch } from "./useCodexAccountsQuery";
 
@@ -83,22 +81,24 @@ it("shows active rollback as progress and exposes interrupted rollback recovery"
 	expect(interrupted.canRecover).toBe(true);
 });
 
-it("maps every account reason to complete native locale copy with a safe unknown fallback", () => {
-	const locales: AppLocale[] = ["en", "de", "es", "fr", "ja", "ko", "pt-BR", "zh-CN"];
-	const switchKeys = ["requested", "stopping_sessions", "sessions_stopped", "checkpointing_source", "activating_target", "verifying_target", "restarting_sessions", "rollback_required", "recovery_required", "completed", "failed", "unknown"].map((phase) => `settings.codexAccounts.switch.${phase}`);
+it("maps every account reason to complete English copy with a safe unknown fallback", () => {
+	const switchPhases = ["requested", "stopping_sessions", "sessions_stopped", "checkpointing_source", "activating_target", "verifying_target", "restarting_sessions", "rollback_required", "recovery_required", "completed", "failed", "unknown"];
 	const keys = [
 		...codexAccountReasonCodes.map(codexAccountReasonKey),
-		...switchKeys,
 		"Account switch failed. Your previous Codex account was restored.",
 		"Retry recovery",
 	];
-	for (const locale of locales) {
-		const catalog = catalogFor(locale);
-		for (const key of keys) {
-			const value = catalog[key as keyof typeof catalog];
-			expect(value, `${locale}: ${key}`).toBeTruthy();
-			expect(value).not.toBe(key);
-		}
+	for (const key of keys) {
+		expect(key, key).toBeTruthy();
+	}
+	for (const phase of switchPhases) {
+		const display = codexSwitchDisplay({
+			id: "switch-1", sourceAccountId: "account-a", targetAccountId: "account-b",
+			phase: phase as never, canRecover: false,
+			sessions: [], createdAt: "2026-09-02T00:00:00Z", updatedAt: "2026-09-02T00:01:00Z",
+		} satisfies CodexAccountSwitch);
+		expect(display.key, phase).toBeTruthy();
+		expect(display.key, phase).not.toContain("settings.codexAccounts.");
 	}
 	expect(codexAccountReasonKey("provider-private-message")).toBe("The current status is unavailable.");
 });

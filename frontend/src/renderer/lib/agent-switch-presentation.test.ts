@@ -46,12 +46,12 @@ function expectRelationship(
 
 describe("deriveAgentSwitchPresentation", () => {
 	it.each([
-		["preparing_handoff", "preparing", "switchAgent.state.preparingHandoff"],
-		["stopping_source", "stopping_source", "switchAgent.state.stoppingSource"],
-		["source_stopped", "starting_target", "switchAgent.state.sourceStopped"],
-		["starting_target", "starting_target", "switchAgent.state.startingTarget"],
-		["target_ready", "confirming_takeover", "switchAgent.state.targetReady"],
-		["delivering_context", "confirming_takeover", "switchAgent.state.deliveringContext"],
+		["preparing_handoff", "preparing", "Preparing handoff"],
+		["stopping_source", "stopping_source", "Stopping source agent"],
+		["source_stopped", "starting_target", "Source stopped"],
+		["starting_target", "starting_target", "Starting target agent"],
+		["target_ready", "confirming_takeover", "Target ready"],
+		["delivering_context", "confirming_takeover", "Delivering context"],
 	] as const)("maps %s into the durable %s stage", (state, stage, description) => {
 		const presentation = deriveAgentSwitchPresentation(input(switchSummary({ state })));
 
@@ -64,16 +64,16 @@ describe("deriveAgentSwitchPresentation", () => {
 			tone: "working",
 		});
 		expect(presentation).toMatchObject({
-			compactLabelKey: "switchAgent.compact.switching",
+			compactLabel: "Switching to Codex",
 			description,
-			titleKey: "switchAgent.progressTitle",
+			title: "Switching from Claude Code to Codex",
 		});
 	});
 
 	it.each([
-		["blocked", true, "switchAgent.sourceInput.description"],
-		["waiting_input", true, "switchAgent.sourceInput.description"],
-		["active", false, "switchAgent.state.preparingHandoff"],
+		["blocked", true, "The source agent needs input. Review the terminal prompt to continue the handoff."],
+		["waiting_input", true, "The source agent needs input. Review the terminal prompt to continue the handoff."],
+		["active", false, "Preparing handoff"],
 	] as const)(
 		"maps a requested source handoff with %s activity to preparation",
 		(activityState, allowSourceInput, description) => {
@@ -107,9 +107,9 @@ describe("deriveAgentSwitchPresentation", () => {
 			tone: "warning",
 		});
 		expect(presentation).toMatchObject({
-			compactLabelKey: "switchAgent.recovery.compact",
-			description: "switchAgent.recovery.description",
-			titleKey: "switchAgent.recovery.title",
+			compactLabel: "Agent switch needs recovery",
+			description: "AO could not confirm whether the target agent started. Terminal input remains locked to prevent two agents from owning the session.",
+			title: "Target startup could not be confirmed",
 		});
 	});
 
@@ -127,9 +127,9 @@ describe("deriveAgentSwitchPresentation", () => {
 			tone: "warning",
 		});
 		expect(presentation).toMatchObject({
-			compactLabelKey: "switchAgent.sourceRecovery.compact",
-			description: "switchAgent.sourceRecovery.description",
-			titleKey: "switchAgent.sourceRecovery.title",
+			compactLabel: "Claude Code needs restoration",
+			description: "The switch failed, and AO could not restore Claude Code. Terminal input remains locked until AO verifies one active owner.",
+			title: "Claude Code could not be restored",
 		});
 	});
 
@@ -147,9 +147,9 @@ describe("deriveAgentSwitchPresentation", () => {
 			tone: "warning",
 		});
 		expect(presentation).toMatchObject({
-			compactLabelKey: "switchAgent.recovery.compact",
-			description: "switchAgent.sourceStopRecovery.description",
-			titleKey: "switchAgent.sourceStopRecovery.title",
+			compactLabel: "Agent switch needs recovery",
+			description: "AO could not confirm whether Claude Code stopped. Check the session before continuing.",
+			title: "Claude Code status could not be confirmed",
 		});
 	});
 
@@ -164,7 +164,7 @@ describe("deriveAgentSwitchPresentation", () => {
 			stage: "confirming_takeover",
 			tone: "working",
 		});
-		expect(presentation.description).toBe("switchAgent.state.completed");
+		expect(presentation.description).toBe("Completed");
 	});
 
 	it.each([
@@ -210,15 +210,15 @@ describe("deriveAgentSwitchPresentation", () => {
 			tone: "success",
 		});
 		expect(presentation).toMatchObject({
-			compactLabelKey: "switchAgent.success.compact",
-			description: "switchAgent.state.completed",
-			titleKey: "switchAgent.success.compact",
+			compactLabel: "Switched to Codex",
+			description: "Completed",
+			title: "Switched to Codex",
 		});
 	});
 
 	it.each([
-		["target_binary_missing", "switchAgent.error.targetBinaryMissing"],
-		["future_failure", "switchAgent.state.failed"],
+		["target_binary_missing", "Target agent is not installed"],
+		["future_failure", "Failed"],
 	] as const)("maps failed switches through the stable %s error detail", (errorCode, description) => {
 		const presentation = deriveAgentSwitchPresentation(
 			input(switchSummary({ errorCode, state: "failed" })),
@@ -233,9 +233,9 @@ describe("deriveAgentSwitchPresentation", () => {
 			tone: "danger",
 		});
 		expect(presentation).toMatchObject({
-			compactLabelKey: "switchAgent.failure.compact",
+			compactLabel: "Agent switch failed",
 			description,
-			titleKey: "switchAgent.state.failed",
+			title: "Failed",
 		});
 	});
 
@@ -253,9 +253,9 @@ describe("deriveAgentSwitchPresentation", () => {
 			tone: "working",
 		});
 		expect(presentation).toMatchObject({
-			compactLabelKey: "switchAgent.refreshOnly.compact",
-			description: "switchAgent.checkingStatus",
-			titleKey: "switchAgent.checkingStatus",
+			compactLabel: "Checking switch status",
+			description: "Checking switch status…",
+			title: "Checking switch status…",
 		});
 	});
 });

@@ -1,19 +1,13 @@
 import { existsSync } from "node:fs";
 import path from "node:path";
 import { app, Menu, nativeImage, Tray, type MenuItemConstructorOptions } from "electron";
-import { catalogFor, type MessageKey, type PluralMessageKey } from "../renderer/i18n/messages";
-import type { AppLocale } from "../shared/ui-locale";
 import type { TrayAttentionState, TrayAttentionZone, TrayOpenSessionTarget, TraySessionEntry } from "../shared/tray";
 
 const MAX_MENU_SESSIONS = 8;
 
 const zoneRank: Record<TrayAttentionZone, number> = { merge: 0, action: 1 };
 
-const zoneLabelKey: Record<TrayAttentionZone, MessageKey> = { merge: "zone.merge", action: "zone.action" };
-
-function format(template: string, vars: Record<string, string | number>): string {
-	return template.replace(/\{\{(\w+)\}\}/g, (match, key: string) => String(vars[key] ?? match));
-}
+const zoneLabels: Record<TrayAttentionZone, string> = { merge: "Ready to merge", action: "Needs you" };
 
 function trayIconPath(): string | undefined {
 	const candidate = app.isPackaged
@@ -24,7 +18,6 @@ function trayIconPath(): string | undefined {
 
 export type TrayController = {
 	setState(state: TrayAttentionState): void;
-	setLocale(locale: AppLocale): void;
 	clear(): void;
 	dispose(): void;
 };
@@ -32,7 +25,6 @@ export type TrayController = {
 export type TrayControllerOptions = {
 	focusWindow: () => void;
 	openSession: (target: TrayOpenSessionTarget) => void;
-	locale: AppLocale;
 };
 
 export function createTrayController(options: TrayControllerOptions): TrayController | null {
@@ -44,17 +36,9 @@ export function createTrayController(options: TrayControllerOptions): TrayContro
 
 	const tray = new Tray(icon);
 	let sessions: TraySessionEntry[] = [];
-	let catalog = catalogFor(options.locale);
 
-	const t = (key: MessageKey, vars?: Record<string, string | number>): string => {
-		const raw = catalog[key] ?? key;
-		return vars ? format(raw, vars) : raw;
-	};
-
-	const tPlural = (base: PluralMessageKey, count: number): string => {
-		const key = (count === 1 ? `${base}_one` : `${base}_other`) as MessageKey;
-		return t(key, { count });
-	};
+	const attentionTooltip = (count: number): string =>
+		count === 1 ? "1 session needs attention" : `${count} sessions need attention`;
 
 	const sessionItem = (entry: TraySessionEntry): MenuItemConstructorOptions => {
 		const title = entry.title || "Untitled session";
@@ -67,7 +51,7 @@ export function createTrayController(options: TrayControllerOptions): TrayContro
 	const render = () => {
 		const count = sessions.length;
 		tray.setTitle(count > 0 ? String(count) : "");
-		tray.setToolTip(count > 0 ? tPlural("tray.attentionTooltip", count) : "Agent Orchestrator");
+		tray.setToolTip(count > 0 ? attentionTooltip(count) : "Agent Orchestrator");
 
 		const items: MenuItemConstructorOptions[] = [];
 		if (count === 0) {
@@ -83,14 +67,14 @@ export function createTrayController(options: TrayControllerOptions): TrayContro
 			for (const entry of visible) {
 				if (entry.zone !== lastZone) {
 					if (lastZone !== null) items.push({ type: "separator" });
-					items.push({ label: t(zoneLabelKey[entry.zone]), enabled: false });
+					items.push({ label: zoneLabels[entry.zone], enabled: false });
 					lastZone = entry.zone;
 				}
 				items.push(sessionItem(entry));
 			}
 			if (overflow.length > 0) {
 				items.push({ type: "separator" });
-				items.push({ label: `${"More"} (${overflow.length})`, submenu: overflow.map(sessionItem) });
+				items.push({ label: `More (${overflow.length})`, submenu: overflow.map(sessionItem) });
 			}
 		}
 		items.push({ type: "separator" });
@@ -104,10 +88,6 @@ export function createTrayController(options: TrayControllerOptions): TrayContro
 	return {
 		setState(state) {
 			sessions = state.sessions ?? [];
-			render();
-		},
-		setLocale(locale) {
-			catalog = catalogFor(locale);
 			render();
 		},
 		clear() {

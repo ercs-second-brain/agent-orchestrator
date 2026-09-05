@@ -1,5 +1,4 @@
 import { AlertTriangle } from "lucide-react";
-import { useTranslation } from "react-i18next";
 import { aoBridge } from "../lib/bridge";
 import { parseNightlyVersion } from "../lib/build-channel";
 import { sessionsAtRiskFromInstall } from "../lib/update-install-risk";
@@ -39,7 +38,6 @@ export function RestartToUpdateDialog() {
 }
 
 function RestartToUpdateDialogBody() {
-	const { i18n } = useTranslation();
 	const close = useUiStore((state) => state.closeUpdateInstallPrompt);
 	const status = useUpdateStatus();
 	// Subscription off: this only ever reads the already-cached workspace list,
@@ -50,7 +48,7 @@ function RestartToUpdateDialogBody() {
 	const version = staged?.version ?? status.version;
 	const nightly = parseNightlyVersion(version);
 	const buildLabel = nightly
-		? `Nightly ${nightly.base} · ${new Intl.DateTimeFormat(i18n.resolvedLanguage ?? i18n.language, {
+		? `Nightly ${nightly.base} · ${new Intl.DateTimeFormat("en", {
 					month: "short",
 					day: "numeric",
 				}).format(nightly.builtAt)}`

@@ -60,7 +60,7 @@ function entry(overrides: Partial<TraySessionEntry> & { sessionId: string }): Tr
 function setup() {
 	const openSession = vi.fn();
 	const focusWindow = vi.fn();
-	const controller = createTrayController({ focusWindow, openSession, locale: "en" });
+	const controller = createTrayController({ focusWindow, openSession });
 	if (!controller) throw new Error("expected a tray controller");
 	const tray = trayInstances[trayInstances.length - 1];
 	return { controller, tray, openSession, focusWindow };
@@ -141,14 +141,4 @@ describe("createTrayController", () => {
 		expect(tray.destroyed).toBe(true);
 	});
 
-	it("relocalizes menu labels when setLocale is called", () => {
-		const { controller, tray } = setup();
-		controller.setState({ sessions: [entry({ sessionId: "s1", zone: "action" })] });
-		expect(tray.template.some((i) => i.label === "Needs you")).toBe(true);
-
-		controller.setLocale("zh-CN");
-		expect(tray.tooltip).toBe("1 个会话需要关注");
-		expect(tray.template.some((i) => i.label === "需要你处理")).toBe(true);
-		expect(tray.template.some((i) => i.label === "显示 Agent Orchestrator")).toBe(true);
-	});
 });

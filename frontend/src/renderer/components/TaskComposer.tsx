@@ -353,7 +353,7 @@ export function TaskComposer({
 			labels={{
 				addFile: "Add file",
 				fallbackAction: fallbackAction === "bypass-permissions"
-					? "\"Start without approvals\""
+					? "Start without approvals"
 					: "Create as Terminal UI",
 				removeFile: (name) => `Remove ${name}`,
 				runsWith: "Runs with",

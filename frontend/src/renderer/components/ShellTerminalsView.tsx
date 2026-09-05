@@ -1,6 +1,5 @@
 import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
 import { useCallback, useEffect } from "react";
-import { Trans } from "react-i18next";
 import { defaultShortcutBindings, shortcutBindingLabel } from "../../shared/shortcuts";
 import { useOverflowScroll } from "../hooks/useOverflowScroll";
 import { useCloseShellTerminal, useRenameShellTerminal, useShellTerminals } from "../hooks/useShellTerminals";
@@ -181,11 +180,9 @@ export function ShellTerminalsView() {
 						<div className="text-center">
 							<div className="text-terminal">{"No terminals open"}</div>
 							<div className="mt-2 text-terminal-dim">
-								<Trans
-									components={{ shortcut: <span className="text-terminal" /> }}
-									i18nKey="terminal.emptyHint"
-									values={{ shortcut: newTerminalShortcutLabel }}
-								/>
+								{"Press "}
+								<span className="text-terminal">{newTerminalShortcutLabel}</span>
+								{" or use the + button to open one."}
 							</div>
 						</div>
 					</div>
