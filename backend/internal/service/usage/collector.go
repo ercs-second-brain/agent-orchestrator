@@ -20,7 +20,6 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/aoagents/agent-orchestrator/backend/internal/domain"
-	"github.com/aoagents/agent-orchestrator/backend/internal/pricing"
 )
 
 const (
@@ -46,7 +45,6 @@ type validatedSourceArtifact struct {
 // HookSignal is the usage-specific metadata carried by an AO agent hook.
 type HookSignal struct {
 	Harness                domain.AgentHarness
-	ProviderHint           string
 	Event                  string
 	LaunchID               string
 	NativeSessionID        string
@@ -115,31 +113,9 @@ type Collector struct {
 	store                   collectorStore
 	roots                   SourceRoots
 	notifySourcesChanged    func(reconcile bool)
-	notifyRouteResolved     func()
 	codexLogicalSourceLimit int
 	now                     func() time.Time
 	mu                      sync.Mutex
-	// Guarded separately from mu, which RecordHook holds across the whole hook.
-	routeMu sync.RWMutex
-}
-
-// OnRouteResolved registers the handler called the first time a binding learns
-// its billing route. Only Claude needs it: a Claude transcript names no
-// provider, so events collected before the first hook are unattributed, and
-// this is the moment the evidence to repair them finally exists.
-func (c *Collector) OnRouteResolved(handler func()) {
-	if c == nil {
-		return
-	}
-	c.routeMu.Lock()
-	defer c.routeMu.Unlock()
-	c.notifyRouteResolved = handler
-}
-
-func (c *Collector) routeResolvedHandler() func() {
-	c.routeMu.RLock()
-	defer c.routeMu.RUnlock()
-	return c.notifyRouteResolved
 }
 
 // NewCollector constructs a transcript source registrar.
@@ -262,7 +238,6 @@ func (c *Collector) RecordHook(ctx context.Context, sessionID domain.SessionID, 
 		return err
 	}
 	signal.Harness = session.Harness
-	signal.ProviderHint = trustedClaudeProviderHint(session.Harness, signal.ProviderHint)
 	signal.NativeSessionID = boundedUsageMetadata(signal.NativeSessionID)
 	if signal.NativeSessionID == "" {
 		signal.NativeSessionID = usageNativeSessionID(session)
@@ -348,28 +323,24 @@ func (c *Collector) RecordHook(ctx context.Context, sessionID domain.SessionID, 
 	if session.Harness == domain.HarnessCodex && strings.TrimSpace(signal.TranscriptPath) == "" {
 		lastErrorCode = domain.UsageErrorSourceDiscoveryPending
 	}
-	// A binding that existed without a billable route, and now has one, owns
-	// history whose inferred or unavailable price can be corrected immediately.
-	routeResolved := exists && signal.ProviderHint != "" &&
-		(existing.ProviderHint == "" || existing.ProviderHint == pricing.UnidentifiedBillingRoute) &&
-		existing.ProviderHint != signal.ProviderHint
+	// Keep whatever billing route an older build already recorded; the field is
+	// inert now that usage pricing is gone, but its stored history stays.
+	bindingHint := ""
+	if exists {
+		bindingHint = existing.ProviderHint
+	}
 	binding, err := c.store.UpsertUsageBinding(ctx, domain.UsageBindingRecord{
 		SessionID:      sessionID,
 		Harness:        session.Harness,
 		NativeRootID:   signal.NativeSessionID,
 		InitialModelID: boundedUsageMetadata(signal.ModelID),
-		ProviderHint:   signal.ProviderHint,
+		ProviderHint:   bindingHint,
 		State:          state,
 		LastErrorCode:  lastErrorCode,
 		UpdatedAt:      now,
 	})
 	if err != nil {
 		return err
-	}
-	if routeResolved {
-		if notify := c.routeResolvedHandler(); notify != nil {
-			notify()
-		}
 	}
 
 	if mainArtifact != nil {
@@ -456,13 +427,6 @@ func (c *Collector) RecordHook(ctx context.Context, sessionID domain.SessionID, 
 		c.notifySourceInventory(false)
 	}
 	return nil
-}
-
-func trustedClaudeProviderHint(harness domain.AgentHarness, raw string) string {
-	if harness != domain.HarnessClaudeCode {
-		return ""
-	}
-	return pricing.TrustedClaudeRoute(boundedUsageMetadata(raw))
 }
 
 func finalizingEvent(event string) bool {

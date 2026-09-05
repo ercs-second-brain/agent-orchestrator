@@ -2256,7 +2256,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List compact token and estimated cost usage for session cards */
+        /** List compact token usage for session cards */
         get: operations["listCompactSessionUsage"];
         put?: never;
         post?: never;
@@ -2273,7 +2273,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Get detailed token and estimated cost usage for one session */
+        /** Get detailed token usage for one session */
         get: operations["getSessionUsage"];
         put?: never;
         post?: never;
@@ -2696,7 +2696,6 @@ export interface components {
             tokensBefore?: number;
         };
         CompactSessionUsageResponse: {
-            estimatedCost: null | components["schemas"]["EstimatedCostResponse"];
             incomplete: boolean;
             /** @description Canonical input plus output. Null when either component is unknown. */
             processedTokens: null | number;
@@ -3105,26 +3104,6 @@ export interface components {
         EnsureCodexAccountsRequest: {
             accountIds?: string[];
             includeUsage?: boolean;
-        };
-        EstimatedCostResponse: {
-            /** Format: int64 */
-            cachedInputNanos: null | number;
-            /** @enum {string} */
-            coverage: "complete" | "partial";
-            /**
-             * Format: int64
-             * @description Every non-cache-read input charge, cache writes included.
-             */
-            inputNanos: null | number;
-            /** Format: int64 */
-            outputNanos: null | number;
-            /**
-             * @description Whether contributing billing providers were detected, inferred from model ownership, or both.
-             * @enum {string}
-             */
-            providerAttribution: "observed" | "inferred" | "mixed";
-            /** Format: int64 */
-            totalNanos: number;
         };
         ExitAgentResponse: {
             ok: boolean;
@@ -4107,8 +4086,6 @@ export interface components {
             /** @enum {string} */
             harness: "claude-code" | "codex";
             modelId?: string;
-            /** @description Canonical provider routing hint derived by the trusted local Claude hook. */
-            providerId?: string;
             subagentId?: string;
             subagentTranscriptPath?: string;
             transcriptPath?: string;
@@ -4122,7 +4099,6 @@ export interface components {
             cacheReadTokens: null | number;
             /** @description Input read from an existing provider cache. Cache hit percentage uses cachedInputTokens divided by inclusive inputTokens. */
             cachedInputTokens: null | number;
-            estimatedCost: null | components["schemas"]["EstimatedCostResponse"];
             /** @description Total input, including cached and uncached input. */
             inputTokens: null | number;
             /** @description Total output, including provider-specific subsets such as reasoning output. */

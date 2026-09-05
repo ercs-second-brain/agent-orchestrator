@@ -47,7 +47,6 @@ func (c *UsageController) listSessions(w http.ResponseWriter, r *http.Request) {
 		out = append(out, CompactSessionUsageResponse{
 			SessionID: item.SessionID, ProcessedTokens: item.ProcessedTokens,
 			TotalTokens: totalTokens, Incomplete: item.Incomplete,
-			EstimatedCost: estimatedCostResponse(item.EstimatedCost),
 		})
 	}
 	envelope.WriteJSON(w, http.StatusOK, ListCompactSessionUsageResponse{Sessions: out})
@@ -91,18 +90,5 @@ func usageTotalsResponse(totals domain.UsageMetricTotals) UsageTotalsResponse {
 		UncachedInputTokens: totals.UncachedInputTokens,
 		OutputTokens:        totals.OutputTokens, ProcessedTokens: totals.ProcessedTokens,
 		CacheReadTokens: totals.CachedInputTokens,
-		EstimatedCost:   estimatedCostResponse(totals.EstimatedCost),
-	}
-}
-
-func estimatedCostResponse(cost *domain.EstimatedCost) *EstimatedCostResponse {
-	if cost == nil {
-		return nil
-	}
-	return &EstimatedCostResponse{
-		TotalNanos: cost.TotalNanos, InputNanos: cost.InputNanos,
-		CachedInputNanos: cost.CachedInputNanos, OutputNanos: cost.OutputNanos,
-		Coverage:            string(cost.Coverage),
-		ProviderAttribution: string(cost.ProviderAttribution),
 	}
 }

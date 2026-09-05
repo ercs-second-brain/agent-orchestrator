@@ -14,7 +14,6 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/aoagents/agent-orchestrator/backend/internal/domain"
-	"github.com/aoagents/agent-orchestrator/backend/internal/pricing"
 )
 
 type jsonlRecord struct {
@@ -114,22 +113,24 @@ type stableTailStateV1 struct {
 }
 
 type claudeParserStateV1 struct {
-	ModelID  string `json:"model_id,omitempty"`
+	ModelID string `json:"model_id,omitempty"`
+	// Provider is the retired "billing_provider" key. Usage pricing and its
+	// billing attribution were removed; the field survives only so parser
+	// state written by older builds still decodes (DisallowUnknownFields) and
+	// must never be read. Reusing the key would stamp a retired billing route
+	// onto every event newly ingested from such a source.
 	Provider string `json:"billing_provider,omitempty"`
 	// LegacyProvider is the retired "provider" key. A build before #2928 filled
 	// it with the harness name — "claude-code", "openai" — not a billing route,
-	// so decoding must accept it (DisallowUnknownFields) and must never read
-	// it. Reusing the key for the billing route would stamp the harness name
-	// onto every event newly ingested from such a source, marked observed and
-	// therefore beyond every repair path.
+	// so decoding must accept it and must never read it.
 	LegacyProvider string `json:"provider,omitempty"`
 }
 
 type codexParserStateV1 struct {
 	Baseline       codexTokenVector `json:"baseline"`
 	ModelID        string           `json:"model_id,omitempty"`
-	Provider       string           `json:"billing_provider,omitempty"`
-	LegacyProvider string           `json:"provider,omitempty"` // see claudeParserStateV1
+	Provider       string           `json:"billing_provider,omitempty"` // retired, see claudeParserStateV1
+	LegacyProvider string           `json:"provider,omitempty"`         // see claudeParserStateV1
 
 	NativeSessionID     string   `json:"native_session_id,omitempty"`
 	DirectParentID      string   `json:"direct_parent_id,omitempty"`
@@ -293,14 +294,9 @@ func parseClaude(source domain.UsageSourceContext, records []jsonlRecord, state 
 			recordMalformed(result)
 			continue
 		}
-		// The transcript feeds the same write-once column as the hook, so it
-		// earns the same whitelist. An unrecognised string is dropped rather
-		// than stored: unattributed is repairable, a wrong attribution is not.
-		nativeProvider := pricing.TrustedClaudeBillingProvider(
-			firstNonEmpty(native.Message.Provider, native.Provider))
-		if nativeProvider != "" {
-			state.Provider = nativeProvider
-		}
+		// An unrecognised routing string no longer matters: pricing and its
+		// billing attribution are gone, so the transcript's provider field is
+		// ignored entirely.
 		if native.Type != "assistant" || !jsonValueReported(native.Message.Usage) ||
 			native.Message.StopReason == nil || strings.TrimSpace(*native.Message.StopReason) == "" {
 			continue
@@ -335,19 +331,14 @@ func parseClaude(source domain.UsageSourceContext, records []jsonlRecord, state 
 		}
 		model := firstNonEmpty(native.Message.Model, state.ModelID, source.InitialModelID, "unknown")
 		state.ModelID = model
-		billingProvider := pricing.TrustedClaudeBillingProvider(firstNonEmpty(
-			nativeProvider, state.Provider, source.ProviderHint,
-		))
 		keyID := firstNonEmpty(native.Message.ID, native.UUID, strconv.FormatInt(record.Offset, 10))
 		event := domain.ModelUsageEvent{
-			ProviderID:            domain.UsageProviderAnthropic,
-			BillingProviderID:     billingProvider,
-			BillingProviderSource: domain.ObservedBillingProviderSource(billingProvider),
-			ModelID:               model,
-			MeasurementKind:       domain.UsageMeasurementNativeReported,
-			Tokens:                tokens,
-			ProviderUsageJSON:     boundedProviderUsage(native.Message.Usage),
-			CreatedAt:             parseUsageTimestamp(native.Timestamp),
+			ProviderID:        domain.UsageProviderAnthropic,
+			ModelID:           model,
+			MeasurementKind:   domain.UsageMeasurementNativeReported,
+			Tokens:            tokens,
+			ProviderUsageJSON: boundedProviderUsage(native.Message.Usage),
+			CreatedAt:         parseUsageTimestamp(native.Timestamp),
 			SourceEventKey: stableSourceEventKey(
 				"claude",
 				source.NativeRootID,
@@ -369,17 +360,6 @@ func parseClaude(source domain.UsageSourceContext, records []jsonlRecord, state 
 	}
 }
 
-// canonicalBillingProvider normalizes one observed routing fact into a catalog
-// provider identifier. Unknown or conflicting routing stays empty so the event
-// is stored unattributed rather than priced against the wrong provider.
-func canonicalBillingProvider(observed string) string {
-	provider := pricing.CanonicalProviderID(observed)
-	if provider == "unknown" {
-		return ""
-	}
-	return provider
-}
-
 type codexEnvelope struct {
 	Timestamp string          `json:"timestamp"`
 	Type      string          `json:"type"`
@@ -394,13 +374,6 @@ func parseCodex(source domain.UsageSourceContext, records []jsonlRecord, state *
 			continue
 		}
 		switch envelope.Type {
-		case "session_meta":
-			var payload struct {
-				ModelProvider string `json:"model_provider"`
-			}
-			if json.Unmarshal(envelope.Payload, &payload) == nil {
-				state.Provider = firstNonEmpty(payload.ModelProvider, state.Provider)
-			}
 		case "turn_context":
 			var payload struct {
 				Model string `json:"model"`
@@ -698,14 +671,12 @@ func parseCodexEvent(source domain.UsageSourceContext, envelope codexEnvelope, s
 	model := firstNonEmpty(state.ModelID, source.InitialModelID, "unknown")
 	state.ModelID = model
 	event := domain.ModelUsageEvent{
-		ProviderID:            domain.UsageProviderOpenAI,
-		BillingProviderID:     canonicalBillingProvider(state.Provider),
-		BillingProviderSource: domain.ObservedBillingProviderSource(canonicalBillingProvider(state.Provider)),
-		ModelID:               model,
-		MeasurementKind:       domain.UsageMeasurementNativeReported,
-		Tokens:                tokens,
-		ProviderUsageJSON:     codexProviderUsage(payload.Info, derivedCacheWrite),
-		CreatedAt:             parseUsageTimestamp(envelope.Timestamp),
+		ProviderID:        domain.UsageProviderOpenAI,
+		ModelID:           model,
+		MeasurementKind:   domain.UsageMeasurementNativeReported,
+		Tokens:            tokens,
+		ProviderUsageJSON: codexProviderUsage(payload.Info, derivedCacheWrite),
+		CreatedAt:         parseUsageTimestamp(envelope.Timestamp),
 		SourceEventKey: stableSourceEventKey(
 			"codex",
 			source.NativeRootID,
