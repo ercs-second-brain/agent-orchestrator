@@ -64,6 +64,14 @@ type ProjectConfig struct {
 	// drifting out of sync with a project-config list.
 	ContainerReap ContainerReapConfig `json:"containerReap,omitempty"`
 
+	// WorktreePriming controls whether new session worktrees are primed with
+	// node_modules from a daemon-cached template (see
+	// backend/internal/worktreepriming). It applies to projects that have
+	// package-lock.json files; nil means enabled. Templates are a cache under
+	// the daemon data dir keyed on the combined lockfile hash, so deleting one
+	// only costs the next session a plain npm ci.
+	WorktreePriming *WorktreePrimingConfig `json:"worktreePriming,omitempty"`
+
 	// AutoReview controls whether new worker sessions spawned for this project
 	// have automatic PR review enabled by default. Absent (nil) means enabled:
 	// automatic review is the default-on policy, applied at spawn time without
@@ -77,6 +85,14 @@ type ProjectConfig struct {
 type ContainerReapConfig struct {
 	// Disabled turns off container reaping for every session in this project.
 	// Per-container sparing (ao.spare=true) is unaffected either way.
+	Disabled bool `json:"disabled,omitempty"`
+}
+
+// WorktreePrimingConfig is the project-level opt-out for priming new session
+// worktrees from the cached node_modules template.
+type WorktreePrimingConfig struct {
+	// Disabled turns off template priming for every session in this project:
+	// no template is used or harvested, and workers install as before.
 	Disabled bool `json:"disabled,omitempty"`
 }
 

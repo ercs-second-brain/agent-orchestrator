@@ -28,6 +28,7 @@ import (
 	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/sessionguard"
 	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/skillassets"
 	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/tmuxbin"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/worktreepriming"
 )
 
 // Sentinel errors returned by the Session Manager; callers match them with
@@ -347,6 +348,7 @@ type Manager struct {
 	attachmentSuffix            func() (string, error)
 	dataDir                     string
 	runFilePath                 string
+	primer                      *worktreepriming.Primer
 	clock                       func() time.Time
 	reconcileWorkers            int
 	defaultBranchRefreshTimeout time.Duration
@@ -652,6 +654,7 @@ func New(d Deps) *Manager {
 		daemonRunID:                    strings.TrimSpace(d.DaemonRunID),
 		lcm:                            d.Lifecycle,
 		attachments:                    attachmentstore.New(d.DataDir),
+		primer:                         worktreepriming.New(d.DataDir, d.Logger),
 		attachmentSuffix:               randomSuffix,
 		dataDir:                        d.DataDir,
 		runFilePath:                    strings.TrimSpace(d.RunFilePath),
@@ -3935,14 +3938,85 @@ func HookPATH(executable func() (string, error), getenv func(string) string, pro
 }
 
 // provisionWorkspace applies the project's per-workspace setup after the
-// worktree exists: symlink shared files from the project repo, then run any
-// post-create commands. Either failing aborts the spawn so a half-provisioned
-// workspace never launches an agent.
+// worktree exists: prime node_modules from the project template (best-effort),
+// symlink shared files from the project repo, then run any post-create
+// commands. Symlink/post-create failures abort the spawn so a half-provisioned
+// workspace never launches an agent; priming failures never do (the worker
+// falls back to a plain npm ci).
 func (m *Manager) provisionWorkspace(ctx context.Context, project domain.ProjectRecord, workspacePath string) error {
+	m.primeWorkspace(ctx, project, workspacePath)
 	if err := applySymlinks(project.Path, workspacePath, project.Config.Symlinks); err != nil {
 		return err
 	}
 	return runPostCreate(ctx, workspacePath, project.Config.PostCreate)
+}
+
+// primeWorkspace pre-installs node_modules into a freshly created worktree
+// from the project's cached template (issue #11) so workers can skip npm ci
+// when the lockfiles are unchanged. Every failure path is a fallback: no
+// template, a failed prime, or priming disabled means the worker installs as
+// before, so priming problems must never fail the spawn.
+func (m *Manager) primeWorkspace(ctx context.Context, project domain.ProjectRecord, workspacePath string) {
+	if project.Kind.WithDefault() == domain.ProjectKindScratch {
+		return
+	}
+	if project.Config.WorktreePriming != nil && project.Config.WorktreePriming.Disabled {
+		return
+	}
+	if m.primer == nil {
+		return // test managers built without New
+	}
+	hash, err := m.primer.Hash(workspacePath)
+	if err != nil || hash == "" {
+		return // no package-lock.json (or unreadable tree): nothing to prime
+	}
+	primed, err := m.primer.Prime(ctx, project.ID, workspacePath, hash)
+	switch {
+	case err != nil:
+		m.logger.Warn("spawn: worktree priming failed; worker falls back to npm ci",
+			"projectID", project.ID, "workspacePath", workspacePath, "error", err)
+	case primed:
+		m.logger.Info("spawn: worktree primed from template",
+			"projectID", project.ID, "workspacePath", workspacePath)
+	default:
+		// No usable template for this lockfile hash yet. Harvest one in the
+		// background from a tree that already matches — usually the project
+		// checkout, otherwise an existing session worktree — so later spawns
+		// prime instead of reinstalling.
+		m.harvestTemplate(project, workspacePath, hash)
+	}
+}
+
+// harvestTemplate donates the first candidate tree whose lockfile hash matches
+// to the project's priming template. Runs on the manager's background context:
+// the spawn request that triggered it returns long before the copy finishes.
+func (m *Manager) harvestTemplate(project domain.ProjectRecord, excludePath, hash string) {
+	ctx := m.backgroundContext
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	candidates := []string{project.Path}
+	if sessions, err := m.store.ListSessions(ctx, domain.ProjectID(project.ID)); err != nil {
+		m.logger.Warn("worktree priming: session worktree harvest candidates unavailable",
+			"projectID", project.ID, "error", err)
+	} else {
+		for _, rec := range sessions {
+			if path := rec.Metadata.WorkspacePath; path != "" && path != excludePath {
+				candidates = append(candidates, path)
+			}
+		}
+	}
+	for _, candidate := range candidates {
+		if candidate == "" {
+			continue
+		}
+		candidateHash, err := m.primer.Hash(candidate)
+		if err != nil || candidateHash != hash {
+			continue
+		}
+		m.primer.HarvestAsync(ctx, project.ID, candidate, hash)
+		return
+	}
 }
 
 // applySymlinks links each repo-relative path into the workspace. A source that
