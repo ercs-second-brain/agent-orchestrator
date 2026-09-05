@@ -3643,6 +3643,9 @@ func TestSpawn_DefaultsBranchFromSessionID(t *testing.T) {
 	if st.sessions[s.ID].AutoReviewEnabled {
 		t.Fatal("auto review must default to disabled when project config does not enable it")
 	}
+	if !st.sessions[s.ID].TerminateOnPRMerge {
+		t.Fatal("terminate on PR merge must default to enabled")
+	}
 }
 
 func TestSpawn_InheritsAutoReviewFromProjectConfig(t *testing.T) {
