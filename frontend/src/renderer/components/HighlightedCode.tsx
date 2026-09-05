@@ -14,7 +14,7 @@
 
 import { memo, useEffect, useReducer, type ReactNode } from "react";
 import type { Root, RootContent } from "hast";
-import { highlight, highlightSync, type GrammarName } from "../../lib/code-highlight";
+import { highlight, highlightSync, type GrammarName } from "../lib/code-highlight";
 // The token colours live with the engine rather than with one caller: they are
 // scoped under `.chat-code`/`.markdown-code`, so anything rendering these class
 // names has to be inside one of those containers and has to have loaded this sheet.

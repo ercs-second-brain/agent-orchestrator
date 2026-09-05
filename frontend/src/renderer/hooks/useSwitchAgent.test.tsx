@@ -41,7 +41,7 @@ beforeEach(() => {
 });
 
 describe("useSwitchAgent", () => {
-	it("omits the default model and refreshes target conversation state", async () => {
+	it("omits the default model and refreshes agent switch state", async () => {
 		postMock.mockResolvedValue({
 			data: {
 				switch: {
@@ -76,9 +76,8 @@ describe("useSwitchAgent", () => {
 			},
 		);
 		await waitFor(() => {
-			expect(invalidate).toHaveBeenCalledWith({ queryKey: ["conversation", "sess-1"] });
-			expect(invalidate).toHaveBeenCalledWith({ queryKey: ["conversation-models", "sess-1"] });
-			expect(invalidate).toHaveBeenCalledWith({ queryKey: ["conversation-config-options", "sess-1"] });
+			expect(invalidate).toHaveBeenCalledWith({ queryKey: ["session-agent-switches", "sess-1"] });
+			expect(invalidate).toHaveBeenCalledWith({ queryKey: ["workspaces"] });
 		});
 	});
 });

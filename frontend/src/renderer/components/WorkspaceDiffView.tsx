@@ -27,7 +27,7 @@ import type { DiffSelectionLine } from "../../shared/diff-selection";
 import { Button } from "./ui/button";
 import { DiffSelectionMenu } from "./DiffSelectionMenu";
 import { ImageDiffView } from "./ImageDiffView";
-import "./chat/code-theme.css";
+import "./code-theme.css";
 
 type WorkspaceFileStatus = WorkspaceFileSummary["status"];
 

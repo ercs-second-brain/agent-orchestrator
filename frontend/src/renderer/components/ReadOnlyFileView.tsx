@@ -1,7 +1,7 @@
 import { getApiBaseUrl } from "../lib/api-client";
 import type { WorkspaceFileDetail } from "../hooks/useSessionWorkspaceFiles";
 import { canonicalLanguage } from "../lib/code-highlight";
-import { HighlightedCode } from "./chat/HighlightedCode";
+import { HighlightedCode } from "./HighlightedCode";
 import { PanelMessage } from "./WorkspaceDiffView";
 
 function formatBytes(bytes: number): string {

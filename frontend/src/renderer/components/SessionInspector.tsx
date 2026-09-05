@@ -47,7 +47,6 @@ import {
 } from "../hooks/useSessionScmSummary";
 import { useSessionUsage, type SessionUsage } from "../hooks/useSessionUsage";
 import { useSessionWorkspaceFilesChangedCount } from "../hooks/useSessionWorkspaceFiles";
-import { useSessionBrowserLink } from "../hooks/useSessionBrowserLink";
 import { clearTerminateSessionState, useTerminateSession } from "../hooks/useTerminateSession";
 import { prBrowserUrl, prCardPresentation, prNouns, sessionPRDisplaySummaries } from "../lib/pr-display";
 import { formatTokenCount } from "../lib/format-token-count";
@@ -1592,7 +1591,6 @@ function MergedReviewsSection({
 	session: WorkspaceSession;
 }) {
 	const queryClient = useQueryClient();
-	const openInAOBrowser = useSessionBrowserLink(session);
 	const openReviewStates = openReviewStatesFor(session, reviewStates);
 	const runsByPR = runsByPRFrom(openReviewStates, runs);
 	const aoStates = triggeredReviewStatesFrom(openReviewStates, runs);
@@ -1854,7 +1852,6 @@ function MergedReviewsSection({
 			labels={labels}
 			onRequestRereview={requestRereview}
 			onResolveInlineComment={resolveInlineComment}
-			onOpenInAOBrowser={openInAOBrowser}
 			onSendInlineComment={sendInlineCommentToWorker}
 			onSendReviewSummary={sendReviewSummaryToWorker}
 			onViewInlineCommentInFile={(comment) => {

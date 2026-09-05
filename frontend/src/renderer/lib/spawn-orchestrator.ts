@@ -1,6 +1,6 @@
 import { apiClient, apiErrorCode, apiErrorMessage, apiErrorRequestId } from "./api-client";
 import type { OrchestratorSpawnSource } from "./orchestrator-spawn-sources";
-import type { SessionMode } from "../types/conversation";
+import type { SessionMode } from "../types/workspace";
 
 // Every UI entry point that spawns an orchestrator: the board CTA, the topbar
 // and sidebar launchers, the restore-unavailable dialog, and the auto-spawn
