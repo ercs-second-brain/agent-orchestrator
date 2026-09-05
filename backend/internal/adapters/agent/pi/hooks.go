@@ -26,6 +26,16 @@ const (
 
 var piVersionPattern = regexp.MustCompile(`\b(\d+)\.(\d+)\.(\d+)\b`)
 
+// isProvisionedBinary reports whether the resolved binary is the
+// AO-provisioned pinned binary rather than a user-supplied PATH/npm install.
+func isProvisionedBinary(binary string) bool {
+	provisioned, ok := ResolveProvisionedBinary()
+	if !ok {
+		return false
+	}
+	return filepath.Clean(binary) == filepath.Clean(provisioned)
+}
+
 func piExtensionPath(workspacePath string) string {
 	return filepath.Join(workspacePath, ".pi", piExtensionsDirName, piExtensionFileName)
 }
@@ -77,6 +87,13 @@ func (p *Plugin) piAgentSettledSupported(ctx context.Context) (bool, error) {
 	binary, err := p.piBinary(ctx)
 	if err != nil {
 		return false, err
+	}
+	if isProvisionedBinary(binary) {
+		// The provisioned binary is pinned at build time (provision.PiPinnedVersion),
+		// so the version floor is a compile-time fact per ADR 0005 and the
+		// `pi --version` probe is only needed for user-supplied binaries whose
+		// provenance is unknown.
+		return true, nil
 	}
 	if !filepath.IsAbs(binary) {
 		if abs, absErr := filepath.Abs(binary); absErr == nil {

@@ -30,6 +30,7 @@ package pi
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"strings"
 	"sync"
@@ -37,6 +38,7 @@ import (
 	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/adapters"
 	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/adapters/agent/agentbase"
 	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/adapters/agent/binaryutil"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/adapters/agent/pi/provision"
 	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/ports"
 )
 
@@ -180,10 +182,66 @@ var piBinarySpec = binaryutil.BinarySpec{
 	},
 }
 
-// ResolvePiBinary finds the `pi` binary, searching PATH then common install
-// locations. It returns a wrapped ports.ErrAgentBinaryNotFound when Pi is absent.
+// ResolvePiBinary resolves the `pi` binary to launch. Resolution order (ADR
+// 0005): the AO_PI_BINARY user override, then the AO-provisioned pinned
+// binary, then PATH and common install locations via binaryutil.
 func ResolvePiBinary(ctx context.Context) (string, error) {
+	if override := strings.TrimSpace(os.Getenv(envPiBinaryOverride)); override != "" {
+		// An explicit override is a deliberate user choice: fail loudly rather
+		// than silently launching a different binary.
+		if !provision.IsExecutableFile(override) {
+			return "", fmt.Errorf("%s=%q is not an executable file", envPiBinaryOverride, override)
+		}
+		return override, nil
+	}
+	if path, ok := ResolveProvisionedBinary(); ok {
+		return path, nil
+	}
 	return binaryutil.ResolveBinary(ctx, piBinarySpec)
+}
+
+const envPiBinaryOverride = "AO_PI_BINARY"
+
+var (
+	provisionRootMu    sync.RWMutex
+	provisionStoreRoot string
+)
+
+// SetProvisionStoreRoot wires the managed-pi store root (typically
+// <stateDir>/bin/pi). The daemon calls it once at boot, before provisioning
+// runs and any session can spawn.
+func SetProvisionStoreRoot(root string) {
+	provisionRootMu.Lock()
+	defer provisionRootMu.Unlock()
+	provisionStoreRoot = root
+}
+
+// ProvisionStoreRoot returns the managed-pi store root. Before daemon wiring
+// it falls back to the environment-derived default so bare resolution (CLI
+// helpers, tests) still sees the provisioned binary.
+func ProvisionStoreRoot() string {
+	provisionRootMu.RLock()
+	defer provisionRootMu.RUnlock()
+	if provisionStoreRoot != "" {
+		return provisionStoreRoot
+	}
+	return provision.DefaultStoreRoot()
+}
+
+// ResolveProvisionedBinary returns the AO-provisioned pinned pi binary when
+// it is installed and executable. Provisioning is best-effort and runs in the
+// background at daemon start, so absence here is normal and callers fall
+// back to PATH resolution.
+func ResolveProvisionedBinary() (string, bool) {
+	root := ProvisionStoreRoot()
+	if root == "" {
+		return "", false
+	}
+	path := provision.BinaryPath(root, provision.PiPinnedVersion)
+	if !provision.IsExecutableFile(path) {
+		return "", false
+	}
+	return path, true
 }
 
 func (p *Plugin) piBinary(ctx context.Context) (string, error) {

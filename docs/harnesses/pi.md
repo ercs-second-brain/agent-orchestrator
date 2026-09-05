@@ -12,8 +12,11 @@ is no chat driver of any kind; AO never launches `pi-acp` or any ACP transport.
 
 ## Spawn and configuration
 
-- AO resolves `pi` from `PATH` and common user-level binary locations, exactly
-  like every other agent harness, and executes it inside the session terminal.
+- AO prefers the AO-provisioned pinned pi binary under `~/.ao/bin/pi` (auto-
+  downloaded and checksum-verified on daemon start, see ADR 0005), then any
+  explicit `AO_PI_BINARY` override, and finally resolves `pi` from `PATH` and
+  common user-level binary locations, and executes it inside the session
+  terminal.
 - Pi provider credentials and configuration remain in Pi's normal agent
   directory (`PI_CODING_AGENT_DIR`, or `~/.pi/agent`). AO passes the project
   environment through unchanged and never bundles or downloads provider CLIs.
