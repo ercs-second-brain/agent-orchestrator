@@ -108,7 +108,6 @@ func (s *Server) run(ctx context.Context, onReady func()) error {
 		StartedAt:             time.Now().UTC(),
 		Owner:                 os.Getenv("AO_OWNER"),
 		AppRunID:              s.cfg.AppRunID,
-		BrowserRuntimeAddress: os.Getenv("AO_BROWSER_RUNTIME_ADDRESS"),
 	}
 	if err := runfile.Write(s.cfg.RunFilePath, info); err != nil {
 		_ = s.listen.Close()

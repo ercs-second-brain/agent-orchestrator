@@ -8545,8 +8545,6 @@ tags:
   name: import
 - description: Connect Mobile LAN bridge control (loopback/desktop only)
   name: mobile
-- description: Target-isolated desktop browser runtime (loopback only)
-  name: browser
 - description: Local machine readiness checks the desktop app runs before showing
     the board
   name: system

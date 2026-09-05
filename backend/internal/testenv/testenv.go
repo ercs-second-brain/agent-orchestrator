@@ -14,9 +14,9 @@ import (
 // ScrubAmbientDaemonEnv removes every AO_* variable inherited from the
 // surrounding process environment. When the suite runs inside an AO worker
 // session, the daemon exports AO_SESSION_ID, AO_PROJECT_ID,
-// AO_RUNTIME_LAUNCH_ID, AO_BROWSER_CAPABILITY, AO_DATA_DIR, AO_RUN_FILE, and
-// friends; CLI tests that assert unset-default behavior (hook payload
-// fallbacks, project resolution order, browser capability gating) then fail
+// AO_RUNTIME_LAUNCH_ID, AO_DATA_DIR, AO_RUN_FILE, and friends; CLI tests that
+// assert unset-default behavior (hook payload fallbacks, project resolution
+// order) then fail
 // spuriously even though the code under test is correct. Tests that need
 // these variables set them explicitly via t.Setenv, which runs after this
 // scrub and takes precedence.

@@ -223,13 +223,13 @@ type SessionView struct {
 	// old attachment when this value changes.
 	TerminalGeneration string `json:"terminalGeneration,omitempty"`
 	// PreviewURL is the browser preview target the desktop app opens for this
-	// session, set via POST /sessions/{sessionId}/preview. Empty (omitted) when
-	// no preview has been requested. Pulled from the json:"-" domain Metadata.
+	// session. Empty (omitted) when no preview has been requested. Pulled from
+	// the json:"-" domain Metadata. Kept until the renderer's preview UI is
+	// removed (frontend layer of #39).
 	PreviewURL string `json:"previewUrl,omitempty"`
-	// PreviewRevision bumps on every `ao preview` call (even when previewUrl is
-	// unchanged) so the desktop browser panel can re-navigate / refresh on a
-	// repeated preview of the same target. Pulled from the json:"-" domain
-	// Metadata.
+	// PreviewRevision bumps on every preview navigation so the desktop panel can
+	// re-navigate / refresh on a repeated preview of the same target. Pulled
+	// from the json:"-" domain Metadata.
 	PreviewRevision int64 `json:"previewRevision,omitempty"`
 	// Model is the agent model this session resolved to at spawn time. Empty
 	// means the agent's default model. Pulled from the json:"-" domain Metadata.
@@ -457,13 +457,6 @@ type DesktopWorkspaceLocationResponse struct {
 	WorkspacePath string           `json:"workspacePath"`
 }
 
-// SessionPreviewResponse is the body of GET /api/v1/sessions/{sessionId}/preview.
-type SessionPreviewResponse struct {
-	SessionID  domain.SessionID `json:"sessionId"`
-	PreviewURL string           `json:"previewUrl,omitempty"`
-	Entry      string           `json:"entry,omitempty"`
-}
-
 // RenameSessionRequest is the body of PATCH /api/v1/sessions/{sessionId}.
 type RenameSessionRequest struct {
 	DisplayName string `json:"displayName" minLength:"1"`
@@ -498,70 +491,7 @@ func (r *SetSessionAutoReviewRequest) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// SetSessionPreviewRequest is the body of POST /api/v1/sessions/{sessionId}/preview.
-// An empty url asks the daemon to autodetect a static entry point in the
-// session workspace; a non-empty url is used verbatim as the preview target.
-type SetSessionPreviewRequest struct {
-	URL string `json:"url,omitempty" description:"Preview target URL. When empty, the daemon autodetects a static entry point in the session workspace."`
-}
 
-// StartPreviewServerRequest selects one named entry from .ao/launch.json. The
-// name may be omitted when the file contains exactly one configuration.
-type StartPreviewServerRequest struct {
-	Configuration string `json:"configuration,omitempty" description:"Named preview configuration. Optional when exactly one configuration exists."`
-}
-
-// PreviewServerStatusResponse reports the deterministic server AO owns for one
-// session. Logs are bounded to the latest lines and never contain global
-// process or port discovery.
-type PreviewServerStatusResponse struct {
-	SessionID     domain.SessionID `json:"sessionId"`
-	State         string           `json:"state" enum:"stopped,starting,ready,stopping,failed"`
-	Configuration string           `json:"configuration,omitempty"`
-	TargetKind    string           `json:"targetKind,omitempty" enum:"app,api"`
-	URL           string           `json:"url,omitempty"`
-	Port          int              `json:"port,omitempty"`
-	StartedAt     time.Time        `json:"startedAt,omitempty"`
-	Error         string           `json:"error,omitempty"`
-	Logs          []string         `json:"logs"`
-}
-
-// BrowserStatusQuery selects the session whose logical browser is inspected.
-type BrowserStatusQuery struct {
-	SessionID domain.SessionID `query:"sessionId" description:"AO session identifier."`
-}
-
-// BrowserCapabilityHeader proves that the caller owns the target session.
-type BrowserCapabilityHeader struct {
-	Capability string `header:"X-AO-Browser-Capability" description:"Opaque browser capability injected into the owning AO worker."`
-}
-
-// BrowserStatusResponse reports whether the desktop-owned browser transport is
-// ready. A connected runtime can create the session target while its panel is
-// hidden; panel visibility is intentionally not part of this state.
-type BrowserStatusResponse struct {
-	SessionID   domain.SessionID `json:"sessionId"`
-	Connected   bool             `json:"connected"`
-	ConnectedAt time.Time        `json:"connectedAt,omitempty"`
-	Transport   string           `json:"transport"`
-}
-
-// BrowserCommandRequest is the stable daemon-facing command envelope. Action
-// arguments remain action-specific JSON so new target-scoped operations do not
-// require a new transport or Electron IPC surface.
-type BrowserCommandRequest struct {
-	SessionID domain.SessionID       `json:"sessionId"`
-	Action    string                 `json:"action"`
-	Args      map[string]interface{} `json:"args,omitempty"`
-}
-
-// BrowserCommandResponse returns a correlated result from the browser runtime.
-type BrowserCommandResponse struct {
-	RequestID string           `json:"requestId"`
-	SessionID domain.SessionID `json:"sessionId"`
-	Action    string           `json:"action"`
-	Result    interface{}      `json:"result"`
-}
 
 // SetSessionMergePolicyRequest is the body of PATCH /api/v1/sessions/{sessionId}/merge-policy.
 type SetSessionMergePolicyRequest struct {
