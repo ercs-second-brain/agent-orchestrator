@@ -65,8 +65,8 @@ func requestLoggerWithCapture(log *slog.Logger, sink ports.EventSink, captureHTT
 					if capErr != nil {
 						errorKind, errorCode = telemetrymeta.ErrorKindAndCode(capErr)
 					}
-					// Same grouping key for PostHog and Sentry so an issue lines up
-					// across both.
+					// Same grouping key Sentry uses so an issue lines up across
+					// daemon surfaces.
 					fingerprint := telemetrymeta.Fingerprint("httpd", "http_request", r.Method, path, strconv.Itoa(ww.Status()), errorKind, errorCode)
 					if sink != nil {
 						payload := map[string]any{

@@ -51,7 +51,7 @@ func TestLoadDefaults(t *testing.T) {
 	if wantStateDir := filepath.Join(homeDir, ".ao"); cfg.StateDir != wantStateDir {
 		t.Errorf("StateDir = %q, want %q", cfg.StateDir, wantStateDir)
 	}
-	if cfg.Telemetry.Remote != TelemetryRemoteOff || cfg.Telemetry.PostHogHost != DefaultTelemetryPostHogHost {
+	if cfg.Telemetry.Events || cfg.Telemetry.Metrics {
 		t.Fatalf("Telemetry defaults = %+v", cfg.Telemetry)
 	}
 	if cfg.Telemetry.EventsExplicit {
@@ -103,9 +103,6 @@ func TestLoadOverrides(t *testing.T) {
 	t.Setenv("AO_DATA_DIR", dataDir)
 	t.Setenv("AO_TELEMETRY_EVENTS", "on")
 	t.Setenv("AO_TELEMETRY_METRICS", "off")
-	t.Setenv("AO_TELEMETRY_REMOTE", "posthog")
-	t.Setenv("AO_TELEMETRY_POSTHOG_KEY", "phc_test")
-	t.Setenv("AO_TELEMETRY_POSTHOG_HOST", "https://eu.i.posthog.com")
 
 	cfg, err := Load()
 	if err != nil {
@@ -134,9 +131,6 @@ func TestLoadOverrides(t *testing.T) {
 	}
 	if !cfg.Telemetry.EventsExplicit {
 		t.Fatal("Telemetry.EventsExplicit = false for AO_TELEMETRY_EVENTS=on")
-	}
-	if cfg.Telemetry.Remote != TelemetryRemotePostHog || cfg.Telemetry.PostHogKey != "phc_test" || cfg.Telemetry.PostHogHost != "https://eu.i.posthog.com" {
-		t.Fatalf("Telemetry remote = %+v", cfg.Telemetry)
 	}
 }
 

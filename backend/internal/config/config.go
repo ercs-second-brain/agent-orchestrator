@@ -36,9 +36,6 @@ const (
 	// daemon validates it at startup, but worker/orchestrator spawns resolve from
 	// explicit requests or project role config instead of falling back to it.
 	DefaultAgent = "claude-code"
-	// DefaultTelemetryPostHogHost is the default PostHog ingestion host when
-	// remote telemetry is enabled and AO_TELEMETRY_POSTHOG_HOST is unset.
-	DefaultTelemetryPostHogHost = "https://us.i.posthog.com"
 	// ClientElevenX is the AO_CLIENT value entitled to the cloud offering. It is
 	// the single place the identity is spelled out; gating logic must compare
 	// against this constant, never a string literal.
@@ -49,17 +46,7 @@ const (
 	defaultCloudControlPlaneURL = "https://staging-api.aoagents.dev"
 )
 
-// TelemetryRemote selects the remote telemetry exporter.
-type TelemetryRemote string
-
-const (
-	// TelemetryRemoteOff disables remote telemetry export.
-	TelemetryRemoteOff TelemetryRemote = "off"
-	// TelemetryRemotePostHog exports allowlisted events to PostHog.
-	TelemetryRemotePostHog TelemetryRemote = "posthog"
-)
-
-// TelemetryConfig controls local and remote telemetry behavior.
+// TelemetryConfig controls local telemetry behavior.
 type TelemetryConfig struct {
 	Events bool
 	// EventsExplicit distinguishes an operator/supervisor choice from the
@@ -67,13 +54,10 @@ type TelemetryConfig struct {
 	// when AO_TELEMETRY_EVENTS was explicitly set to on.
 	EventsExplicit bool
 	Metrics        bool
-	Remote         TelemetryRemote
-	PostHogKey     string
-	PostHogHost    string
-	// DisabledEvents names event streams that must never reach the remote
-	// (billed) sink. This is the kill switch: a stream that turns out to be
-	// noisy or expensive can be silenced by configuration, without waiting for
-	// users to install a new build. Local storage still records everything.
+	// DisabledEvents names event streams that must never be exported. This is
+	// the kill switch: a stream that turns out to be noisy can be silenced by
+	// configuration, without waiting for users to install a new build. Local
+	// storage still records everything.
 	DisabledEvents []string
 	// AppVersion is the desktop app version the daemon was launched by, stamped
 	// on remote events so failures can be attributed to a release. The daemon
@@ -82,8 +66,7 @@ type TelemetryConfig struct {
 	AppVersion string
 	// SentryDSN, when set (AO_SENTRY_DSN), enables daemon-side Sentry capture of
 	// genuine server faults (5xx and panics) with their Go stack. Blank keeps
-	// Sentry a no-op. Kept separate from the PostHog key: the two are different
-	// processors with different projects.
+	// Sentry a no-op.
 	SentryDSN string
 }
 
@@ -201,9 +184,6 @@ func (c Config) Addr() string {
 //	AO_ALLOWED_ORIGINS   CORS origins, comma-separated (default DefaultAllowedOrigins)
 //	AO_TELEMETRY_EVENTS  local event capture off|on (default off)
 //	AO_TELEMETRY_METRICS local metric capture off|on (default off)
-//	AO_TELEMETRY_REMOTE  remote exporter off|posthog (default off)
-//	AO_TELEMETRY_POSTHOG_KEY   PostHog project key
-//	AO_TELEMETRY_POSTHOG_HOST  PostHog host (default DefaultTelemetryPostHogHost)
 //	AO_GITLAB_ALLOWED_HOSTS    comma-separated self-managed GitLab hosts (each may include :port)
 //	AO_GITLAB_HOST_TOKENS      host=token,host=token per-host token overrides
 //	AO_CLIENT                  client identity for offering gates (trimmed, default empty)
@@ -220,10 +200,7 @@ func Load() (Config, error) {
 		ShutdownTimeout: DefaultShutdownTimeout,
 		Agent:           DefaultAgent,
 		AllowedOrigins:  DefaultAllowedOrigins,
-		Telemetry: TelemetryConfig{
-			Remote:      TelemetryRemoteOff,
-			PostHogHost: DefaultTelemetryPostHogHost,
-		},
+		Telemetry:        TelemetryConfig{},
 		LocalOffering: true,
 	}
 
@@ -300,19 +277,6 @@ func Load() (Config, error) {
 			return Config{}, err
 		}
 		cfg.Telemetry.Metrics = v
-	}
-	if raw := os.Getenv("AO_TELEMETRY_REMOTE"); raw != "" {
-		remote, err := parseTelemetryRemote(raw)
-		if err != nil {
-			return Config{}, fmt.Errorf("invalid AO_TELEMETRY_REMOTE %q: %w", raw, err)
-		}
-		cfg.Telemetry.Remote = remote
-	}
-	if raw := os.Getenv("AO_TELEMETRY_POSTHOG_KEY"); raw != "" {
-		cfg.Telemetry.PostHogKey = raw
-	}
-	if raw := os.Getenv("AO_TELEMETRY_POSTHOG_HOST"); raw != "" {
-		cfg.Telemetry.PostHogHost = raw
 	}
 	if raw := os.Getenv("AO_TELEMETRY_DISABLED_EVENTS"); raw != "" {
 		cfg.Telemetry.DisabledEvents = parseTelemetryDisabledEvents(raw)
@@ -402,17 +366,6 @@ func parseToggleEnv(name, raw string) (bool, error) {
 		return false, nil
 	default:
 		return false, fmt.Errorf("%s must be off|on", name)
-	}
-}
-
-func parseTelemetryRemote(raw string) (TelemetryRemote, error) {
-	switch TelemetryRemote(strings.ToLower(strings.TrimSpace(raw))) {
-	case TelemetryRemoteOff:
-		return TelemetryRemoteOff, nil
-	case TelemetryRemotePostHog:
-		return TelemetryRemotePostHog, nil
-	default:
-		return "", fmt.Errorf("must be off|posthog")
 	}
 }
 

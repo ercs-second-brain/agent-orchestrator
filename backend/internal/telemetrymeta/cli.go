@@ -164,7 +164,7 @@ var legacyActorlessUserCLICommands = map[string]struct{}{
 	"ao mobile regenerate":      {},
 	"ao mobile status":          {},
 
-	// Legacy commands observed in PostHog's current billing-period data.
+	// Legacy command spellings kept allowlisted for continuity.
 	"ao handoff":                   {},
 	"ao project orchestration get": {},
 	"ao project orchestration set": {},

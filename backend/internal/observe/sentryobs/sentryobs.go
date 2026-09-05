@@ -1,7 +1,7 @@
 // Package sentryobs is the daemon-side Sentry integration. It captures genuine
-// server faults (5xx and panics) with their Go stack, grouped by the same
-// telemetrymeta fingerprint the PostHog path uses so an issue lines up across
-// both. It is the surface where the daemon's INTERNAL_ERROR 500 root causes
+// server faults (5xx and panics) with their Go stack, grouped by the shared
+// telemetrymeta fingerprint so an issue lines up across daemon surfaces.
+// It is the surface where the daemon's INTERNAL_ERROR 500 root causes
 // finally get a stack instead of an opaque count.
 //
 // It is a no-op until a DSN is configured (AO_SENTRY_DSN), and deny-by-default
@@ -169,8 +169,8 @@ func ShouldCaptureStatus(status int) bool {
 	return status >= http.StatusInternalServerError && status != http.StatusServiceUnavailable
 }
 
-// CaptureHTTPError captures a server-fault error with the given tags and a
-// fingerprint identical to the PostHog grouping key. No-op when disabled or the
+// CaptureHTTPError captures a server-fault error with the given tags and the
+// shared telemetrymeta grouping fingerprint. No-op when disabled or the
 // error is nil.
 func CaptureHTTPError(ctx context.Context, err error, tags map[string]string, fingerprint string) {
 	if err == nil || ctx.Err() != nil || !enterCapture() {
