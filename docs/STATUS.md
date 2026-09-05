@@ -224,9 +224,15 @@ surface (`npm run sqlc`, `npm run api`).
   can cancel it, but no common provider protocol serializes a currently executing
   tool call or detached background process for adoption by another controller.
 
-- **Tracker lane**: GitHub tracker adapter exists, but there is no daemon
-  observer loop or agent-lifecycle→issue mirroring yet, so the tracker does
-  nothing at runtime ([#112](https://github.com/ercs-second-brain/agent-orchestrator/issues/112)).
+- **Tracker lifecycle mirroring (issue → session direction is shipped)**: the
+  daemon runs an opt-in issue-intake observer (`internal/observe/trackerintake`)
+  that polls a project's configured tracker and spawns one worker session per
+  eligible open issue, gated by assignee eligibility
+  (`ProjectConfig.TrackerIntake.Assignee`), with GitHub and GitLab adapters
+  under `internal/adapters/tracker/`. What remains unshipped is the reverse
+  direction: writing session/agent lifecycle state back to issues (comments,
+  status/label transitions, `tracker_*` CDC facts) — the tracker adapters are
+  read-only today.
 - **Full raw PR/tracker fact surfacing**: the SCM observer writes facts and the
   desktop consumes concise PR summaries, but exposing the full raw `pr_*` /
   `tracker_*` CDC events to live consumers
