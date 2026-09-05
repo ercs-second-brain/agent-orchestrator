@@ -46,6 +46,7 @@ const {
 	getMock,
 	navigateMock,
 	mockParams,
+	mockPathname,
 	postMock,
 	renameSessionMock,
 	spawnMock,
@@ -68,6 +69,7 @@ const {
 		postMock: vi.fn(),
 		navigateMock: vi.fn(),
 		mockParams: { projectId: undefined as string | undefined, sessionId: undefined as string | undefined },
+		mockPathname: { current: "/" },
 		renameSessionMock: vi.fn().mockResolvedValue(undefined),
 		spawnMock: vi.fn(),
 		updateStatusMock: vi.fn(),
@@ -132,7 +134,7 @@ vi.mock("@tanstack/react-router", async (importOriginal) => {
 		useNavigate: () => navigateMock,
 		useParams: () => ({ ...mockParams }),
 		useRouterState: ({ select }: { select: (state: { location: { pathname: string } }) => unknown }) =>
-			select({ location: { pathname: "/" } }),
+			select({ location: { pathname: mockPathname.current } }),
 	};
 });
 
@@ -411,6 +413,7 @@ beforeEach(() => {
 	checkUpdateMock.mockReset().mockResolvedValue(undefined);
 	mockParams.projectId = undefined;
 	mockParams.sessionId = undefined;
+	mockPathname.current = "/";
 });
 
 afterEach(() => {
@@ -501,6 +504,32 @@ describe("Sidebar", () => {
 		expect(content).toHaveClass("overflow-y-auto", "project-sidebar-scrollbar");
 		expect(content).not.toHaveClass("scrollbar-none");
 		expect(content).not.toContainElement(screen.getByText("Projects"));
+	});
+
+	it("opens the global kanban board from the sidebar", async () => {
+		const user = userEvent.setup();
+		renderSidebar();
+
+		const kanban = screen.getByTestId("sidebar-kanban");
+		expect(kanban).not.toHaveAttribute("data-active");
+		await user.click(kanban);
+		expect(navigateMock).toHaveBeenCalledWith({ to: "/board" });
+	});
+
+	it("marks the kanban entry active on the global board route", () => {
+		mockPathname.current = "/board";
+		renderSidebar();
+
+		expect(screen.getByTestId("sidebar-kanban").dataset.active).toBe("true");
+	});
+
+	it("exposes the global kanban as an icon button on the collapsed rail", async () => {
+		const user = userEvent.setup();
+		renderSidebar({ initialOpen: false });
+
+		const railKanban = screen.getByTestId("sidebar-kanban-rail");
+		await user.click(railKanban);
+		expect(navigateMock).toHaveBeenCalledWith({ to: "/board" });
 	});
 
 	it("opens project settings instead of spawning when no orchestrator agent is configured", async () => {
