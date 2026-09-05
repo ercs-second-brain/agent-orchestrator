@@ -30,6 +30,7 @@ Start with [architecture.md](architecture.md) for the current backend model and
 | ------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------- |
 | [harnesses/pi.md](harnesses/pi.md)                           | Pi support: TUI spawning via the `pi` executable. Chat-mode (pi-acp) integration was removed by #39.          |
 | [runbooks/agent-switch-failure-points.md](runbooks/agent-switch-failure-points.md) | Failure-point runbook for the staged agent-switch production stream, with release gates.             |
+| [orchestration.md](orchestration.md)                         | Orchestration runbook: worker execution discipline and the stalled-session escalation playbook.           |
 
 ## Decision records
 
