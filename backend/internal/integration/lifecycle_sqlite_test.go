@@ -173,30 +173,32 @@ func TestMergedPRUsesSessionManagerOnlyWhenOptedIn(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	// Spawn defaults the policy on; opt out explicitly for the no-teardown path.
+	if ok, err := st.store.SetSessionTerminateOnPRMerge(ctx, sess.ID, false, time.Now().UTC()); err != nil || !ok {
+		t.Fatalf("disable terminate-on-merge: ok=%v err=%v", ok, err)
+	}
 
 	if err := st.prm.ApplyObservation(ctx, sess.ID, ports.PRObservation{Fetched: true, URL: "pr1", Number: 1, Merged: true}); err != nil {
 		t.Fatal(err)
 	}
 	if st.rt.destroyed != 0 || st.ws.destroyed != 0 {
-		t.Fatalf("default policy tore down resources: runtime=%d workspace=%d", st.rt.destroyed, st.ws.destroyed)
+		t.Fatalf("opted-out policy tore down resources: runtime=%d workspace=%d", st.rt.destroyed, st.ws.destroyed)
 	}
 	rec, _, _ := st.store.GetSession(ctx, sess.ID)
 	if rec.IsTerminated {
-		t.Fatalf("default policy terminated merged session: %+v", rec)
+		t.Fatalf("opted-out policy terminated merged session: %+v", rec)
 	}
 
 	sess2, _, _, err := st.sm.Spawn(ctx, ports.SpawnConfig{ProjectID: "mer", Kind: domain.KindWorker, Branch: "c", Prompt: "do more"})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if ok, err := st.store.SetSessionTerminateOnPRMerge(ctx, sess2.ID, true, time.Now().UTC()); err != nil || !ok {
-		t.Fatalf("enable terminate-on-merge: ok=%v err=%v", ok, err)
-	}
+	// sess2 keeps the spawn default (enabled) — assert the default-on teardown path.
 	if err := st.prm.ApplyObservation(ctx, sess2.ID, ports.PRObservation{Fetched: true, URL: "pr2", Number: 2, Merged: true}); err != nil {
 		t.Fatal(err)
 	}
 	if st.rt.destroyed != 1 || st.ws.destroyed != 1 {
-		t.Fatalf("opted-in merge teardown: runtime=%d workspace=%d, want 1/1", st.rt.destroyed, st.ws.destroyed)
+		t.Fatalf("default-on merge teardown: runtime=%d workspace=%d, want 1/1", st.rt.destroyed, st.ws.destroyed)
 	}
 	rec, _, _ = st.store.GetSession(ctx, sess2.ID)
 	if !rec.IsTerminated {
