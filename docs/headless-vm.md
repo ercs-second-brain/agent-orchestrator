@@ -139,6 +139,18 @@ code from `ao mobile pairing-code`, or enter host, port, and password manually.
 The desktop probes `GET /api/v1/identity` before sending the password, then
 attaches without starting a local daemon.
 
+Pairing payloads in the v2 format from `ao mobile pairing-code --json` carry
+multiple endpoints; the desktop picks the first reachable one by kind
+preference `lan` → `tailscale` → `tunnel` → `relay`. Older v1 payloads (single
+host/port) and manual host/port/password entry still work. The connection is
+stored as `desktop-remote.json` under `~/.ao/electron`.
+
+In remote mode only the app API is reachable over the authenticated LAN
+listener: sessions, terminal (`/mux`), events, and projects. Loopback-gated
+routes (`/shutdown`, telemetry, mobile control) are never served remotely. See
+[architecture.md](architecture.md) for the listener model and
+[cli/README.md](cli/README.md) for `ao mobile` commands.
+
 Switch back to **This computer** to run agents locally again.
 
 ## Pi on the VM
