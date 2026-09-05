@@ -11,7 +11,6 @@ import { Loader2 } from "lucide-react";
 import { RequiredAgentField } from "./CreateProjectAgentSheet";
 import type { components } from "../../api/schema";
 import { apiClient, apiErrorCode, apiErrorMessage } from "../lib/api-client";
-import { captureRendererEvent } from "../lib/telemetry";
 import {
 	cacheAgentReadiness,
 	ensureAgentReadiness,
@@ -127,7 +126,6 @@ export function TaskComposer({
 
 	const createCloudTask = useCallback(
 		async (input: CreateTaskInput): Promise<string> => {
-			void captureRendererEvent("ao.renderer.task_create_requested", { project_id: input.projectId });
 			if (!cloudOrg?.id) throw new Error(t("newTask.unableToStart"));
 			try {
 				const { session } = await cloudClient.createSession(cloudOrg.id, {
@@ -140,10 +138,8 @@ export function TaskComposer({
 				// The control plane provisions the sandbox asynchronously; surface the
 				// new session on the board immediately.
 				void queryClient.invalidateQueries({ queryKey: cloudSessionsQueryKey });
-				void captureRendererEvent("ao.renderer.task_create_succeeded", { project_id: input.projectId });
 				return session.id;
 			} catch (err) {
-				void captureRendererEvent("ao.renderer.task_create_failed", { project_id: input.projectId });
 				throw err instanceof Error ? err : new Error(t("newTask.unableToStart"));
 			}
 		},
@@ -152,7 +148,6 @@ export function TaskComposer({
 
 	const createLocalTask = useCallback(
 		async (input: CreateTaskInput): Promise<string> => {
-			void captureRendererEvent("ao.renderer.task_create_requested", { project_id: input.projectId });
 			try {
 				const { data, error } = await apiClient.POST("/api/v1/orchestrators/delegate", {
 					body: {
@@ -173,10 +168,8 @@ export function TaskComposer({
 					);
 				}
 				if (!data?.workerId) throw new Error(t("newTask.noSession"));
-				void captureRendererEvent("ao.renderer.task_create_succeeded", { project_id: input.projectId });
 				return data.workerId;
 			} catch (err) {
-				void captureRendererEvent("ao.renderer.task_create_failed", { project_id: input.projectId });
 				if (
 					err instanceof TaskCreateError &&
 					err.code &&

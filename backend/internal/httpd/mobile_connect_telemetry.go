@@ -24,8 +24,8 @@ const mobileDeviceConnectedEvent = "ao.mobile.device_connected"
 // authMiddleware. Every request from a paired phone passes that middleware,
 // including each image, stylesheet, and script of a preview page (those
 // authenticate by cookie). Reporting per request would emit thousands of events
-// per phone per minute, which is the exact shape of stream that produced AO's
-// PostHog bill.
+// per phone per minute, which is the exact shape of stream that makes raw
+// per-request telemetry unusable.
 //
 // One event per transport per day answers the question that was asked — how
 // many installs have a phone connected, and over which transport — at a volume

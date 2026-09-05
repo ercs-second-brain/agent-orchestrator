@@ -2,7 +2,6 @@ import { type QueryClient, useMutation, useMutationState, useQueryClient } from 
 import { toKanbanColumn, type WorkspaceSession, type WorkspaceSummary } from "../types/workspace";
 import { workspaceQueryKey } from "./useWorkspaceQuery";
 import { apiClient, apiErrorMessage } from "../lib/api-client";
-import { captureRendererEvent } from "../lib/telemetry";
 
 type TerminateSessionOptions = {
 	onSuccess?: (session: WorkspaceSession) => void;
@@ -71,7 +70,6 @@ export function useTerminateSession(options: TerminateSessionOptions = {}) {
 	return useMutation({
 		mutationKey: terminateSessionMutationKey,
 		mutationFn: async (session: WorkspaceSession) => {
-			void captureRendererEvent("ao.renderer.session_kill_requested", { project_id: session.workspaceId });
 			const { error, response } = await apiClient.POST("/api/v1/sessions/{sessionId}/kill", {
 				params: { path: { sessionId: session.id } },
 			});
@@ -81,7 +79,6 @@ export function useTerminateSession(options: TerminateSessionOptions = {}) {
 			}
 		},
 		onSuccess: (_data, session) => {
-			void captureRendererEvent("ao.renderer.session_kill_succeeded", { project_id: session.workspaceId });
 			// Write the outcome into the cached board first, then refresh in the
 			// background. A mutation stays `pending` until its onSuccess settles,
 			// so awaiting the refetch here kept the row's spinner up for a whole
@@ -96,8 +93,7 @@ export function useTerminateSession(options: TerminateSessionOptions = {}) {
 			void queryClient.invalidateQueries({ queryKey: workspaceQueryKey });
 			options.onSuccess?.(session);
 		},
-		onError: (_error, session) => {
-			void captureRendererEvent("ao.renderer.session_kill_failed", { project_id: session.workspaceId });
+		onError: () => {
 		},
 	});
 }

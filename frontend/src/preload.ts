@@ -16,7 +16,6 @@ import {
 	type TrayOpenSessionTarget,
 } from "./shared/tray";
 import type { DaemonStatus } from "./shared/daemon-status";
-import type { TelemetryBootstrap } from "./shared/telemetry";
 import {
 	TELEMETRY_CLEAR_RENDERER_QUEUES_CHANNEL,
 	TELEMETRY_POLICY_CHANGED_CHANNEL,
@@ -318,11 +317,6 @@ const api = {
 		},
 	},
 	telemetry: {
-		getBootstrap: async () => {
-			const bootstrap = await ipcRenderer.invoke("telemetry:getBootstrap") as TelemetryBootstrap | null;
-			if (bootstrap && currentTelemetryPolicy) currentTelemetryPolicy = { ...currentTelemetryPolicy, eventsEnabled: bootstrap.eventsEnabled, consentGeneration: bootstrap.consentGeneration };
-			return bootstrap;
-		},
 		getPolicy: async () => {
 			const view = await ipcRenderer.invoke("telemetry:getPolicy") as TelemetryPolicyView;
 			currentTelemetryPolicy = view;

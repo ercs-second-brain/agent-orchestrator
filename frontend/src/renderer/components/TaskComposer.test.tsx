@@ -7,7 +7,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 const h = vi.hoisted(() => ({
 	get: vi.fn(),
 	post: vi.fn(),
-	capture: vi.fn(),
 	ensureReadiness: vi.fn(),
 	ensureTargetedReadiness: vi.fn(),
 	agentValues: [] as string[],
@@ -61,7 +60,6 @@ vi.mock("../lib/api-client", () => ({
 	apiErrorMessage: (error: { message?: string }, fallback = "err") => error?.message ?? fallback,
 }));
 
-vi.mock("../lib/telemetry", () => ({ captureRendererEvent: h.capture }));
 
 import { TaskComposer } from "./TaskComposer";
 import { agentReadiness } from "../test/agent-readiness-fixtures";
@@ -96,7 +94,6 @@ beforeEach(() => {
 afterEach(() => {
 	h.get.mockReset();
 	h.post.mockReset();
-	h.capture.mockReset();
 	h.ensureReadiness.mockReset();
 	h.ensureTargetedReadiness.mockReset();
 	vi.unstubAllGlobals();

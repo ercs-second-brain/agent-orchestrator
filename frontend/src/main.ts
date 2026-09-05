@@ -101,9 +101,8 @@ import {
 } from "./main/cloud-auth";
 import { installCloudLocalAuthIPC } from "./main/cloud-auth-local";
 import { installCloudCpProxy } from "./main/cloud-cp-proxy";
-import { DEFAULT_POSTHOG_HOST } from "./shared/posthog-config";
 import { DEFAULT_SENTRY_DSN } from "./shared/sentry-config";
-import { buildTelemetryBootstrap, rendererTelemetryEnabled } from "./shared/telemetry";
+import { rendererTelemetryEnabled } from "./shared/telemetry";
 import {
 	TELEMETRY_CLEAR_RENDERER_QUEUES_CHANNEL,
 	TELEMETRY_POLICY_CHANGED_CHANNEL,
@@ -819,18 +818,10 @@ let shellEnvPromise: Promise<void> | null = null;
 let terminalShellPreference: TerminalShellPreference = { ...DEFAULT_TERMINAL_SHELL };
 
 // Local event recording stays on so settings and diagnostics still work.
-// Remote export is off unless the operator sets AO_TELEMETRY_REMOTE and a key;
-// this build does not ship a third-party PostHog/Sentry phone-home.
+// This build ships no third-party product-analytics phone-home.
 function telemetryOverrides(): Record<string, string> {
 	return {
 		AO_TELEMETRY_EVENTS: process.env.AO_TELEMETRY_EVENTS ?? "on",
-		AO_TELEMETRY_REMOTE: process.env.AO_TELEMETRY_REMOTE ?? "off",
-		...(process.env.AO_TELEMETRY_POSTHOG_KEY
-			? { AO_TELEMETRY_POSTHOG_KEY: process.env.AO_TELEMETRY_POSTHOG_KEY }
-			: {}),
-		...(process.env.AO_TELEMETRY_POSTHOG_HOST
-			? { AO_TELEMETRY_POSTHOG_HOST: process.env.AO_TELEMETRY_POSTHOG_HOST }
-			: { AO_TELEMETRY_POSTHOG_HOST: DEFAULT_POSTHOG_HOST }),
 		AO_SENTRY_DSN: process.env.AO_SENTRY_DSN ?? DEFAULT_SENTRY_DSN,
 		AO_TELEMETRY_APP_VERSION: process.env.AO_TELEMETRY_APP_VERSION ?? app.getVersion(),
 		...(process.env.AO_TELEMETRY_DISABLED_EVENTS
@@ -1701,10 +1692,8 @@ async function startDaemonInner(startEpoch: number): Promise<DaemonStatus> {
 		if (daemonProcess !== child) return;
 		daemonProcess = null;
 		// An explicit stopDaemon() already set a clean `{ state: "stopped" }`.
-		// daemon-telemetry reports any status carrying a `code` as
-		// ao.renderer.daemon_failure, so don't stamp `code: "exited"` on a stop
-		// the user or app asked for — that would count intentional stops as
-		// failures. Preserve the clean stopped status instead.
+		// Don't stamp `code: "exited"` on a stop the user or app asked for;
+		// preserve the clean stopped status instead.
 		if (daemonStoppingProcess === child) {
 			daemonStoppingProcess = null;
 			if (daemonRestartAfterExitProcess === child) {
@@ -1938,10 +1927,6 @@ ipcMain.handle("menu:action", (_event, action: string) => {
 			});
 			return;
 	}
-});
-ipcMain.handle("telemetry:getBootstrap", () => {
-	if (!telemetryPolicyController) return null;
-	return buildTelemetryBootstrap({ ...process.env, AO_DATA_DIR: desktopDataDir }, app.getVersion(), process.platform, os.homedir(), app.isPackaged, telemetryPolicyController.snapshot());
 });
 ipcMain.handle("telemetry:getPolicy", () => telemetryPolicyController?.snapshot() ?? failClosedTelemetryPolicyView());
 ipcMain.handle("telemetry:setEventsEnabled", (_event, input: { eventsEnabled?: unknown; expectedGeneration?: unknown }) => {

@@ -19,7 +19,6 @@ Start with [architecture.md](architecture.md) for the current backend model and
 | [headless-vm.md](headless-vm.md)                       | Run AO on a Linux VM (systemd, Connect Mobile, Pi) and attach Mac/Windows/Android clients over LAN.                   |
 | [cloud-development.md](cloud-development.md)           | Optional private checkout workflow, current Cloud foundation, remaining implementation, and recommended build order. |
 | [cloud-refactor.md](cloud-refactor.md)                 | Public contracts, generated Cloud schema types, typed client, reusable product UI, and private implementation boundaries. |
-| [posthog-cost-controls.md](posthog-cost-controls.md)   | Runbook for cutting PostHog spend while preserving active usage and reliability observability.                        |
 | [development.md](development.md)                       | Prerequisites, build steps, running tests, and troubleshooting for local development.                                 |
 | [STATUS.md](STATUS.md)                                 | What is shipped on `main` today and what is still in flight.                                                          |
 | [stack.md](stack.md)                                   | Accepted library/runtime choices, pending stack decisions, and dependencies explicitly avoided for V1.                |

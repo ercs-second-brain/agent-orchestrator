@@ -9,12 +9,8 @@ import "./styles.css";
 import { queryClient } from "./lib/query-client";
 import { mergeUnreadNotification, unreadNotificationsQueryKey } from "./lib/notifications";
 import { createAppRouter } from "./router";
-import { TelemetryBoundary } from "./components/TelemetryBoundary";
+import { AppErrorBoundary } from "./components/AppErrorBoundary";
 import { CloudOnboardingGate } from "./components/CloudOnboardingGate";
-import { applyRendererTelemetryPolicy, clearRendererTelemetryQueues, initTelemetry } from "./lib/telemetry";
-import { aoBridge } from "./lib/bridge";
-import { startDaemonFailureTelemetry } from "./lib/daemon-telemetry";
-import { startUpdateTelemetry } from "./lib/update-telemetry";
 import { appI18n } from "./i18n";
 import { useLocaleStore } from "./stores/locale-store";
 import { useSoundNotificationsStore } from "./stores/sound-notifications-store";
@@ -22,10 +18,6 @@ import { useTelemetryPolicyStore } from "./stores/telemetry-policy-store";
 
 const router = createAppRouter(queryClient);
 
-// Main owns consent and only acknowledges opt-out after every live AO shell
-// confirms that its in-memory renderer queues were actually purged.
-aoBridge.telemetry.onClearQueues(clearRendererTelemetryQueues);
-aoBridge.telemetry.onPolicy((view) => applyRendererTelemetryPolicy(view.eventsEnabled && view.acknowledged && view.state === "applied"));
 
 if (import.meta.env.DEV) {
 	const w = window as never as Record<string, unknown>;
@@ -68,9 +60,6 @@ if (import.meta.env.DEV) {
 	};
 }
 
-void initTelemetry();
-startDaemonFailureTelemetry();
-startUpdateTelemetry();
 
 declare module "@tanstack/react-router" {
 	interface Register {
@@ -90,12 +79,12 @@ async function renderApp(): Promise<void> {
 	createRoot(document.getElementById("root") as HTMLElement).render(
 		<React.StrictMode>
 			<I18nextProvider i18n={appI18n}>
-				<TelemetryBoundary>
+				<AppErrorBoundary>
 					<QueryClientProvider client={queryClient}>
 						<RouterProvider router={router} />
 						<CloudOnboardingGate />
 					</QueryClientProvider>
-				</TelemetryBoundary>
+				</AppErrorBoundary>
 			</I18nextProvider>
 		</React.StrictMode>,
 	);

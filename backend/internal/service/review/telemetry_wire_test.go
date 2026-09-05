@@ -2,30 +2,20 @@ package review
 
 import (
 	"context"
-	"encoding/json"
-	"io"
-	"log/slog"
-	"net/http"
 	"strings"
 	"sync"
 	"testing"
 	"time"
 
-	telemetryadapter "github.com/aoagents/agent-orchestrator/backend/internal/adapters/telemetry"
 	"github.com/aoagents/agent-orchestrator/backend/internal/domain"
 	"github.com/aoagents/agent-orchestrator/backend/internal/ports"
 	reviewcore "github.com/aoagents/agent-orchestrator/backend/internal/review"
 )
 
-type wireRoundTripper func(*http.Request) (*http.Response, error)
-
-func (f wireRoundTripper) Do(req *http.Request) (*http.Response, error) { return f(req) }
-
-// captured is one PostHog capture request as it actually left the process.
+// captured is one telemetry event as the review service emitted it.
 type captured struct {
 	event string
 	props map[string]any
-	raw   string
 }
 
 type wireRecorder struct {
@@ -33,11 +23,13 @@ type wireRecorder struct {
 	events []captured
 }
 
-func (r *wireRecorder) add(c captured) {
+func (r *wireRecorder) Emit(_ context.Context, ev ports.TelemetryEvent) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	r.events = append(r.events, c)
+	r.events = append(r.events, captured{event: ev.Name, props: ev.Payload})
 }
+
+func (r *wireRecorder) Close(context.Context) error { return nil }
 
 func (r *wireRecorder) find(name string) (captured, bool) {
 	r.mu.Lock()
@@ -60,50 +52,18 @@ func (r *wireRecorder) names() []string {
 	return out
 }
 
-// newWireSink builds the same remote chain newTelemetrySink wires in the daemon
-// (denylist -> aggregation -> rate limit -> PostHog) in front of a fake
-// transport, so a test can assert what an emit site actually puts on the wire
-// rather than what it handed to a sink. flushEvery is long on purpose: the
-// aggregator is flushed by Close, never by the background ticker, so nothing
-// here depends on timing.
+// newWireSink hands the review service a recording sink so a test can assert
+// exactly what an emit site handed to telemetry rather than trusting the
+// emit-site call alone.
 func newWireSink(t *testing.T) (ports.EventSink, *wireRecorder, func()) {
 	t.Helper()
 	rec := &wireRecorder{}
-	remote, err := telemetryadapter.NewPostHogSink(t.TempDir(), "phc_test", "https://us.i.posthog.com", "", "",
-		wireRoundTripper(func(req *http.Request) (*http.Response, error) {
-			defer req.Body.Close()
-			var body struct {
-				Event      string         `json:"event"`
-				Properties map[string]any `json:"properties"`
-			}
-			raw, err := io.ReadAll(req.Body)
-			if err != nil {
-				return nil, err
-			}
-			if err := json.Unmarshal(raw, &body); err != nil {
-				return nil, err
-			}
-			rec.add(captured{event: body.Event, props: body.Properties, raw: string(raw)})
-			return &http.Response{StatusCode: http.StatusOK, Header: make(http.Header), Body: http.NoBody}, nil
-		}), slog.Default())
-	if err != nil {
-		t.Fatalf("NewPostHogSink: %v", err)
-	}
-	rateLimited := telemetryadapter.NewRateLimitedSink(remote, nil)
-	aggregated := telemetryadapter.NewAggregatingSink(rateLimited, nil, time.Hour)
-	sink := telemetryadapter.NewDenylistSink(aggregated, nil)
-	return sink, rec, func() {
-		if err := sink.Close(context.Background()); err != nil {
-			t.Fatalf("Close sink chain: %v", err)
-		}
-	}
+	return rec, rec, func() {}
 }
 
-// End to end: the review service's real emit sites, through the real export
-// chain, onto the wire. Every assertion here is one a unit test cannot make,
-// because the payload allowlist that decides what actually reaches PostHog
-// lives in the adapter and is keyed by event name, with nothing tying it to the
-// emit site at compile time.
+// End to end: the review service's real emit sites into a recording sink.
+// Every assertion here is one a call-site review cannot make on its own,
+// because nothing ties an emit site's payload keys to what the test expects.
 func TestReviewFunnelReachesTheWireWithItsProperties(t *testing.T) {
 	sink, rec, closeSink := newWireSink(t)
 
@@ -159,8 +119,10 @@ func TestReviewFunnelReachesTheWireWithItsProperties(t *testing.T) {
 		"harness":            "claude-code",
 		"trigger":            "auto",
 		"posted_to_provider": true,
-		"duration_ms":        float64(90_000), // JSON numbers decode as float64
-		"body_bytes":         float64(len(reviewBody)),
+		// Values arrive as the emit site handed them over (no JSON round trip):
+		// duration_ms is an int64 millisecond count, body_bytes an int len.
+		"duration_ms": int64(90_000),
+		"body_bytes":  len(reviewBody),
 	} {
 		if got := submitted.props[key]; got != want {
 			t.Errorf("submitted.%s = %#v, want %#v", key, got, want)
@@ -168,13 +130,15 @@ func TestReviewFunnelReachesTheWireWithItsProperties(t *testing.T) {
 	}
 
 	// The review prose, the repository, and the commit must not appear anywhere
-	// in what left the process, in any event, under any key.
+	// in what telemetry received, in any event, under any key or value.
 	for _, ev := range rec.events {
-		for _, forbidden := range []string{
-			reviewBody, "secret-repo", "deadbeefcafe", "prod.ts", "github.com", "gh-review-42",
-		} {
-			if strings.Contains(ev.raw, forbidden) {
-				t.Errorf("%s put %q on the wire: %s", ev.event, forbidden, ev.raw)
+		for _, value := range ev.props {
+			for _, forbidden := range []string{
+				reviewBody, "secret-repo", "deadbeefcafe", "prod.ts", "github.com", "gh-review-42",
+			} {
+				if s, ok := value.(string); ok && strings.Contains(s, forbidden) {
+					t.Errorf("%s carried forbidden value %q under a payload key", ev.event, forbidden)
+				}
 			}
 		}
 	}

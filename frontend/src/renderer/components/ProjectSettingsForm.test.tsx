@@ -10,14 +10,13 @@ function render(ui: ReactElement) {
 	return rtlRender(<TooltipProvider>{ui}</TooltipProvider>);
 }
 
-const { getMock, putMock, postMock, navigateMock, closeSettingsMock, setOrchestratorReplacementErrorMock, captureOrchestratorReplacementFailureMock, ensureAgentReadinessMock } = vi.hoisted(() => ({
+const { getMock, putMock, postMock, navigateMock, closeSettingsMock, setOrchestratorReplacementErrorMock, ensureAgentReadinessMock } = vi.hoisted(() => ({
 	getMock: vi.fn(),
 	putMock: vi.fn(),
 	postMock: vi.fn(),
 	navigateMock: vi.fn(),
 	closeSettingsMock: vi.fn(),
 	setOrchestratorReplacementErrorMock: vi.fn(),
-	captureOrchestratorReplacementFailureMock: vi.fn(),
 	ensureAgentReadinessMock: vi.fn(),
 }));
 
@@ -40,10 +39,6 @@ vi.mock("../stores/ui-store", () => ({
 			closeSettings: closeSettingsMock,
 			setOrchestratorReplacementError: setOrchestratorReplacementErrorMock,
 		}),
-}));
-
-vi.mock("../lib/orchestrator-replacement-telemetry", () => ({
-	captureOrchestratorReplacementFailure: captureOrchestratorReplacementFailureMock,
 }));
 
 vi.mock("../lib/api-client", () => ({
@@ -202,7 +197,6 @@ beforeEach(() => {
 	navigateMock.mockReset();
 	closeSettingsMock.mockReset();
 	setOrchestratorReplacementErrorMock.mockReset();
-	captureOrchestratorReplacementFailureMock.mockReset();
 	ensureAgentReadinessMock.mockReset();
 	putMock.mockResolvedValue({ data: { project: {} }, error: undefined });
 	postMock.mockResolvedValue({
@@ -1714,12 +1708,5 @@ describe("ProjectSettingsForm", () => {
 			code: "ORCHESTRATOR_SPAWN_FAILED",
 			requestId: "request-42",
 		});
-		expect(captureOrchestratorReplacementFailureMock).toHaveBeenCalledWith(
-			expect.objectContaining({
-				code: "ORCHESTRATOR_SPAWN_FAILED",
-				requestId: "request-42",
-			}),
-			"proj-1",
-		);
 	});
 });

@@ -9,18 +9,12 @@ import {
 	setApiBaseUrl,
 	subscribeApiBaseUrl,
 } from "./api-client";
-import { captureRendererEvent } from "./telemetry";
 import { captureApiErrorToSentry } from "./sentry";
-
-vi.mock("./telemetry", () => ({
-	captureRendererEvent: vi.fn().mockResolvedValue(undefined),
-}));
 
 vi.mock("./sentry", () => ({
 	captureApiErrorToSentry: vi.fn(),
 }));
 
-const captureMock = vi.mocked(captureRendererEvent);
 const sentryCaptureMock = vi.mocked(captureApiErrorToSentry);
 
 describe("apiClient runtime base URL", () => {
@@ -276,7 +270,6 @@ describe("api error telemetry", () => {
 		vi.useFakeTimers({ toFake: ["Date"] });
 		clock += 10 * 60_000;
 		vi.setSystemTime(clock);
-		captureMock.mockClear();
 		sentryCaptureMock.mockClear();
 	});
 	afterEach(() => {
@@ -292,11 +285,6 @@ describe("api error telemetry", () => {
 
 		await apiClient.GET("/api/v1/agents");
 
-		expect(captureMock).toHaveBeenCalledWith("ao.renderer.api_error", {
-			operation: "GET /api/v1/agents",
-			error_category: "http_5xx",
-			status: 500,
-		});
 		expect(sentryCaptureMock).toHaveBeenCalledTimes(1);
 	});
 
@@ -316,7 +304,6 @@ describe("api error telemetry", () => {
 
 		const { error } = await apiClient.GET("/api/v1/agents");
 
-		expect(captureMock).toHaveBeenCalledTimes(1);
 		expect(sentryCaptureMock).not.toHaveBeenCalled();
 		expect(apiErrorMessage(error)).toBe("Agent switch failed (AGENT_SWITCH_FAILED)");
 	});
@@ -376,7 +363,6 @@ describe("api error telemetry", () => {
 		await apiClient.GET("/api/v1/agents");
 		await apiClient.GET("/api/v1/agents");
 
-		expect(captureMock).toHaveBeenCalledTimes(2);
 		expect(sentryCaptureMock).toHaveBeenCalledTimes(1);
 	});
 
@@ -388,11 +374,7 @@ describe("api error telemetry", () => {
 			params: { path: { sessionId: "ao-raw-id" } },
 		});
 
-		expect(captureMock).toHaveBeenCalledWith("ao.renderer.api_error", {
-			operation: "POST /api/v1/sessions/:id/kill",
-			error_category: "http_4xx",
-			status: 404,
-		});
+		expect(sentryCaptureMock).toHaveBeenCalledWith("POST /api/v1/sessions/:id/kill", "http_4xx", 404, undefined, undefined);
 	});
 
 	it("reports network_error and rethrows", async () => {
@@ -401,11 +383,7 @@ describe("api error telemetry", () => {
 
 		await expect(apiClient.GET("/api/v1/agents")).rejects.toThrow("Failed to fetch");
 
-		expect(captureMock).toHaveBeenCalledWith("ao.renderer.api_error", {
-			operation: "GET /api/v1/agents",
-			error_category: "network_error",
-			status: undefined,
-		});
+		expect(sentryCaptureMock).toHaveBeenCalledWith("GET /api/v1/agents", "network_error", undefined, undefined, undefined);
 	});
 
 	it("does not report caller-initiated aborts", async () => {
@@ -414,7 +392,7 @@ describe("api error telemetry", () => {
 
 		await expect(apiClient.GET("/api/v1/agents")).rejects.toThrow("Aborted");
 
-		expect(captureMock).not.toHaveBeenCalled();
+		expect(sentryCaptureMock).not.toHaveBeenCalled();
 	});
 
 	it("reports daemon_unavailable when the base URL is untrusted", async () => {
@@ -422,11 +400,7 @@ describe("api error telemetry", () => {
 
 		await apiClient.GET("/api/v1/agents");
 
-		expect(captureMock).toHaveBeenCalledWith("ao.renderer.api_error", {
-			operation: "GET /api/v1/agents",
-			error_category: "daemon_unavailable",
-			status: 503,
-		});
+		expect(sentryCaptureMock).toHaveBeenCalledWith("GET /api/v1/agents", "daemon_unavailable", 503, undefined, undefined);
 	});
 
 	it("dedupes repeated identical failures within the 30s window", async () => {
@@ -435,11 +409,11 @@ describe("api error telemetry", () => {
 
 		await apiClient.GET("/api/v1/agents");
 		await apiClient.GET("/api/v1/agents");
-		expect(captureMock).toHaveBeenCalledTimes(1);
+		expect(sentryCaptureMock).toHaveBeenCalledTimes(1);
 
 		vi.setSystemTime(clock + 31_000);
 		await apiClient.GET("/api/v1/agents");
-		expect(captureMock).toHaveBeenCalledTimes(2);
+		expect(sentryCaptureMock).toHaveBeenCalledTimes(2);
 	});
 });
 
