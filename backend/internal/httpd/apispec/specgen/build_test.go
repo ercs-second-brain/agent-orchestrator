@@ -123,55 +123,6 @@ func TestBuild_DelegateAgentEnumIncludesPrimeAgent(t *testing.T) {
 	}
 }
 
-func schemaContainsRef(node openAPISchemaNode, want string) bool {
-	if node.Ref == want {
-		return true
-	}
-	for _, child := range append(node.AnyOf, node.OneOf...) {
-		if child.Ref == want {
-			return true
-		}
-	}
-	return false
-}
-
-func schemaAllowsNull(node openAPISchemaNode) bool {
-	containsNull := func(value any) bool {
-		switch typed := value.(type) {
-		case string:
-			return typed == "null"
-		case []any:
-			return slices.Contains(typed, any("null"))
-		default:
-			return false
-		}
-	}
-	if node.Type != nil && !containsNull(node.Type) {
-		return false
-	}
-	if len(node.AnyOf) > 0 {
-		for _, child := range node.AnyOf {
-			if schemaAllowsNull(child) {
-				return true
-			}
-		}
-		return false
-	}
-	if len(node.OneOf) > 0 {
-		matches := 0
-		for _, child := range node.OneOf {
-			if schemaAllowsNull(child) {
-				matches++
-			}
-		}
-		return matches == 1
-	}
-	if node.Ref != "" {
-		return false
-	}
-	return containsNull(node.Type)
-}
-
 func TestBuild_OMPIsPubliclySpawnable(t *testing.T) {
 	doc := buildSchemas(t)
 	harnesses := doc.Components.Schemas["SpawnSessionRequest"].Properties["harness"].Enum

@@ -12,7 +12,6 @@ import (
 	"strings"
 	"testing"
 	"time"
-
 )
 
 type activityCapture struct {

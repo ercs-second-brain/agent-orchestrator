@@ -808,10 +808,7 @@ describe("SessionInspector usage", () => {
 		processedTokens: 1500,
 	};
 
-	const tokenTotals = (estimatedCost: unknown) => ({ ...canonicalTotals, estimatedCost });
-
-	function mockUsage(estimatedCost: unknown, harnesses?: unknown[]) {
-		const totals = tokenTotals(estimatedCost);
+	function mockUsage(totals: unknown = canonicalTotals, harnesses?: unknown[]) {
 		getMock.mockImplementation(async (path: string) => {
 			if (path === "/api/v1/usage/sessions/{sessionId}") {
 				return {
@@ -839,13 +836,12 @@ describe("SessionInspector usage", () => {
 
 	it("shows detailed token statistics only when Developer Mode is enabled", async () => {
 		useUiStore.getState().setDeveloperMode(true);
-		mockUsage(null);
+		mockUsage();
 
 		renderWithQuery(<SessionInspector session={session([])} />);
-		expect(await screen.findByText("Usage & cost")).toBeInTheDocument();
+		expect(await screen.findByText("Usage")).toBeInTheDocument();
 		expect(screen.getByText("Tokens processed")).toBeInTheDocument();
 		expect(screen.getByLabelText("1,500 tokens processed")).toBeInTheDocument();
-		expect(screen.getByText("Estimated cost").parentElement?.nextElementSibling).toHaveTextContent("Unavailable");
 		expect(screen.queryByText("Coming soon")).not.toBeInTheDocument();
 		const metrics = screen.getAllByTestId("session-usage-metrics")[0];
 		expect(within(metrics).getAllByRole("term").map((term) => term.textContent)).toEqual([
@@ -866,14 +862,14 @@ describe("SessionInspector usage", () => {
 		expect(within(details).queryByText("2 models")).not.toBeInTheDocument();
 		expect(within(details).queryByText("Processed")).not.toBeInTheDocument();
 		expect(within(details).queryByText("Cost")).not.toBeInTheDocument();
+		expect(within(details).queryByText("Estimated cost")).not.toBeInTheDocument();
 	});
 
 	it("shows icon disclosures without repeated metrics when multiple agents contributed", async () => {
 		useUiStore.getState().setDeveloperMode(true);
-		const totals = { ...canonicalTotals, estimatedCost: null };
-		mockUsage(null, [
-			{ harness: "codex", totals, models: [{ modelId: "gpt-5.5", totals }] },
-			{ harness: "claude-code", totals, models: [{ modelId: "claude-haiku-4-5-20251001", totals }] },
+		mockUsage(canonicalTotals, [
+			{ harness: "codex", totals: canonicalTotals, models: [{ modelId: "gpt-5.5", totals: canonicalTotals }] },
+			{ harness: "claude-code", totals: canonicalTotals, models: [{ modelId: "claude-haiku-4-5-20251001", totals: canonicalTotals }] },
 		]);
 
 		renderWithQuery(<SessionInspector session={session([])} />);
@@ -895,190 +891,6 @@ describe("SessionInspector usage", () => {
 			"title",
 			"claude-haiku-4-5-20251001",
 		);
-	});
-
-	it("renders complete costs and provider/model attribution", async () => {
-		useUiStore.getState().setDeveloperMode(true);
-		const completeCost = {
-			cachedInputNanos: 100_000_000,
-			coverage: "complete",
-			inputNanos: 540_000_000,
-			outputNanos: 600_000_000,
-			providerAttribution: "observed",
-			totalNanos: 1_240_000_000,
-		};
-		mockUsage(completeCost, [
-			{
-				harness: "claude-code",
-				totals: tokenTotals(completeCost),
-				models: [
-					{
-						modelId: "claude-sonnet-4",
-						totals: tokenTotals({ ...completeCost, totalNanos: 600_000_000 }),
-					},
-				],
-			},
-		]);
-
-		renderWithQuery(<SessionInspector session={session([])} />);
-
-		const section = (await screen.findByText("Usage & cost")).closest(
-			"[data-testid='inspector-section']",
-		) as HTMLElement;
-		// The value carries no coverage qualifier, and the disclosure beside the
-		// heading explains the estimate without claiming it is billing.
-		expect(within(section).getAllByText("$1.24").length).toBeGreaterThan(0);
-		expect(section).not.toHaveTextContent(/[≈≥]\$/);
-		// The row already sits under its agent, so the billing provider is not
-		// repeated in the model name.
-		expect(within(section).getByText("Sonnet 4")).toBeInTheDocument();
-		expect(section).not.toHaveTextContent("anthropic ·");
-
-		await userEvent.hover(within(section).getByRole("button", { name: "About estimated cost" }));
-		const tooltip = await screen.findByRole("tooltip");
-		expect(tooltip).toHaveTextContent(/published API list prices/);
-		expect(tooltip).not.toHaveTextContent(/could not be priced/);
-	});
-
-	it("explains when the displayed price uses an inferred billing provider", async () => {
-		useUiStore.getState().setDeveloperMode(true);
-		mockUsage({
-			cachedInputNanos: 100_000_000,
-			coverage: "complete",
-			inputNanos: 540_000_000,
-			outputNanos: 600_000_000,
-			providerAttribution: "inferred",
-			totalNanos: 1_240_000_000,
-		});
-
-		renderWithQuery(<SessionInspector session={session([])} />);
-
-		const section = (await screen.findByText("Usage & cost")).closest(
-			"[data-testid='inspector-section']",
-		) as HTMLElement;
-		expect(within(section).getAllByText("$1.24").length).toBeGreaterThan(0);
-
-		await userEvent.hover(within(section).getByRole("button", { name: "About estimated cost" }));
-		const tooltip = await screen.findByRole("tooltip");
-		expect(tooltip).toHaveTextContent(/Billing provider not confirmed/);
-		expect(tooltip).toHaveTextContent(/inferred from the model/);
-		expect(tooltip).toHaveTextContent(/Actual charges may differ/);
-	});
-
-	it("explains when an aggregate mixes detected and inferred providers", async () => {
-		useUiStore.getState().setDeveloperMode(true);
-		mockUsage({
-			cachedInputNanos: 100_000_000,
-			coverage: "complete",
-			inputNanos: 540_000_000,
-			outputNanos: 600_000_000,
-			providerAttribution: "mixed",
-			totalNanos: 1_240_000_000,
-		});
-
-		renderWithQuery(<SessionInspector session={session([])} />);
-		const section = (await screen.findByText("Usage & cost")).closest(
-			"[data-testid='inspector-section']",
-		) as HTMLElement;
-		await userEvent.hover(within(section).getByRole("button", { name: "About estimated cost" }));
-
-		const tooltip = await screen.findByRole("tooltip");
-		expect(tooltip).toHaveTextContent(/Some billing providers were detected/);
-		expect(tooltip).toHaveTextContent(/others inferred from their models/);
-		expect(tooltip).toHaveTextContent(/actual charges may differ/i);
-	});
-
-	it("presents a partial total as a plain value and discloses the gap in words", async () => {
-		useUiStore.getState().setDeveloperMode(true);
-		mockUsage({
-			cachedInputNanos: null,
-			coverage: "partial",
-			inputNanos: 2_000_000,
-			outputNanos: 5_000_000,
-			providerAttribution: "observed",
-			totalNanos: 7_000_000,
-		});
-
-		renderWithQuery(<SessionInspector session={session([])} />);
-
-		const section = (await screen.findByText("Usage & cost")).closest(
-			"[data-testid='inspector-section']",
-		) as HTMLElement;
-		expect(within(section).getAllByText("$0.007").length).toBeGreaterThan(0);
-		expect(section).not.toHaveTextContent(/[≈≥]\$/);
-		expect(section).not.toHaveTextContent(/partial/i);
-
-		await userEvent.hover(within(section).getByRole("button", { name: "About estimated cost" }));
-		const tooltip = await screen.findByRole("tooltip");
-		expect(tooltip).toHaveTextContent(/Some usage could not be priced/);
-	});
-
-	// The column itself carries the "nothing here is priced" case: it disappears
-	// when no row has an estimate, so an install without pricing shows no empty
-	// column at all. Once any row is priced the column earns its place, and the
-	// rows that are not priced say so in words rather than trailing a dash.
-	it("drops the cost column only when no agent has an estimate", async () => {
-		useUiStore.getState().setDeveloperMode(true);
-		const totals = tokenTotals(null);
-		mockUsage(null, [
-			{ harness: "codex", totals, models: [{ modelId: "gpt-5.5", totals }] },
-			{ harness: "claude-code", totals, models: [{ modelId: "claude-sonnet-4", totals }] },
-		]);
-
-		renderWithQuery(<SessionInspector session={session([])} />);
-
-		const section = (await screen.findByText("Usage & cost")).closest(
-			"[data-testid='inspector-section']",
-		) as HTMLElement;
-		// The header row's parent is the list container holding every agent row.
-		const agentList = within(section).getByText("Agent").parentElement?.parentElement as HTMLElement;
-		expect(within(agentList).queryByText("Cost")).not.toBeInTheDocument();
-		expect(agentList).not.toHaveTextContent("Unavailable");
-	});
-
-	it("keeps the cost column and marks unpriced agents unavailable", async () => {
-		useUiStore.getState().setDeveloperMode(true);
-		const priced = tokenTotals({
-			cachedInputNanos: 100_000_000,
-			coverage: "complete",
-			inputNanos: 540_000_000,
-			outputNanos: 600_000_000,
-			providerAttribution: "observed",
-			totalNanos: 1_240_000_000,
-		});
-		const unpriced = tokenTotals(null);
-		mockUsage(null, [
-			{ harness: "codex", totals: priced, models: [{ modelId: "gpt-5.5", totals: priced }] },
-			{
-				harness: "claude-code",
-				totals: unpriced,
-				models: [{ modelId: "claude-sonnet-4", totals: unpriced }],
-			},
-		]);
-
-		renderWithQuery(<SessionInspector session={session([])} />);
-
-		const section = (await screen.findByText("Usage & cost")).closest(
-			"[data-testid='inspector-section']",
-		) as HTMLElement;
-		// The header row's parent is the list container holding every agent row.
-		const agentList = within(section).getByText("Agent").parentElement?.parentElement as HTMLElement;
-		expect(within(agentList).getByText("Cost")).toBeInTheDocument();
-		expect(within(agentList).getByText("$1.24")).toBeInTheDocument();
-		expect(within(agentList).getByText("Unavailable")).toBeInTheDocument();
-		expect(within(agentList).queryByText("—")).not.toBeInTheDocument();
-	});
-
-	it("shows an unavailable estimate as words rather than a dash", async () => {
-		useUiStore.getState().setDeveloperMode(true);
-		mockUsage(null);
-
-		renderWithQuery(<SessionInspector session={session([])} />);
-
-		const section = (await screen.findByText("Usage & cost")).closest(
-			"[data-testid='inspector-section']",
-		) as HTMLElement;
-		expect(within(section).getAllByText("Unavailable").length).toBeGreaterThan(0);
 	});
 });
 

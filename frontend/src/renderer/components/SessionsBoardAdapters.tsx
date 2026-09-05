@@ -15,7 +15,6 @@ import { Check, Copy, GitBranch, LoaderCircle, RotateCcw, Trash2 } from "lucide-
 import type { MessageKey } from "../i18n";
 import { aoBridge } from "../lib/bridge";
 import { formatTimeCompact } from "../lib/format-time";
-import { formatEstimatedCost } from "../lib/format-cost";
 import { formatTokenCount } from "../lib/format-token-count";
 import { prBrowserUrl, sessionPRDisplaySummaries } from "../lib/pr-display";
 import {
@@ -275,8 +274,8 @@ function reviewerAvatarUrl(pr: SessionPRSummary, reviewerId: string): string | u
 	return undefined;
 }
 
-// Keep the board metric scannable by showing cost only. The full cost/token
-// summary remains available from the hover tooltip and to screen readers.
+// Keep the board metric token-only. The token count remains in the tooltip
+// summary for screen readers.
 function toUsagePresentation(
 	usage: SessionUsageSummary | undefined,
 	t: TFunction,
@@ -285,29 +284,16 @@ function toUsagePresentation(
 	if (!usage) {
 		return undefined;
 	}
-	const cost = formatEstimatedCost(usage.estimatedCost);
-	if (!cost) {
-		if (processedTokens === null || processedTokens <= 0) {
-			return undefined;
-		}
-		const compactTokens = formatTokenCount(processedTokens).replace(/ tok$/, "");
-		const accessibleTokens = t("shell.usageTokens", {
-			count: processedTokens.toLocaleString("en-US"),
-		});
-		return {
-			accessibleLabel: accessibleTokens,
-			compactLabel: compactTokens,
-		};
+	if (processedTokens === null || processedTokens <= 0) {
+		return undefined;
 	}
-	if (processedTokens === null) {
-		return { accessibleLabel: cost, compactLabel: cost };
-	}
+	const compactTokens = formatTokenCount(processedTokens).replace(/ tok$/, "");
 	const accessibleTokens = t("shell.usageTokens", {
 		count: processedTokens.toLocaleString("en-US"),
 	});
 	return {
-		accessibleLabel: `${cost} · ${accessibleTokens}`,
-		compactLabel: cost,
+		accessibleLabel: accessibleTokens,
+		compactLabel: compactTokens,
 	};
 }
 

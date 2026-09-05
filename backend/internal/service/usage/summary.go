@@ -33,10 +33,7 @@ func (r *SummaryReader) ListCompact(ctx context.Context, projectID domain.Projec
 	}
 	out := make([]domain.CompactSessionUsage, 0, len(rows))
 	for _, row := range rows {
-		out = append(out, domain.CompactSessionUsage{
-			SessionID: row.SessionID, ProcessedTokens: row.ProcessedTokens,
-			Incomplete: row.Incomplete,
-		})
+		out = append(out, domain.CompactSessionUsage(row))
 	}
 	return out, nil
 }
@@ -68,22 +65,16 @@ func (r *SummaryReader) Get(ctx context.Context, sessionID domain.SessionID) (do
 	if err != nil {
 		return domain.SessionUsageSummary{}, err
 	}
-	totals, err := usageTotals(models)
-	if err != nil {
-		return domain.SessionUsageSummary{}, err
-	}
-	harnesses, err := harnessUsageSummaries(models)
-	if err != nil {
-		return domain.SessionUsageSummary{}, err
-	}
+	totals := usageTotals(models)
+	harnesses := harnessUsageSummaries(models)
 	return domain.SessionUsageSummary{
 		SessionID: sessionID, Incomplete: incomplete, Totals: totals, Harnesses: harnesses,
 	}, nil
 }
 
-func usageTotals(models []domain.UsageModelAggregate) (domain.UsageMetricTotals, error) {
+func usageTotals(models []domain.UsageModelAggregate) domain.UsageMetricTotals {
 	if len(models) == 0 {
-		return domain.UsageMetricTotals{}, nil
+		return domain.UsageMetricTotals{}
 	}
 	input := aggregateMetric(models, func(model domain.UsageModelAggregate) *int64 { return model.Tokens.InputTokens })
 	output := aggregateMetric(models, func(model domain.UsageModelAggregate) *int64 { return model.Tokens.OutputTokens })
@@ -99,7 +90,7 @@ func usageTotals(models []domain.UsageModelAggregate) (domain.UsageMetricTotals,
 		processed := *input + *output
 		totals.ProcessedTokens = &processed
 	}
-	return totals, nil
+	return totals
 }
 
 // aggregateMetric sums one metric across models. One uncollected counter makes
@@ -116,7 +107,7 @@ func aggregateMetric(models []domain.UsageModelAggregate, selectMetric func(doma
 	return &total
 }
 
-func harnessUsageSummaries(models []domain.UsageModelAggregate) ([]domain.HarnessUsageSummary, error) {
+func harnessUsageSummaries(models []domain.UsageModelAggregate) []domain.HarnessUsageSummary {
 	order := make([]domain.AgentHarness, 0)
 	grouped := make(map[domain.AgentHarness][]domain.UsageModelAggregate)
 	for _, model := range models {
@@ -128,21 +119,13 @@ func harnessUsageSummaries(models []domain.UsageModelAggregate) ([]domain.Harnes
 	out := make([]domain.HarnessUsageSummary, 0, len(order))
 	for _, harness := range order {
 		rows := grouped[harness]
-		totals, err := usageTotals(rows)
-		if err != nil {
-			return nil, err
-		}
-		summary := domain.HarnessUsageSummary{Harness: harness, Totals: totals}
+		summary := domain.HarnessUsageSummary{Harness: harness, Totals: usageTotals(rows)}
 		for _, row := range rows {
-			modelTotals, err := usageTotals([]domain.UsageModelAggregate{row})
-			if err != nil {
-				return nil, err
-			}
 			summary.Models = append(summary.Models, domain.ModelUsageSummary{
-				ModelID: row.ModelID, Totals: modelTotals,
+				ModelID: row.ModelID, Totals: usageTotals([]domain.UsageModelAggregate{row}),
 			})
 		}
 		out = append(out, summary)
 	}
-	return out, nil
+	return out
 }

@@ -111,8 +111,6 @@ func TestSummaryReaderGetPreservesStrongestPartialLowerBoundWithoutDoubleCountin
 // observed prices without preserving the distinction the UI needs to explain
 // that the billing provider has not been confirmed.
 
-
-
 func testUsageMetrics(input, cachedInput, uncachedInput, output int64) domain.UsageTokenMetrics {
 	return domain.UsageTokenMetrics{
 		InputTokens: &input, CachedInputTokens: &cachedInput, UncachedInputTokens: &uncachedInput,

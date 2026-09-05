@@ -753,14 +753,6 @@ func ptrInt64ToNull(v *int64) sql.NullInt64 {
 	return sql.NullInt64{Int64: *v, Valid: true}
 }
 
-func nullInt64Ptr(v sql.NullInt64) *int64 {
-	if !v.Valid {
-		return nil
-	}
-	value := v.Int64
-	return &value
-}
-
 func int64PtrWhen(v int64, ok bool) *int64 {
 	if !ok {
 		return nil

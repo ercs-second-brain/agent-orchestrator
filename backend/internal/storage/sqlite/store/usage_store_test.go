@@ -958,14 +958,14 @@ func TestUsageAggregatesMergeProvidersPerModel(t *testing.T) {
 	source := seedUsageSource(t, s, sess, now)
 	events := []domain.ModelUsageEvent{
 		{
-			ProviderID:      domain.UsageProviderOpenAI,
-			ModelID:         "shared-model", SourceEventKey: "complete",
+			ProviderID: domain.UsageProviderOpenAI,
+			ModelID:    "shared-model", SourceEventKey: "complete",
 			MeasurementKind: domain.UsageMeasurementNativeReported,
 			Tokens:          canonicalUsageTokens(10, 4, 6, 2),
 		},
 		{
-			ProviderID:      domain.UsageProviderOpenAI,
-			ModelID:         "shared-model", SourceEventKey: "partial",
+			ProviderID: domain.UsageProviderOpenAI,
+			ModelID:    "shared-model", SourceEventKey: "partial",
 			MeasurementKind: domain.UsageMeasurementNativeReported,
 			Tokens:          canonicalUsageTokens(5, 0, 5, 1),
 		},
