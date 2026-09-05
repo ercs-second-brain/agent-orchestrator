@@ -89,7 +89,7 @@ func TestUsageAPIShowsDetailedTokenTotals(t *testing.T) {
 			OutputTokens: &output, ProcessedTokens: &processed,
 		},
 		Harnesses: []domain.HarnessUsageSummary{{
-			Harness: domain.HarnessCodex,
+			Harness: domain.HarnessPi,
 			Models: []domain.ModelUsageSummary{{
 				ModelID: "gpt-5.6",
 				Totals:  domain.UsageMetricTotals{},

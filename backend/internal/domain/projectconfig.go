@@ -44,12 +44,14 @@ type ProjectConfig struct {
 	// AgentConfig is the default agent config for the project.
 	AgentConfig AgentConfig `json:"agentConfig,omitempty"`
 	// Worker and Orchestrator are role-specific harness/agent-config overrides.
+	// Stored non-pi harness values from before the single-agent consolidation
+	// are preserved but ignored (ADR 0005): they resolve to pi at spawn.
 	Worker       RoleOverride `json:"worker,omitempty"`
 	Orchestrator RoleOverride `json:"orchestrator,omitempty"`
 
-	// Reviewers names the agent(s) that review a worker's PR when a review is
-	// triggered. It is configured independently of the Worker override; an empty
-	// list falls back to claude-code (see ResolveReviewerHarness).
+//	// Reviewers names the agent(s) that review a worker's PR when a review is
+//	// triggered. It is configured independently of the Worker override; an empty
+//	// list falls back to pi (see ResolveReviewerHarness).
 	Reviewers []ReviewerConfig `json:"reviewers,omitempty"`
 	// TrackerIntake controls issue-driven worker spawning. It is opt-in and
 	// read-only toward the tracker in v1: matching issues spawn sessions, but the
@@ -88,29 +90,16 @@ type ReviewerConfig struct {
 	AgentConfig AgentConfig     `json:"agentConfig,omitempty"`
 }
 
-// FallbackReviewerHarness is the reviewer used when a project configures none
-// and the worker's harness is not itself a supported reviewer.
-const FallbackReviewerHarness = ReviewerClaudeCode
+// FallbackReviewerHarness is the reviewer used when a project configures
+// none. Since ADR 0005 pi is the only supported reviewer.
+const FallbackReviewerHarness = ReviewerPi
 
 // ResolveReviewerHarness picks the reviewer harness for a worker. A configured
-// reviewer wins. Otherwise only the original, unattended-safe reviewer set is
-// inherited from the worker. Every other reviewer requires explicit selection,
-// so adding an experimental adapter never silently changes an existing project.
+// reviewer wins. With pi as the single supported harness (ADR 0005), the
+// fallback is always pi.
 func (c ProjectConfig) ResolveReviewerHarness(worker AgentHarness) ReviewerHarness {
 	if len(c.Reviewers) > 0 {
 		return c.Reviewers[0].Harness
-	}
-	switch worker {
-	case HarnessClaudeCode:
-		return ReviewerClaudeCode
-	case HarnessCodex:
-		return ReviewerCodex
-	case HarnessOpenCode:
-		return ReviewerOpenCode
-	case HarnessMuse:
-		return ReviewerMuse
-	case HarnessKimchi:
-		return ReviewerKimchi
 	}
 	return FallbackReviewerHarness
 }

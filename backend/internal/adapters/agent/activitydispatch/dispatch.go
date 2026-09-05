@@ -9,24 +9,8 @@
 package activitydispatch
 
 import (
-	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/adapters/agent/activitystate"
-	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/adapters/agent/agy"
-	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/adapters/agent/aider"
-	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/adapters/agent/amp"
-	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/adapters/agent/auggie"
-	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/adapters/agent/claudecode"
-	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/adapters/agent/codex"
-	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/adapters/agent/continueagent"
-	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/adapters/agent/cursor"
-	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/adapters/agent/droid"
 	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/adapters/agent/fake"
-	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/adapters/agent/kimchi"
-	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/adapters/agent/muse"
-	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/adapters/agent/omp"
-	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/adapters/agent/opencode"
 	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/adapters/agent/pi"
-	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/adapters/agent/primeagent"
-	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/adapters/agent/vibe"
 	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/domain"
 )
 
@@ -37,35 +21,8 @@ type DeriveFunc func(event string, payload []byte) (domain.ActivityState, bool)
 // Derivers maps the agent token in `ao hooks <agent> <event>` to its deriver.
 // Per-adapter PRs add their tokens here as they land.
 var Derivers = map[string]DeriveFunc{
-	// Adapters that parse hook payloads for finer-grained state keep their own
-	// deriver; the rest share the name-only StandardDeriveActivityState.
-	"claude-code": claudecode.DeriveActivityState,
-	"grok":        claudecode.DeriveActivityState,
-	"muse":        muse.DeriveActivityState,
-	"omp":         omp.DeriveActivityState,
-	"codex":       codex.DeriveActivityState,
-	"continue":    continueagent.DeriveActivityState,
-	"droid":       droid.DeriveActivityState,
-	"agy":         agy.DeriveActivityState,
-	"aider":       aider.DeriveActivityState,
-	"kimchi":      kimchi.DeriveActivityState,
-	"opencode":    opencode.DeriveActivityState,
-	"prime-agent": primeagent.DeriveActivityState,
-	"amp":         amp.DeriveActivityState,
-	"pi":          pi.DeriveActivityState,
-	"auggie":      auggie.DeriveActivityState,
-	"goose":       activitystate.StandardDeriveActivityState,
-	"devin":       activitystate.StandardDeriveActivityState,
-	"cursor":      cursor.DeriveActivityState,
-	"qwen":        activitystate.StandardDeriveActivityState,
-	"copilot":     activitystate.StandardDeriveActivityState,
-	"kimi":        activitystate.StandardDeriveActivityState,
-	"cline":       activitystate.StandardDeriveActivityState,
-	"kiro":        activitystate.StandardDeriveActivityState,
-	"kilocode":    activitystate.StandardDeriveActivityState,
-	"autohand":    activitystate.StandardDeriveActivityState,
-	"vibe":        vibe.DeriveActivityState,
-	"fake":        fake.DeriveActivityState,
+	"pi":   pi.DeriveActivityState,
+	"fake": fake.DeriveActivityState,
 }
 
 // SignalCoverage describes how much of a harness lifecycle AO can observe.
@@ -87,13 +44,9 @@ const (
 )
 
 // signalCoverageOverrides records harnesses whose callback coverage cannot be
-// inferred from a same-named Derivers entry. Aider has only a completion
-// callback. Continue's Claude-compatible hooks vary by installed CLI version,
-// so its terminal fallback is useful without treating hook silence as broken.
-var signalCoverageOverrides = map[domain.AgentHarness]SignalCoverage{
-	domain.HarnessAider:    SignalCoveragePartial,
-	domain.HarnessContinue: SignalCoveragePartial,
-}
+// inferred from a same-named Derivers entry. (Empty since the single-agent
+// consolidation; kept as the extension point for future partial pipelines.)
+var signalCoverageOverrides = map[domain.AgentHarness]SignalCoverage{}
 
 // CoverageForHarness returns the activity-signal coverage for a selectable
 // harness. Same-named callback pipelines are complete by default; exceptional

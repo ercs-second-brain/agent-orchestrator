@@ -58,18 +58,18 @@ func TestSummaryReaderGetPreservesStrongestPartialLowerBoundWithoutDoubleCountin
 	store := &usageSummaryStoreStub{
 		found:      true,
 		incomplete: true,
-		session:    domain.SessionRecord{ID: "reverb-12", Harness: domain.HarnessCodex},
+		session:    domain.SessionRecord{ID: "reverb-12", Harness: domain.HarnessFake},
 		models: []domain.UsageModelAggregate{
 			{
-				Harness: domain.HarnessClaudeCode, ModelID: "<synthetic>",
+				Harness: domain.HarnessFake, ModelID: "<synthetic>",
 				Tokens: testUsageMetrics(0, 0, 0, 0),
 			},
 			{
-				Harness: domain.HarnessCodex, ModelID: "gpt-5.6",
+				Harness: domain.HarnessFake, ModelID: "gpt-5.6",
 				Tokens: testUsageMetrics(1000, 400, 600, 200),
 			},
 			{
-				Harness: domain.HarnessClaudeCode, ModelID: "claude-sonnet",
+				Harness: domain.HarnessFake, ModelID: "claude-sonnet",
 				Tokens: testUsageMetrics(100, 20, 80, 25),
 			},
 		},
@@ -125,5 +125,12 @@ func TestSummaryReaderGetReturnsUnavailableMetricsWithoutEvents(t *testing.T) {
 	if got.Totals.InputTokens != nil || got.Totals.OutputTokens != nil ||
 		got.Totals.ProcessedTokens != nil || len(got.Harnesses) != 0 {
 		t.Fatalf("empty usage = %+v", got)
+	}
+}
+
+func mustNoError(t *testing.T, err error) {
+	t.Helper()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
 	}
 }

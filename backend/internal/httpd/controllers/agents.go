@@ -32,26 +32,9 @@ type AgentsController struct {
 
 // Register mounts the agent inventory routes on the supplied router.
 func (c *AgentsController) Register(r chi.Router) {
-	r.Get("/agents", c.list)
-	r.Post("/agents/refresh", c.refresh)
-	r.Get("/agents/readiness", c.readiness)
 	r.Post("/agents/readiness/ensure", c.ensureReadiness)
-	r.Post("/agents/{agent}/probe", c.probe)
 	r.Get("/agents/{agent}/models", c.models)
 	r.Post("/agents/{agent}/models/refresh", c.refreshModels)
-}
-
-func (c *AgentsController) readiness(w http.ResponseWriter, r *http.Request) {
-	if c.Catalog == nil {
-		apispec.NotImplemented(w, r, "GET", "/api/v1/agents/readiness")
-		return
-	}
-	result, err := c.Catalog.CachedReadiness(r.Context())
-	if err != nil {
-		envelope.WriteError(w, r, err)
-		return
-	}
-	envelope.WriteJSON(w, http.StatusOK, result)
 }
 
 func (c *AgentsController) ensureReadiness(w http.ResponseWriter, r *http.Request) {
@@ -107,48 +90,4 @@ func (c *AgentsController) writeModels(w http.ResponseWriter, r *http.Request, r
 		return
 	}
 	envelope.WriteJSON(w, http.StatusOK, catalog)
-}
-
-func (c *AgentsController) list(w http.ResponseWriter, r *http.Request) {
-	if c.Catalog == nil {
-		apispec.NotImplemented(w, r, "GET", "/api/v1/agents")
-		return
-	}
-	inventory, err := c.Catalog.List(r.Context())
-	if err != nil {
-		envelope.WriteError(w, r, err)
-		return
-	}
-	envelope.WriteJSON(w, http.StatusOK, inventory)
-}
-
-func (c *AgentsController) refresh(w http.ResponseWriter, r *http.Request) {
-	if c.Catalog == nil {
-		apispec.NotImplemented(w, r, "POST", "/api/v1/agents/refresh")
-		return
-	}
-	inventory, err := c.Catalog.Refresh(r.Context())
-	if err != nil {
-		envelope.WriteError(w, r, err)
-		return
-	}
-	envelope.WriteJSON(w, http.StatusOK, inventory)
-}
-
-func (c *AgentsController) probe(w http.ResponseWriter, r *http.Request) {
-	if c.Catalog == nil {
-		apispec.NotImplemented(w, r, "POST", "/api/v1/agents/{agent}/probe")
-		return
-	}
-	agentID := strings.TrimSpace(chi.URLParam(r, "agent"))
-	if agentID == "" {
-		envelope.WriteAPIError(w, r, http.StatusBadRequest, "bad_request", "AGENT_REQUIRED", "agent is required", nil)
-		return
-	}
-	result, err := c.Catalog.Probe(r.Context(), agentID)
-	if err != nil {
-		envelope.WriteError(w, r, err)
-		return
-	}
-	envelope.WriteJSON(w, http.StatusOK, result)
 }

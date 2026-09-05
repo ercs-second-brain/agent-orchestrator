@@ -20,7 +20,7 @@ func TestDelegateTaskSpawnsWorkerThenRequestsTitleFromNewestActiveOrchestrator(t
 		wantAgent domain.AgentHarness
 	}{
 		{name: "project default"},
-		{name: "requested agent model and mode", agent: domain.HarnessCursor, model: "  sonnet-custom  ", mode: domain.SessionModeChat, wantAgent: domain.HarnessCursor},
+		{name: "requested agent model and mode", agent: domain.HarnessPi, model: "  sonnet-custom  ", mode: domain.SessionModeChat, wantAgent: domain.HarnessPi},
 	}
 
 	for _, tt := range tests {

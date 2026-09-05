@@ -12,7 +12,6 @@ import (
 	"unicode/utf8"
 
 	"github.com/spf13/cobra"
-	"github.com/spf13/pflag"
 )
 
 // maxDisplayNameLen caps the sidebar label set by `--name`. Mirrored by the
@@ -105,7 +104,7 @@ func newSpawnCommand(ctx *commandContext) *cobra.Command {
 			}
 			opts.project = project.ID
 
-			harness, err := resolveSpawnHarness(opts.harness, opts.kind, project)
+			harness, err := resolveSpawnHarness(opts.kind, project)
 			if err != nil {
 				return err
 			}
@@ -179,16 +178,7 @@ func newSpawnCommand(ctx *commandContext) *cobra.Command {
 		},
 	}
 	f := cmd.Flags()
-	// --agent is an alias for --harness so the more intuitive `ao spawn --agent
-	// droid` works identically; both resolve to the same harness flag.
-	f.SetNormalizeFunc(func(_ *pflag.FlagSet, name string) pflag.NormalizedName {
-		if name == "agent" {
-			name = "harness"
-		}
-		return pflag.NormalizedName(name)
-	})
 	f.StringVar(&opts.project, "project", "", "Project id to spawn the session in (default: AO_PROJECT_ID, current registered repo, or Scratch when it is the only project)")
-	f.StringVar(&opts.harness, "harness", "", "Agent harness / --agent: claude-code, codex, aider, opencode, grok, droid, amp, agy, crush, cursor, qwen, copilot, goose, auggie, continue, devin, cline, kimi, muse, kiro, kilocode, vibe, pi, kimchi, prime-agent, autohand (default: project worker.agent; orchestrator spawns default to project orchestrator.agent; required if the project has none)")
 	f.StringVar(&opts.kind, "kind", "", "Session role: worker or orchestrator (default: worker)")
 	f.StringVar(&opts.mode, "mode", "", "Initial session interface: chat (structured agent connection) or tui (the agent's native terminal). Omitted uses the daemon default; compatible sessions can switch later.")
 	f.StringVar(&opts.branch, "branch", "", "Branch for git project sessions (default: ao/<session-id>/root; unsupported for Scratch)")
@@ -201,21 +191,6 @@ func newSpawnCommand(ctx *commandContext) *cobra.Command {
 	f.BoolVar(&opts.noTakeover, "no-takeover", false, "Refuse if another active session owns the claimed PR (requires --claim-pr)")
 	f.BoolVar(&opts.skipAgentCheck, "skip-agent-check", false, "Skip CLI readiness warnings (the daemon still validates launch readiness)")
 	return cmd
-}
-
-func (c *commandContext) fetchAgentInventory(ctx context.Context, refresh bool) (agentInventory, error) {
-	if refresh {
-		var inventory agentInventory
-		if err := c.postJSON(ctx, "agents/refresh", struct{}{}, &inventory); err != nil {
-			return agentInventory{}, err
-		}
-		return inventory, nil
-	}
-	readiness, err := c.ensureAgentReadiness(ctx, nil, "display")
-	if err != nil {
-		return agentInventory{}, err
-	}
-	return readinessInventory(readiness), nil
 }
 
 func (c *commandContext) resolveSpawnProject(ctx context.Context, explicit string) (projectDetails, error) {
@@ -350,25 +325,40 @@ func pathContains(root, child string) bool {
 	return rel != "." && rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator))
 }
 
-func resolveSpawnHarness(explicit, kind string, project projectDetails) (string, error) {
-	if harness := strings.TrimSpace(explicit); harness != "" {
-		return harness, nil
-	}
-	if project.Config != nil {
-		if kind == "orchestrator" {
-			if harness := strings.TrimSpace(project.Config.Orchestrator.Agent); harness != "" {
-				return harness, nil
-			}
-		} else {
-			if harness := strings.TrimSpace(project.Config.Worker.Agent); harness != "" {
-				return harness, nil
-			}
-		}
-	}
-	if kind == "orchestrator" {
-		return "", usageError{fmt.Errorf("agent could not be resolved; pass --agent or configure `ao project set-config %s --orchestrator-agent <agent>`", project.ID)}
-	}
-	return "", usageError{fmt.Errorf("agent could not be resolved; pass --agent or configure `ao project set-config %s --worker-agent <agent>`", project.ID)}
+// resolveSpawnHarness resolves the session harness from the project's role
+// config. Stored non-pi values from before the single-agent consolidation are
+// preserved but ignored (ADR 0005 Q6): they resolve to pi, the only supported
+// harness.
+func resolveSpawnHarness(kind string, project projectDetails) (string, error) {
+	_ = project // role overrides are store-and-ignore; every spawn runs pi
+	_ = kind
+	return "pi", nil
+}
+
+type agentReadinessObservation struct {
+	State      string `json:"state"`
+	Freshness  string `json:"freshness"`
+	ReasonCode string `json:"reasonCode"`
+	Reason     string `json:"reason"`
+}
+
+type agentReadinessSnapshot struct {
+	ID                 string                    `json:"id"`
+	Label              string                    `json:"label"`
+	Installation       agentReadinessObservation `json:"installation"`
+	Authentication     agentReadinessObservation `json:"authentication"`
+	EffectiveReadiness string                    `json:"effectiveReadiness"`
+	UsageCount         int                       `json:"usageCount"`
+	LastUsedAt         *string                   `json:"lastUsedAt,omitempty"`
+}
+
+type agentReadinessResponse struct {
+	Agents []agentReadinessSnapshot `json:"agents"`
+}
+
+type ensureAgentReadinessRequest struct {
+	AgentIDs []string `json:"agentIds,omitempty"`
+	Purpose  string   `json:"purpose"`
 }
 
 func (c *commandContext) preflightSpawnAgentAuth(ctx context.Context, cmd *cobra.Command, agentID string) error {
@@ -376,12 +366,12 @@ func (c *commandContext) preflightSpawnAgentAuth(ctx context.Context, cmd *cobra
 	if err != nil {
 		var apiErr apiResponseError
 		if errors.As(err, &apiErr) && apiErr.ErrorBody.Code == "UNKNOWN_AGENT_ID" {
-			return fmt.Errorf("agent %q is not supported by this daemon; pass a supported --agent or run `ao agent ls`", agentID)
+			return fmt.Errorf("agent %q is not supported by this daemon", agentID)
 		}
 		return err
 	}
 	if len(readiness.Agents) != 1 {
-		return fmt.Errorf("agent %q is not supported by this daemon; pass a supported --agent or run `ao agent ls`", agentID)
+		return fmt.Errorf("agent %q is not supported by this daemon", agentID)
 	}
 	snapshot := readiness.Agents[0]
 	if snapshot.Installation.State == "not_installed" {

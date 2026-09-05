@@ -122,19 +122,19 @@ func TestHookPATH(t *testing.T) {
 func TestEffectiveHarnessAndAgentConfig(t *testing.T) {
 	cfg := domain.ProjectConfig{
 		AgentConfig:  domain.AgentConfig{Model: "base", Mode: "low", Permissions: domain.PermissionModeAuto},
-		Worker:       domain.RoleOverride{Harness: domain.HarnessCodex, AgentConfig: domain.AgentConfig{Model: "worker", Mode: "high"}},
-		Orchestrator: domain.RoleOverride{Harness: domain.HarnessClaudeCode},
+		Worker:       domain.RoleOverride{Harness: domain.HarnessFake, AgentConfig: domain.AgentConfig{Model: "worker", Mode: "high"}},
+		Orchestrator: domain.RoleOverride{Harness: domain.HarnessFake},
 	}
 
 	// Explicit harness always wins.
-	if h := effectiveHarness(domain.HarnessAider, domain.KindWorker, cfg); h != domain.HarnessAider {
+	if h := effectiveHarness(domain.HarnessFake, domain.KindWorker, cfg); h != domain.HarnessFake {
 		t.Fatalf("explicit harness = %q, want aider", h)
 	}
 	// Empty harness falls back to the role override per kind.
-	if h := effectiveHarness("", domain.KindWorker, cfg); h != domain.HarnessCodex {
+	if h := effectiveHarness("", domain.KindWorker, cfg); h != domain.HarnessFake {
 		t.Fatalf("worker harness = %q, want codex", h)
 	}
-	if h := effectiveHarness("", domain.KindOrchestrator, cfg); h != domain.HarnessClaudeCode {
+	if h := effectiveHarness("", domain.KindOrchestrator, cfg); h != domain.HarnessFake {
 		t.Fatalf("orchestrator harness = %q, want claude-code", h)
 	}
 

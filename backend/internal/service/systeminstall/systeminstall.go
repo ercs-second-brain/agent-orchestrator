@@ -19,7 +19,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/domain"
 	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/ports"
 )
 
@@ -263,17 +262,10 @@ type HarnessVerifier interface {
 	Verify(ctx context.Context, target Target) (VerifyResult, error)
 }
 
-// SessionLister exposes durable lifecycle facts used to keep the Droid vendor
-// installer away from active Droid processes.
-type SessionLister interface {
-	ListAllSessions(ctx context.Context) ([]domain.SessionRecord, error)
-}
-
 // Deps are the durable and adapter-backed dependencies used for harness jobs.
 type Deps struct {
 	JobStore ports.AgentInstallJobStore
 	Verifier HarnessVerifier
-	Sessions SessionLister
 }
 
 // Service runs real install commands for the fixed Target allowlist.
@@ -284,7 +276,6 @@ type Service struct {
 	stop              context.CancelFunc
 	stopping          bool
 	workers           sync.WaitGroup
-	droidGate         sync.RWMutex
 
 	executables         ports.ExecutableFinder
 	commands            ports.CommandRunner
@@ -293,7 +284,6 @@ type Service struct {
 	installCapabilities ports.InstallCapabilityProbe
 	jobStore            ports.AgentInstallJobStore
 	verifier            HarnessVerifier
-	sessions            SessionLister
 	// goos selects the platform branch in planFor. Real use is always
 	// runtime.GOOS; tests override it to exercise every OS branch from one
 	// machine, the same seam lookPath provides for PATH probing.
@@ -358,7 +348,6 @@ func NewWithDeps(executables ports.ExecutableFinder, commands ports.CommandRunne
 		installCapabilities: installCapabilities,
 		jobStore:            deps.JobStore,
 		verifier:            deps.Verifier,
-		sessions:            deps.Sessions,
 		goos:                runtime.GOOS,
 		installTimeout:      defaultInstallTimeout,
 		persistenceTimeout:  defaultPersistenceTimeout,
@@ -526,36 +515,6 @@ func (s *Service) StartAgentOperation(ctx context.Context, target Target, method
 	if !IsAgentTarget(target) {
 		return Job{}, fmt.Errorf("systeminstall: unknown harness target %q", target)
 	}
-	var releaseDroid func()
-	if target == TargetDroid {
-		s.mu.Lock()
-		if current, ok := s.jobs[target]; ok && activeStatus(current.Status) {
-			s.mu.Unlock()
-			return Job{}, ErrInstallActive
-		}
-		s.mu.Unlock()
-		if !s.droidGate.TryLock() {
-			return Job{}, fmt.Errorf("%w: a Droid session is starting", ErrHarnessActive)
-		}
-		releaseDroid = s.droidGate.Unlock
-		defer func() {
-			if releaseDroid != nil {
-				releaseDroid()
-			}
-		}()
-		if s.sessions != nil {
-			sessions, err := s.sessions.ListAllSessions(ctx)
-			if err != nil {
-				return Job{}, fmt.Errorf("systeminstall: list sessions before droid install: %w", err)
-			}
-			for _, session := range sessions {
-				if session.Harness == domain.HarnessDroid && !session.IsTerminated {
-					return Job{}, fmt.Errorf("%w: end Droid session %s before installing or reinstalling Droid", ErrHarnessActive, session.ID)
-				}
-			}
-		}
-	}
-
 	var plan Plan
 	var err error
 	planner, plannerErr := s.newRequestPlanner(ctx)
@@ -614,28 +573,11 @@ func (s *Service) StartAgentOperation(ctx context.Context, target Target, method
 		s.finishAgentJob(job, StatusInterrupted, "", "daemon shutdown interrupted the install", "")
 		return initial, nil
 	}
-	workerRelease := releaseDroid
-	releaseDroid = nil
 	go func() { //nolint:gosec // bounded daemon-owned worker intentionally outlives the request.
 		defer s.workers.Done()
-		if workerRelease != nil {
-			defer workerRelease()
-		}
 		s.runAgentInstall(s.backgroundContext, plan, job)
 	}()
 	return initial, nil
-}
-
-// TryBeginHarnessUse prevents a Droid session launch from racing replacement
-// of the Droid executable. The returned release must be called after launch.
-func (s *Service) TryBeginHarnessUse(harness domain.AgentHarness) (func(), bool) {
-	if harness != domain.HarnessDroid {
-		return func() {}, true
-	}
-	if !s.droidGate.TryRLock() {
-		return nil, false
-	}
-	return s.droidGate.RUnlock, true
 }
 
 // Status returns the current or last known Job for target. A target that has

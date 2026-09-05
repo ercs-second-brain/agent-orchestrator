@@ -303,7 +303,7 @@ func TestSubmitPersistsThenAppliesThenStampsDelivered(t *testing.T) {
 func TestApplyReviewActivitySignalPersistsNativeReviewerSessionID(t *testing.T) {
 	st := &fakeStore{
 		reviewOK: true,
-		review:   domain.Review{ID: "review-1", SessionID: "worker-1", Harness: domain.ReviewerOpenCode, AgentSessionID: "old-native"},
+		review:   domain.Review{ID: "review-1", SessionID: "worker-1", Harness: domain.ReviewerPi, AgentSessionID: "old-native"},
 	}
 	svc := New(nil, st)
 
