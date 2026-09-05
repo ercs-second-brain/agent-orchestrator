@@ -73,14 +73,14 @@ const WORKSPACE_MIN_PX = 340;
 const WORKSPACE_MAX_PERCENT = 55;
 // Browser is the primary creation surface when selected. Its generous preferred
 // width is progressively capped by the live workspace, so laptop layouts land
-// at the chat safety floor while larger windows get a canvas-like split.
+// at the readable-minimum floor while larger windows get a canvas-like split.
 const BROWSER_WORKSPACE_DEFAULT_PX = 900;
 const BROWSER_WORKSPACE_MIN_PX = 460;
 const BROWSER_WORKSPACE_MAX_PERCENT = 68;
 const CHAT_READABLE_MIN_PX = 560;
-// Browser mode deliberately turns chat into a compact companion column, like a
-// canvas workflow. This is still wide enough for the timeline and composer, and
-// is separate from the roomier utility-view floor above.
+// Browser mode keeps the session input column compact, like a canvas workflow.
+// This is still wide enough for the composer, and is separate from the roomier
+// utility-view floor above.
 const BROWSER_CHAT_MIN_PX = 440;
 const WORKSPACE_ABSOLUTE_MIN_PX = 300;
 const INSPECTOR_SEPARATOR_RESERVE_PX = 8;
@@ -1142,7 +1142,7 @@ export function SessionView({ sessionId, projectId }: SessionViewProps) {
 		// A new preview target used to force-switch the inspector to the Browser
 		// tab and pop it open, even if the user was looking at something else
 		// entirely (Reviews, a different session's Files tab, mid-typing in
-		// chat). Match the agent-activity effect below: badge it as unseen and
+		// the composer). Match the agent-activity effect below: badge it as unseen and
 		// let the user open Browser themselves when they're ready, instead of
 		// grabbing focus out from under them.
 		setBrowserUnseen(sessionId, true);

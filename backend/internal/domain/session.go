@@ -34,9 +34,9 @@ type SessionMetadata struct {
 	RuntimeLaunchID   string `json:"runtimeLaunchId,omitempty"`
 	AgentSessionID    string `json:"agentSessionId,omitempty"`
 	// AgentSessionIDLaunchID identifies the terminal runtime generation proven to
-	// own AgentSessionID. Usually that proof comes from a provider hook. A
-	// coordinated Chat-to-TUI handoff may also establish it by launching the
-	// target with the exact structured provider id transferred from Chat.
+	// own AgentSessionID. Normally that proof comes from a provider hook; older
+	// rows may carry it from a coordinated handoff that ran before interface
+	// transitions were removed (#39).
 	AgentSessionIDLaunchID string `json:"-"`
 	Prompt                 string `json:"prompt,omitempty"`
 	// LatestUserPrompt is the latest real user-authored task direction observed
@@ -61,10 +61,11 @@ type SessionMetadata struct {
 	// interchangeable; the interface-transition coordinator copies one value into
 	// both only after the adapter explicitly declares that equivalence.
 	ProviderConversationID string `json:"providerConversationId,omitempty"`
-	// ControllerGeneration is rotated each time a Chat controller is started for
-	// this session. Events carrying an older generation are rejected, so a
-	// controller that is dying cannot mutate the session that replaced it. Not
-	// the same fence as RuntimeLaunchID, which covers terminal runtimes.
+	// ControllerGeneration is rotated each time a new controller epoch is
+	// committed for this session. Events carrying an older generation are
+	// rejected, so a controller that is dying cannot mutate the session that
+	// replaced it. Not the same fence as RuntimeLaunchID, which covers terminal
+	// runtimes.
 	ControllerGeneration string `json:"controllerGeneration,omitempty"`
 	// PreviewURL is the browser preview target the desktop app opens for this
 	// session. Set via `ao preview` (POST /sessions/{id}/preview); persisted so

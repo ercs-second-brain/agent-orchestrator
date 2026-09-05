@@ -97,10 +97,10 @@ type AgentNativeSessionTerminator interface {
 	TerminateNativeSession(ctx context.Context, session SessionRef) error
 }
 
-// AgentInterfaceHandoff is an OPTIONAL capability for a TUI adapter whose
-// native resume identity is also understood by its structured Chat driver.
-// Merely supporting GetRestoreCommand is not enough: some harnesses expose a
-// different identifier through their TUI and protocol surfaces.
+// AgentInterfaceHandoff is a legacy capability interface: it let a TUI adapter
+// expose the native resume identity understood by its structured Chat driver.
+// The chat drivers were removed by #39 and no adapter implements it anymore; it
+// survives so old stored handoff data stays interpretable.
 type AgentInterfaceHandoff interface {
 	NativeConversationID(
 		ctx context.Context,

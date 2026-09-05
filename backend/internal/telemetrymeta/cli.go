@@ -3,7 +3,7 @@ package telemetrymeta
 import "strings"
 
 // NormalizeCommandPath canonicalizes command paths received from current CLIs
-// and best-effort legacy loopback callers before cost-control classification.
+// and best-effort legacy loopback callers before telemetry classification.
 func NormalizeCommandPath(commandPath string) string {
 	return strings.ToLower(strings.Join(strings.Fields(commandPath), " "))
 }

@@ -475,8 +475,7 @@ function UpdateActions({
 					)}
 					{status.state === "downloaded" && (
 						// Opens the restart confirmation rather than installing outright:
-						// installing quits the app, which costs a turn on any chat session
-						// running a daemon-owned driver.
+						// installing quits the app, which costs a turn on any running agent session.
 						<Button type="button" variant="primary" size="sm" onClick={openUpdateInstallPrompt}>
 							<RefreshCw className="size-icon-sm" aria-hidden="true" />
 							{"Restart & install"}

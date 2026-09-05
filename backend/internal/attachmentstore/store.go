@@ -21,7 +21,8 @@ import (
 )
 
 const (
-	// WorkspaceDir is the worktree-relative directory named in chat messages.
+	// WorkspaceDir is the worktree-relative directory that holds files attached
+	// to a session through the API, CLI, and desktop composer.
 	WorkspaceDir = ".ao/attachments"
 	durableDir   = "attachments"
 	// MaxFileBytes matches the HTTP attachment limit and also bounds legacy

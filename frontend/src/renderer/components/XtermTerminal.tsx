@@ -427,7 +427,7 @@ export function XtermTerminal(props: XtermTerminalProps) {
 			// parent decides how). Non-web schemes (mailto:, etc.) still go to the OS
 			// via the main process's window-open handler. Right-click to open a web
 			// link in the system browser instead — see the context menu below. Cmd-click
-			// follows the same escape hatch as links in the Chat surface.
+			// follows the same escape hatch as links in rendered markdown views.
 			if (isWebLink(uri)) {
 				if (event.altKey || event.metaKey) {
 					void openLinkInSystemBrowser(uri);

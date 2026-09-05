@@ -715,7 +715,7 @@ export function CenterPane({
 						daemonReady={daemonReady}
 						fontSize={fontSize}
 						// A terminal you can type into should already hold the caret when you
-						// open or switch to the session, the same way the chat composer does.
+						// open or switch to the session, the same way the task composer does.
 						// Worker input is off during an interface transition or a locked agent
 						// switch; every other target is interactive as soon as it is on screen.
 						// Without this a worker terminal was only focused mid agent-switch, so

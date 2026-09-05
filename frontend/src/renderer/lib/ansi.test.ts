@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { caretNotation, stripAnsi } from "./ansi";
 
-// Command output reaches the chat surface as raw PTY bytes: nothing in the daemon
+// Command output reaches the terminal surface as raw PTY bytes: nothing in the daemon
 // strips escape sequences. These cover the shapes that were actually rendering as
 // garbage, plus the two control characters that carry meaning and are applied rather
 // than dropped.
