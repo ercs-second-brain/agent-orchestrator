@@ -57,9 +57,6 @@ jobs:
           npm pack --dry-run
         working-directory: packages/product-ui
 
-      - name: Prepare pinned agent-browser runtime
-        run: npm run browser-runtime:prepare -- --quiet
-
       - name: Typecheck project
         run: npm run typecheck
 
@@ -67,8 +64,6 @@ jobs:
         run: npm run typecheck:e2e
 
       - name: Run vitest suite
-        env:
-          AO_AGENT_BROWSER_TEST_BINARY: ${{ github.workspace }}/frontend/agent-browser/agent-browser
         run: npx vitest run
 
   renderer-smoke:

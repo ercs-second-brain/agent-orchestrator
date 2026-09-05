@@ -232,29 +232,6 @@ vi.mock("./CenterPane", () => ({
 		</div>
 	),
 }));
-vi.mock("./BrowserPanel", () => ({
-	BrowserPanelView: ({
-		poppedOut,
-		onTogglePopOut,
-	}: {
-		poppedOut: boolean;
-		onTogglePopOut: (next: boolean) => void;
-	}) => (
-		<button type="button" onClick={() => onTogglePopOut(!poppedOut)}>
-			{poppedOut ? "browser center" : "browser rail"}
-		</button>
-	),
-	useBrowserAnnotationQueue: () => ({
-		status: "idle",
-		error: "",
-		queuedCount: 0,
-		beginPicking: vi.fn(),
-		cancelPicking: vi.fn(),
-		enqueue: vi.fn(),
-		failPicking: vi.fn(),
-		retryQueued: vi.fn(),
-	}),
-}));
 vi.mock("./SessionFileExplorer", () => ({
 	SessionFileExplorer: ({
 		isMaximized,
@@ -291,49 +268,12 @@ vi.mock("./SessionFileExplorer", () => ({
 vi.mock("./SessionFileWorkspace", () => ({
 	SessionFileWorkspace: ({ path }: { path: string }) => <div data-testid="session-file-workspace">{path}</div>,
 }));
-const { browserDestroy, browserViewOptions, browserViewState } = vi.hoisted(() => ({
-	browserDestroy: vi.fn(),
-	browserViewOptions: { current: undefined as { active: boolean; sessionId: string; terminated: boolean } | undefined },
-	browserViewState: { url: "", agentBrowserActive: false },
-}));
-vi.mock("../hooks/useBrowserView", () => ({
-	useBrowserView: (options: { active: boolean; sessionId: string; terminated: boolean }) => {
-		browserViewOptions.current = options;
-		return {
-			viewId: "browser:sess-1",
-			navState: {
-				viewId: "browser:sess-1",
-				url: browserViewState.url,
-				title: browserViewState.url ? "Calculator" : "",
-				canGoBack: false,
-				canGoForward: false,
-				isLoading: false,
-			},
-			slotRef: vi.fn(),
-			navigate: vi.fn(),
-			goBack: vi.fn(),
-			goForward: vi.fn(),
-			reload: vi.fn(),
-			stop: vi.fn(),
-			tabs: [{ id: "t1", url: "http://127.0.0.1:4173/", title: "Calculator", active: true }],
-			activeTabId: "t1",
-			tabNotice: "",
-			agentBrowserActive: browserViewState.agentBrowserActive,
-			selectTab: vi.fn(),
-			closeTab: vi.fn(),
-			annotationMode: false,
-			setAnnotationMode: vi.fn(),
-			destroy: browserDestroy,
-		};
-	},
-}));
 vi.mock("./SessionInspector", () => ({
 	SessionInspector: ({
 		filesView,
 		isInspectorVisible = true,
 		onOpenFiles,
 		onOpenReviewFile,
-		onToggleBrowserPopOut,
 		onViewChange,
 		view,
 	}: {
@@ -341,7 +281,6 @@ vi.mock("./SessionInspector", () => ({
 		isInspectorVisible?: boolean;
 		onOpenFiles?: () => void;
 		onOpenReviewFile?: (target: { line?: number; path: string }) => void;
-		onToggleBrowserPopOut?: (next: boolean, sourceRect?: DOMRectReadOnly) => void;
 		onViewChange?: (view: InspectorView) => void;
 		view?: string;
 	}) => {
@@ -354,21 +293,7 @@ vi.mock("./SessionInspector", () => ({
 				<button role="tab" type="button" onClick={() => onViewChange?.("reviews")}>
 					Reviews
 				</button>
-				<button role="tab" type="button" onClick={() => onViewChange?.("browser")}>
-					Browser
-				</button>
-				<div data-browser-dock-target="">
-					<button
-						type="button"
-						data-view={view}
-						onClick={(event) =>
-							onToggleBrowserPopOut?.(true, event.currentTarget.parentElement?.getBoundingClientRect())
-						}
-					>
-						pop browser
-					</button>
-				</div>
-				<button type="button" onClick={onOpenFiles}>
+				<button type="button" data-view={view} onClick={onOpenFiles}>
 					open files
 				</button>
 				<button type="button" onClick={() => onOpenReviewFile?.({ path: "src/panel.tsx", line: 42 })}>
@@ -416,12 +341,8 @@ function inspectorOpen(sessionId: string): boolean {
 	return useUiStore.getState().inspectorSessions[sessionId]?.isOpen ?? true;
 }
 
-function browserUnseen(sessionId: string): boolean {
-	return Boolean(useUiStore.getState().inspectorSessions[sessionId]?.browserUnseen);
-}
-
 function inspectorButton(): HTMLElement {
-	const button = screen.getByText("pop browser").closest("button");
+	const button = screen.getByText("open files").closest("button");
 	if (!button) throw new Error("missing inspector button");
 	return button;
 }
@@ -450,8 +371,6 @@ describe("SessionView", () => {
 		nativeFullScreenMock.mockReturnValue(false);
 		window.localStorage.clear();
 		for (const session of workspaces.flatMap((workspace) => workspace.sessions)) {
-			delete session.previewUrl;
-			delete session.previewRevision;
 			delete session.isTerminated;
 			session.status = "working";
 			session.provider = "claude-code";
@@ -467,10 +386,6 @@ describe("SessionView", () => {
 			orchestratorStartupErrors: {},
 			visibleTerminalKindBySession: {},
 		});
-		browserDestroy.mockReset();
-		browserViewOptions.current = undefined;
-		browserViewState.url = "";
-		browserViewState.agentBrowserActive = false;
 		shellTerminalsState.data = [];
 		navigateMock.mockReset();
 		openShellTerminalMock.mockReset();
@@ -1068,15 +983,6 @@ describe("SessionView", () => {
 		expect(inspectorButton()).toHaveAttribute("data-view", "summary");
 	});
 
-	it("treats a merged terminated session as terminated for Browser preview", () => {
-		const worker = workerSession("sess-1");
-		worker.status = "merged";
-		worker.isTerminated = true;
-
-		render(<SessionView sessionId="sess-1" />);
-
-		expect(browserViewOptions.current).toMatchObject({ sessionId: "sess-1", terminated: true });
-	});
 
 	it("mounts the inspector open by default", () => {
 		render(<SessionView sessionId="sess-1" />);
@@ -1258,33 +1164,7 @@ describe("SessionView", () => {
 		expect(toggle).toHaveAttribute("aria-pressed", "false");
 	});
 
-	it("keeps session chrome expanded when Browser is active", () => {
-		useUiStore.setState({
-			isSidebarOpen: true,
-			inspectorSessions: { "sess-1": { initialized: true, isOpen: true, view: "browser" } },
-		});
 
-		render(<SessionView sessionId="sess-1" />);
-
-		const topbar = screen.getByTestId("mock-session-topbar");
-		expect(topbar).toHaveAttribute("data-compact-actions", "false");
-		expect(topbar.closest("[data-compact-session-chrome]")).toHaveAttribute(
-			"data-compact-session-chrome",
-			"false",
-		);
-	});
-
-	it("never shrinks the inspector when entering Browser", async () => {
-		window.localStorage.setItem("ao.inspector.widthPx", "720");
-		window.localStorage.setItem("ao.workspace.browser.canvasWidthPx", "460");
-		render(<SessionView sessionId="sess-1" />);
-		expect(document.documentElement.style.getPropertyValue("--ao-inspector-w")).toBe("720px");
-
-		fireEvent.click(screen.getByRole("tab", { name: "Browser" }));
-		await waitFor(() => {
-			expect(document.documentElement.style.getPropertyValue("--ao-inspector-w")).toBe("720px");
-		});
-	});
 
 	it("restores and clamps the persisted inspector width in pixels", () => {
 		window.localStorage.setItem("ao.inspector.widthPx", "240");
@@ -1293,85 +1173,9 @@ describe("SessionView", () => {
 		expect(document.documentElement.style.getPropertyValue("--ao-inspector-w")).toBe("340px");
 	});
 
-	it("grows Browser into a co-work canvas while utility surfaces stay consistent", async () => {
-		render(<SessionView sessionId="sess-1" />);
-		expect(screen.getByTestId("panel-group")).toHaveAttribute("data-workspace-mode", "utility");
-		expect(document.documentElement.style.getPropertyValue("--ao-inspector-w")).toBe("500px");
 
-		act(() => useUiStore.getState().setInspectorView("sess-1", "browser"));
-		await waitFor(() => {
-			expect(screen.getByTestId("panel-group")).toHaveAttribute("data-workspace-mode", "browser");
-			expect(document.documentElement.style.getPropertyValue("--ao-inspector-w")).toBe("900px");
-			expect(
-				screen.getByTestId("panel-group").style.getPropertyValue("--session-inspector-max-width"),
-			).toBe("min(68%, max(300px, calc(100% - 440px)))");
-		});
 
-		act(() => useUiStore.getState().setInspectorView("sess-1", "files"));
-		await waitFor(() => {
-			expect(screen.getByTestId("panel-group")).toHaveAttribute("data-workspace-mode", "files");
-			expect(document.documentElement.style.getPropertyValue("--ao-inspector-w")).toBe("500px");
-			expect(
-				screen.getByTestId("panel-group").style.getPropertyValue("--session-inspector-max-width"),
-			).toBe("min(55%, max(300px, calc(100% - 560px)))");
-		});
-	});
 
-	it("keeps Browser entry and utility return on one complete workspace spring", () => {
-		vi.useFakeTimers();
-		try {
-			render(<SessionView sessionId="sess-1" />);
-			fireEvent.click(screen.getByRole("tab", { name: "Browser" }));
-
-			const split = screen.getByTestId("panel-group");
-			expect(split).toHaveAttribute("data-workspace-resizing", "true");
-			expect(document.documentElement.style.getPropertyValue("--ao-inspector-w")).toBe("900px");
-			act(() => vi.advanceTimersByTime(300));
-			expect(split).not.toHaveAttribute("data-workspace-resizing");
-
-			fireEvent.click(screen.getByRole("tab", { name: "Summary" }));
-			expect(split).toHaveAttribute("data-workspace-resizing", "true");
-			expect(document.documentElement.style.getPropertyValue("--ao-inspector-w")).toBe("500px");
-			act(() => vi.advanceTimersByTime(300));
-			expect(split).not.toHaveAttribute("data-workspace-resizing");
-		} finally {
-			vi.useRealTimers();
-		}
-	});
-
-	it("restores a separate user-sized Browser workspace without changing utility width", () => {
-		window.localStorage.setItem("ao.workspace.browser.canvasWidthPx", "820");
-		render(<SessionView sessionId="sess-1" />);
-
-		fireEvent.click(screen.getByRole("tab", { name: "Browser" }));
-		expect(document.documentElement.style.getPropertyValue("--ao-inspector-w")).toBe("820px");
-		expect(useUiStore.getState().isSidebarOpen).toBe(true);
-
-		fireEvent.click(screen.getByRole("tab", { name: "Summary" }));
-		expect(document.documentElement.style.getPropertyValue("--ao-inspector-w")).toBe("500px");
-	});
-
-	it("never changes the sidebar preference while browser surfaces open and close", async () => {
-		render(<SessionView sessionId="sess-1" />);
-		expect(useUiStore.getState().isSidebarOpen).toBe(true);
-
-		fireEvent.click(screen.getByRole("tab", { name: "Reviews" }));
-		expect(useUiStore.getState().isSidebarOpen).toBe(true);
-
-		fireEvent.click(screen.getByRole("tab", { name: "Browser" }));
-		expect(useUiStore.getState().isSidebarOpen).toBe(true);
-
-		fireEvent.click(screen.getByRole("tab", { name: "Summary" }));
-		expect(useUiStore.getState().isSidebarOpen).toBe(true);
-
-		fireEvent.click(screen.getByRole("tab", { name: "Browser" }));
-		fireEvent.click(screen.getByRole("button", { name: "open files" }));
-		expect(useUiStore.getState().isSidebarOpen).toBe(true);
-
-		fireEvent.click(screen.getByRole("tab", { name: "Browser" }));
-		fireEvent.click(screen.getByRole("button", { name: "Close inspector panel" }));
-		await waitFor(() => expect(useUiStore.getState().isSidebarOpen).toBe(true));
-	});
 
 	it("mounts the inspector in sync when navigating from an orchestrator session", () => {
 		const { rerender } = render(<SessionView sessionId="sess-orch" />);
@@ -1414,75 +1218,8 @@ describe("SessionView", () => {
 		expect(useUiStore.getState().inspectorSessions["sess-orch"]).toBeUndefined();
 	});
 
-	it("smoothly morphs the browser over the whole app window and back to its dock", async () => {
-		const dockRect = {
-			x: 780,
-			y: 96,
-			top: 96,
-			left: 780,
-			right: 1280,
-			bottom: 796,
-			width: 500,
-			height: 700,
-			toJSON: () => ({}),
-		} as DOMRect;
-		const rect = vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockReturnValue(dockRect);
-		act(() => useUiStore.getState().setInspectorOpen("sess-1", true));
-		try {
-			render(<SessionView sessionId="sess-1" />);
 
-			expect(screen.getByText("terminal center")).toBeInTheDocument();
-			fireEvent.click(screen.getByRole("button", { name: "pop browser" }));
 
-			// The portal begins exactly where the docked browser was, then expands.
-			const overlay = document.querySelector(".browser-popout-overlay");
-			expect(overlay).toHaveAttribute("data-phase", "opening");
-			expect(overlay).toHaveStyle({ "--browser-popout-dock-left": "780px", "--browser-popout-dock-width": "500px" });
-			expect(overlay).toHaveClass("browser-popout-overlay--mac-windowed");
-			expect(screen.getByRole("button", { name: "browser center" })).toBeInTheDocument();
-			expect(screen.getByText("terminal center")).toBeInTheDocument();
-			await waitFor(() => expect(overlay).toHaveAttribute("data-phase", "open"));
-
-			fireEvent.click(screen.getByRole("button", { name: "browser center" }));
-			expect(overlay).toHaveAttribute("data-phase", "closing");
-			expect(screen.getByRole("button", { name: "browser center" })).toBeInTheDocument();
-			fireEvent.transitionEnd(overlay?.querySelector(".browser-popout-frame") as Element, {
-				propertyName: "width",
-			});
-			// Keep the portal alive briefly at the destination so the native browser
-			// can commit its final bounds before React hands ownership back to the dock.
-			expect(screen.getByRole("button", { name: "browser center" })).toBeInTheDocument();
-			await waitFor(() =>
-				expect(screen.queryByRole("button", { name: "browser center" })).not.toBeInTheDocument(),
-			);
-			expect(screen.getByText("terminal center")).toBeInTheDocument();
-			expect(browserDestroy).not.toHaveBeenCalled();
-		} finally {
-			rect.mockRestore();
-		}
-	});
-
-	it("does not reserve the traffic-light band during native macOS fullscreen", () => {
-		nativeFullScreenMock.mockReturnValue(true);
-		act(() => useUiStore.getState().setInspectorOpen("sess-1", true));
-		render(<SessionView sessionId="sess-1" />);
-
-		fireEvent.click(screen.getByRole("button", { name: "pop browser" }));
-
-		expect(document.querySelector(".browser-popout-overlay")).not.toHaveClass("browser-popout-overlay--mac-windowed");
-	});
-
-	it("does not carry popped-out browser visibility into the next session", () => {
-		act(() => useUiStore.getState().setInspectorView("sess-1", "browser"));
-		const { rerender } = render(<SessionView sessionId="sess-1" />);
-
-		fireEvent.click(screen.getByRole("button", { name: "pop browser" }));
-		expect(browserViewOptions.current).toMatchObject({ sessionId: "sess-1", active: true });
-
-		rerender(<SessionView sessionId="sess-2" />);
-
-		expect(browserViewOptions.current).toMatchObject({ sessionId: "sess-2", active: false });
-	});
 
 	it("opens the files view in the inspector rail first", () => {
 		act(() => useUiStore.getState().setInspectorOpen("sess-1", true));
@@ -1609,62 +1346,13 @@ describe("SessionView", () => {
 		expect(document.querySelector(".files-popout-overlay")).not.toHaveClass("files-popout-overlay--mac-windowed");
 	});
 
-	it("badges Browser as unseen for a new live `ao preview` target instead of auto-opening it", () => {
-		const worker = workerSession("sess-1");
-		const { rerender } = render(<SessionView sessionId="sess-1" />);
-		const viewBefore = inspectorButton().getAttribute("data-view");
-		const openBefore = inspectorOpen("sess-1");
 
-		worker.previewUrl = "http://localhost:5173/";
-		worker.previewRevision = 1;
-		rerender(<SessionView sessionId="sess-1" />);
 
-		expect(screen.getByText("terminal center")).toBeInTheDocument();
-		expect(inspectorOpen("sess-1")).toBe(openBefore);
-		expect(inspectorButton()).toHaveAttribute("data-view", viewBefore);
-		expect(browserUnseen("sess-1")).toBe(true);
-	});
-
-	it("badges Browser as unseen without opening a collapsed inspector when a new live preview arrives", () => {
-		const worker = workerSession("sess-1");
-		act(() => useUiStore.getState().setInspectorOpen("sess-1", false));
-		const { rerender } = render(<SessionView sessionId="sess-1" />);
-
-		worker.previewUrl = "http://localhost:5173/";
-		worker.previewRevision = 1;
-		rerender(<SessionView sessionId="sess-1" />);
-
-		expect(inspectorOpen("sess-1")).toBe(false);
-		expect(inspectorButton()).toHaveAttribute("data-view", "summary");
-		expect(browserUnseen("sess-1")).toBe(true);
-	});
-
-	it("keeps Summary on session entry and badges Browser as unseen for later preview work", () => {
-		const secondWorker = workerSession("sess-2");
-		secondWorker.previewUrl = "http://localhost:5173/";
-		secondWorker.previewRevision = 1;
-
-		const { rerender } = render(<SessionView sessionId="sess-1" />);
-
-		expect(screen.getByTestId("panel-inspector")).toHaveAttribute("data-state", "expanded");
-		expect(screen.getByTestId("panel-inspector")).not.toHaveAttribute("inert");
-		expect(inspectorButton()).toHaveAttribute("data-view", "summary");
-
-		rerender(<SessionView sessionId="sess-2" />);
-		expect(inspectorButton()).toHaveAttribute("data-view", "summary");
-		expect(browserUnseen("sess-2")).toBe(false);
-
-		secondWorker.previewRevision = 2;
-		rerender(<SessionView sessionId="sess-2" />);
-		expect(inspectorButton()).toHaveAttribute("data-view", "summary");
-		expect(browserUnseen("sess-2")).toBe(true);
-	});
 
 	// Regression: the session-entry effect that defaults a brand-new session to
 	// Summary tracked only the single most-recently-initialized session ID, so
 	// re-entering ANY session that was not the immediately preceding one looked
 	// identical to a first-ever visit and forced it back to Summary — silently
-	// discarding whatever tab (Files, Browser) the user had left it on.
 	it("remembers the tab a session was left on when returning to it after visiting another session", () => {
 		const { rerender } = render(<SessionView sessionId="sess-1" />);
 		expect(inspectorButton()).toHaveAttribute("data-view", "summary");
@@ -1698,155 +1386,12 @@ describe("SessionView", () => {
 		expect(inspectorButton()).toHaveAttribute("data-view", "files");
 	});
 
-	it("keeps Summary selected when preview content arrives with the async workspace response", () => {
-		const secondWorker = workerSession("sess-2");
-		secondWorker.previewUrl = "http://localhost:5173/";
-		secondWorker.previewRevision = 1;
-		workspaceQueryState.data = undefined;
-		workspaceQueryState.isLoading = true;
 
-		const { rerender } = render(<SessionView sessionId="sess-2" />);
 
-		workspaceQueryState.data = workspaces;
-		workspaceQueryState.isLoading = false;
-		rerender(<SessionView sessionId="sess-2" />);
 
-		expect(inspectorOpen("sess-2")).toBe(true);
-		expect(screen.getByTestId("panel-inspector")).not.toHaveAttribute("inert");
-		expect(inspectorButton()).toHaveAttribute("data-view", "summary");
-		expect(browserUnseen("sess-2")).toBe(false);
-		expect(screen.getByTestId("panel-inspector")).toHaveAttribute("data-state", "expanded");
-	});
 
-	it("glows for agent browser activity after the user leaves Browser", () => {
-		const { rerender } = render(<SessionView sessionId="sess-1" />);
 
-		browserViewState.url = "http://localhost:4173/";
-		rerender(<SessionView sessionId="sess-1" />);
-		expect(inspectorButton()).toHaveAttribute("data-view", "summary");
 
-		act(() => useUiStore.getState().setInspectorView("sess-1", "browser"));
-
-		browserViewState.agentBrowserActive = true;
-		rerender(<SessionView sessionId="sess-1" />);
-		expect(browserUnseen("sess-1")).toBe(false);
-
-		// Switching away during an already-running command must still mark the
-		// Browser as unseen; it should not wait for another command transition.
-		act(() => useUiStore.getState().setInspectorView("sess-1", "summary"));
-
-		expect(inspectorButton()).toHaveAttribute("data-view", "summary");
-		expect(browserUnseen("sess-1")).toBe(true);
-	});
-
-	it("does not glow for preview or agent activity while Browser is visible as a popout", () => {
-		const worker = workerSession("sess-1");
-		worker.previewUrl = "http://localhost:4173/";
-		worker.previewRevision = 1;
-		const { rerender } = render(<SessionView sessionId="sess-1" />);
-
-		fireEvent.click(screen.getByRole("button", { name: "pop browser" }));
-		expect(screen.getByRole("button", { name: "browser center" })).toBeInTheDocument();
-		act(() => useUiStore.getState().setInspectorOpen("sess-1", false));
-
-		worker.previewRevision = 2;
-		browserViewState.agentBrowserActive = true;
-		rerender(<SessionView sessionId="sess-1" />);
-
-		expect(browserUnseen("sess-1")).toBe(false);
-	});
-
-	it("does not let a previous session's popout consume the destination session's preview glow", () => {
-		const secondWorker = workerSession("sess-2");
-		secondWorker.previewUrl = "http://localhost:4173/";
-		secondWorker.previewRevision = 2;
-		act(() => {
-			useUiStore.setState({
-				inspectorSessions: {
-					"sess-2": {
-						isOpen: true,
-						view: "summary",
-						browserContentRevealed: true,
-					},
-				},
-			});
-		});
-		const { rerender } = render(<SessionView sessionId="sess-1" />);
-		fireEvent.click(screen.getByRole("button", { name: "pop browser" }));
-		expect(screen.getByRole("button", { name: "browser center" })).toBeInTheDocument();
-
-		rerender(<SessionView sessionId="sess-2" />);
-
-		expect(browserUnseen("sess-2")).toBe(false);
-		expect(inspectorButton()).toHaveAttribute("data-view", "summary");
-	});
-
-	it("does not open Browser when `ao preview clear` removes the target", () => {
-		const worker = workerSession("sess-1");
-		const { rerender } = render(<SessionView sessionId="sess-1" />);
-
-		worker.previewUrl = "http://localhost:5173/";
-		worker.previewRevision = 1;
-		rerender(<SessionView sessionId="sess-1" />);
-		expect(inspectorButton()).toHaveAttribute("data-view", "summary");
-		expect(browserUnseen("sess-1")).toBe(true);
-
-		act(() => {
-			useUiStore.getState().setInspectorView("sess-1", "summary");
-			useUiStore.getState().setInspectorOpen("sess-1", false);
-		});
-
-		worker.previewUrl = undefined;
-		worker.previewRevision = 2;
-		rerender(<SessionView sessionId="sess-1" />);
-
-		expect(inspectorOpen("sess-1")).toBe(false);
-		expect(inspectorButton()).toHaveAttribute("data-view", "summary");
-		expect(browserUnseen("sess-1")).toBe(false);
-
-		worker.previewUrl = "http://localhost:3000/";
-		worker.previewRevision = 3;
-		rerender(<SessionView sessionId="sess-1" />);
-
-		expect(inspectorOpen("sess-1")).toBe(false);
-		expect(inspectorButton()).toHaveAttribute("data-view", "summary");
-		expect(browserUnseen("sess-1")).toBe(true);
-	});
-
-	// Regression: a terminated session's `previewUrl` is a stale DB fact —
-	// useBrowserView suppresses and destroys the live preview for terminated
-	// sessions, so it must not count as active Browser content.
-	it("keeps Summary selected for a terminated session with a stale previewUrl", () => {
-		const worker = workerSession("sess-1");
-		worker.status = "merged";
-		worker.isTerminated = true;
-		worker.previewUrl = "http://localhost:5173/";
-		worker.previewRevision = 1;
-
-		render(<SessionView sessionId="sess-1" />);
-
-		expect(inspectorButton()).toHaveAttribute("data-view", "summary");
-		expect(useUiStore.getState().inspectorSessions["sess-1"]?.browserContentRevealed).toBeFalsy();
-	});
-
-	// Regression: agent-browser commands (fill, click, snapshot, …) are real
 	// activity even on an empty target that has not navigated anywhere yet.
-	// Gating the glow on hasBrowserContent/browserContentRevealed meant a
 	// command run before any page loaded never surfaced as unseen.
-	it("glows for agent browser activity even before any browser content has loaded", () => {
-		const { rerender } = render(<SessionView sessionId="sess-1" />);
-		expect(inspectorButton()).toHaveAttribute("data-view", "summary");
-
-		browserViewState.agentBrowserActive = true;
-		rerender(<SessionView sessionId="sess-1" />);
-
-		expect(browserUnseen("sess-1")).toBe(true);
-
-		// An explicit clear still resets unseen activity when the target was
-		// already empty, so only previewRevision changes.
-		browserViewState.agentBrowserActive = false;
-		workerSession("sess-1").previewRevision = 1;
-		rerender(<SessionView sessionId="sess-1" />);
-		expect(browserUnseen("sess-1")).toBe(false);
-	});
 });

@@ -30,7 +30,7 @@ export function terminalFontSizeDelta(chord: ShortcutChord, isMac: boolean): -1 
 }
 
 export type AppShortcutId =
-	"new-session" | "new-shell-terminal" | "close-shell-terminal" | "keyboard-shortcuts" | "toggle-sidebar" | "open-project" | "toggle-inspector" | "command-palette" | "open-settings" | "previous-session" | "next-session" | "previous-tab" | "next-tab" | "focus-terminal" | "toggle-browser-devtools";
+	"new-session" | "new-shell-terminal" | "close-shell-terminal" | "keyboard-shortcuts" | "toggle-sidebar" | "open-project" | "toggle-inspector" | "command-palette" | "open-settings" | "previous-session" | "next-session" | "previous-tab" | "next-tab" | "focus-terminal";
 
 export type ShortcutCategory = "General" | "Navigation" | "Session";
 
@@ -129,11 +129,6 @@ export const APP_SHORTCUTS: readonly ShortcutDefinition[] = [
 		label: "Focus terminal",
 		category: "Session",
 	},
-	{
-		id: "toggle-browser-devtools",
-		label: "Toggle browser DevTools",
-		category: "Session",
-	},
 ];
 
 const binding = (
@@ -178,8 +173,6 @@ export function defaultShortcutBindings(id: AppShortcutId, isMac: boolean): read
 			return [binding("Tab", { ctrl: true })];
 		case "focus-terminal":
 			return [isMac ? binding("t", { meta: true, shift: true }) : binding("t", { ctrl: true, shift: true })];
-		case "toggle-browser-devtools":
-			return [isMac ? binding("i", { meta: true, alt: true }) : binding("i", { ctrl: true, shift: true })];
 	}
 }
 
@@ -304,7 +297,7 @@ export const FOCUS_TERMINAL_SHORTCUT_CHANNEL = "app:focus-terminal";
 // live terminal keystroke (readline/vim "next line"), so the non-mac binding
 // adds Shift to stay clear of the shell. Handled at the application level
 // (main-process before-input-event) so it fires even when focus is inside
-// xterm's helper textarea or a native Browser-preview WebContentsView.
+// xterm's helper textarea.
 export function matchesNewSessionShortcut(chord: ShortcutChord, isMac: boolean): boolean {
 	return matchesAppShortcut("new-session", chord, isMac);
 }
@@ -316,8 +309,8 @@ export function matchesNewShellTerminalShortcut(chord: ShortcutChord, isMac: boo
 }
 
 // Keyboard shortcut help: ⌘/ on macOS, Ctrl+/ on Windows/Linux. This is also
-// handled at the application level so the terminal and Browser preview cannot
-// swallow the command before the shell sees it.
+// handled at the application level so the terminal cannot swallow the command
+// before the shell sees it.
 export function matchesKeyboardShortcutsHelpShortcut(chord: ShortcutChord, isMac: boolean): boolean {
 	return matchesAppShortcut("keyboard-shortcuts", chord, isMac);
 }

@@ -1,6 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
-  act,
   fireEvent,
   render,
   screen,
@@ -299,26 +298,6 @@ afterEach(() => {
 });
 
 describe("SessionInspector tabs", () => {
-  it("gives the Browser viewport the full inspector body without the default content gutter", async () => {
-    renderWithQuery(<SessionInspector session={session([])} />);
-
-    await userEvent.click(screen.getByRole("tab", { name: "Browser" }));
-
-    const body = screen
-      .getByRole("complementary", { name: "Session inspector" })
-      .querySelector(".session-inspector__body--browser");
-    expect(body).toHaveClass(
-      "session-inspector__body--browser",
-      "p-0",
-      "overflow-hidden",
-    );
-    expect(body).not.toHaveClass(
-      "p-3",
-      "pb-4",
-      "@max-[300px]/inspector:px-2.5",
-    );
-  });
-
   it("keeps rail tabs square instead of stretching across the inspector", () => {
     renderWithQuery(<SessionInspector session={session([])} />);
 
@@ -330,26 +309,6 @@ describe("SessionInspector tabs", () => {
 		expect(summaryTab).not.toHaveClass("h-control-md", "px-1");
 		expect(summaryTab).toHaveAttribute("title", "Summary");
 	});
-
-  it("shows the glow only while real browser activity is unseen", () => {
-    const currentSession = session([]);
-    const view = renderWithQuery(<SessionInspector session={currentSession} />);
-    expect(
-      screen.queryByTestId("browser-unseen-indicator"),
-    ).not.toBeInTheDocument();
-    view.unmount();
-
-    useUiStore.getState().setBrowserUnseen(currentSession.id, true);
-    renderWithQuery(<SessionInspector session={currentSession} />);
-    expect(screen.getByTestId("browser-unseen-indicator")).toBeInTheDocument();
-
-    act(() =>
-      useUiStore.getState().setInspectorView(currentSession.id, "browser"),
-    );
-    expect(
-      screen.queryByTestId("browser-unseen-indicator"),
-    ).not.toBeInTheDocument();
-  });
 
   it("renders the supplied files view when the Files tab opens", async () => {
     const onOpenFiles = vi.fn();
@@ -1542,7 +1501,7 @@ describe("SessionInspector tabs", () => {
     mockCommonGets([], "", [reviewState(1, "needs_review")]);
     renderWithQuery(<SessionInspector session={session([pr(1, "open")])} />);
     const tabs = screen.getAllByRole("tab").map((el) => el.textContent?.trim());
-    expect(tabs).toEqual(["Summary", "Reviews", "Browser", "Files"]);
+    expect(tabs).toEqual(["Summary", "Reviews", "Files"]);
     expect(screen.queryByText("Review controls")).not.toBeInTheDocument();
 
     await userEvent.click(screen.getByRole("tab", { name: "Reviews" }));
@@ -2164,8 +2123,6 @@ describe("SessionInspector summary reviews", () => {
     await openReviewsSection();
 
     await userEvent.click(await screen.findByRole("button", { name: "Review actions" }));
-    expect(screen.queryByRole("button", { name: "Open in AO Browser" })).not.toBeInTheDocument();
-
     await userEvent.click(screen.getByRole("button", { name: "Send to worker agent" }));
     await waitFor(() =>
       expect(postMock).toHaveBeenCalledWith("/api/v1/sessions/{sessionId}/send", {
@@ -3528,7 +3485,6 @@ describe("SessionInspector summary reviews", () => {
     expect(screen.queryByRole("tab", { name: /Reviews/ })).not.toBeInTheDocument();
     expect(screen.getAllByRole("tab").map((tab) => tab.textContent?.trim())).toEqual([
       "Summary",
-      "Browser",
       "Files",
     ]);
     expect(

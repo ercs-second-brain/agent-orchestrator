@@ -641,10 +641,9 @@ function ShellLayout() {
 		workspaceStartupState,
 	]);
 
-	// Keep Electron's nativeTheme in step with the shell so the embedded preview
-	// WebContentsView (which follows prefers-color-scheme) flips at the same time.
-	// Send the preference, not the resolved theme, so "system" keeps both surfaces
-	// following the OS instead of freezing matchMedia to a forced value.
+	// Keep Electron's nativeTheme in step with the shell theme preference.
+	// Send the preference, not the resolved theme, so "system" keeps following
+	// the OS instead of freezing matchMedia to a forced value.
 	useEffect(() => {
 		void aoBridge.theme?.set(themePreference);
 	}, [themePreference]);
@@ -686,9 +685,9 @@ function ShellLayout() {
 	}, [navigate, toggleSidebar]);
 
 	// New session (⌘N / Ctrl+Shift+N) is detected in the main process and
-	// delivered here, so it fires even when focus is inside xterm or a native
-	// Browser-preview view. The shell owns the routing: open the New Task flow
-	// for the in-scope project, else fall back to create-project.
+	// delivered here, so it fires even when focus is inside xterm. The shell
+	// owns the routing: open the New Task flow for the in-scope project, else
+	// fall back to create-project.
 	useEffect(
 		() =>
 			aoBridge.app.onNewSessionShortcut(() => {
@@ -866,11 +865,6 @@ function ShellLayout() {
           render inside the center panel when the shell topbar is hidden. */}
 			<div
 				className={cn(
-					// `app-shell-root` is the platform-independent hook the native-composition
-					// cascade needs to clear this opaque `bg-sidebar` while the live browser
-					// page shows through. Windows/Linux were already covered by their
-					// platform classes; macOS adds none, so without this the shell painted
-					// over the live page whenever an overlay raised it.
 					"app-shell-root flex h-screen min-h-0 flex-col bg-sidebar text-foreground",
 					isWindows && "platform-windows",
 					isLinux && "platform-linux",

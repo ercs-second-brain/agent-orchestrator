@@ -45,13 +45,6 @@ const {
 		xtermUnmounts: { value: 0 },
 	}),
 );
-const openLinkInSystemBrowserMock = vi.fn();
-let terminalLinkHandler: ((uri: string) => void) | undefined;
-
-vi.mock("../lib/external-link-policy", () => ({
-	openLinkInSystemBrowser: (...args: unknown[]) => openLinkInSystemBrowserMock(...args),
-}));
-
 vi.mock("../lib/api-client", () => ({
 	getApiBaseUrl: () => "",
 	subscribeApiBaseUrl: () => () => undefined,
@@ -67,11 +60,9 @@ vi.mock("../lib/api-client", () => ({
 
 vi.mock("./XtermTerminal", () => ({
 	XtermTerminal: (props: {
-		onLinkOpen?: (uri: string) => void;
 		onReady?: (terminal: AttachableTerminal) => void;
 	}) => {
-		terminalLinkHandler = props.onLinkOpen;
-		const instance = useRef(0);
+			const instance = useRef(0);
 		if (instance.current === 0) {
 			xtermMounts.value += 1;
 			instance.current = xtermMounts.value;
@@ -142,7 +133,6 @@ beforeEach(() => {
 	terminalState.value = "idle";
 	replaySettled.value = true;
 	hasAttached.value = false;
-	terminalLinkHandler = undefined;
 	terminalSessionOptions.length = 0;
 	attachMock.mockClear();
 	prepareForActivationMock.mockReset();
@@ -789,55 +779,5 @@ describe("providerScrollsByKeyboard", () => {
 
 	it("is false when the provider is unknown", () => {
 		expect(providerScrollsByKeyboard(undefined)).toBe(false);
-	});
-});
-
-describe("terminal link handling", () => {
-	beforeEach(() => {
-		openLinkInSystemBrowserMock.mockClear();
-	});
-
-	it("opens web links in the system browser", async () => {
-		const view = renderPane(worker);
-		try {
-			expect(terminalLinkHandler).toBeTypeOf("function");
-			act(() => terminalLinkHandler?.("https://example.com/pull/42"));
-
-			await waitFor(() =>
-				expect(openLinkInSystemBrowserMock).toHaveBeenCalledWith("https://example.com/pull/42"),
-			);
-		} finally {
-			view.restore();
-		}
-	});
-
-	it("opens loopback links in the system browser", () => {
-		const view = renderPane(worker);
-		try {
-			act(() => terminalLinkHandler?.("http://localhost:3000/simple"));
-			expect(openLinkInSystemBrowserMock).toHaveBeenCalledWith("http://localhost:3000/simple");
-		} finally {
-			view.restore();
-		}
-	});
-
-	it("ignores non-web (mailto:) links", () => {
-		const view = renderPane(worker);
-		try {
-			act(() => terminalLinkHandler?.("mailto:dev@example.com"));
-			expect(openLinkInSystemBrowserMock).not.toHaveBeenCalled();
-		} finally {
-			view.restore();
-		}
-	});
-
-	it("ignores malformed links", () => {
-		const view = renderPane(worker);
-		try {
-			act(() => terminalLinkHandler?.("not a url"));
-			expect(openLinkInSystemBrowserMock).not.toHaveBeenCalled();
-		} finally {
-			view.restore();
-		}
 	});
 });

@@ -1,4 +1,4 @@
-import { BadgeCheck, Bot, CircleHelp, GitBranch, Globe2, Inbox, Keyboard, MonitorCog, RefreshCw, Settings2, Smartphone, TriangleAlert, X } from "lucide-react";
+import { BadgeCheck, Bot, CircleHelp, GitBranch, Inbox, Keyboard, MonitorCog, RefreshCw, Settings2, Smartphone, TriangleAlert, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { GlobalSettingsForm } from "./GlobalSettingsForm";
 import {
@@ -49,7 +49,6 @@ export function SettingsDialog() {
 		{ id: "general", label: "General", icon: Settings2 },
 		{ id: "harness", label: "Harness", icon: Bot },
 		{ id: "agents", label: "Subscriptions", icon: BadgeCheck },
-		{ id: "browserProfiles", label: "Browser", icon: Globe2 },
 		{ id: "mobile", label: "Mobile", icon: Smartphone },
 		{ id: "shortcuts", label: "Shortcuts", icon: Keyboard },
 		{ id: "updates", label: "Updates", icon: RefreshCw },

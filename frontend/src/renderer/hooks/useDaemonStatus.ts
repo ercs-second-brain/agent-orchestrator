@@ -54,7 +54,7 @@ export function useDaemonStatus(queryClient: QueryClient = defaultQueryClient) {
 					return undefined;
 				})
 				.catch(() => {
-					// IPC unavailable (browser preview, broken preload): stay on the
+					// IPC unavailable (preview build, broken preload): stay on the
 					// last known status and keep the recovery loop alive.
 					return undefined;
 				})

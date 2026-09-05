@@ -59,8 +59,7 @@ function expandFirstReviewGroup() {
 
 const tabs = [
   { id: "summary" as const, icon: <svg />, label: "Summary" },
-  { id: "reviews" as const, icon: <svg />, label: "Reviews" },
-  { badge: true, id: "browser" as const, icon: <svg />, label: "Browser" },
+  { badge: true, id: "reviews" as const, icon: <svg />, label: "Reviews" },
   {
     displayLabel: "2 Files",
     id: "files" as const,
@@ -76,8 +75,6 @@ describe("SessionInspectorShellView", () => {
       <SessionInspectorShellView
         activeView="summary"
         ariaLabel="Session inspector"
-        browserPoppedOut={false}
-        browserView={<div role="tabpanel">browser slot</div>}
         filesView={<div role="tabpanel">files slot</div>}
         onViewChange={onViewChange}
         reviewsView={<div role="tabpanel">reviews slot</div>}
@@ -101,15 +98,15 @@ describe("SessionInspectorShellView", () => {
 		expect(screen.getByRole("tab", { name: "Summary" })).not.toHaveClass("flex-1");
 		expect(screen.getByRole("tab", { name: "Summary" })).not.toHaveClass("min-w-0");
 		expect(screen.getByRole("tab", { name: "Summary" })).toHaveAttribute("tabindex", "0");
-		expect(screen.getByRole("tab", { name: "Browser" })).toHaveAttribute("tabindex", "-1");
+		expect(screen.getByRole("tab", { name: "Files" })).toHaveAttribute("tabindex", "-1");
 		const filesLabel = within(screen.getByRole("tab", { name: "Files" })).getByText("2 Files");
 		expect(filesLabel).toHaveClass("sr-only");
 		expect(filesLabel).not.toHaveClass("session-inspector__responsive-label");
 		expect(filesLabel).not.toHaveClass("truncate", "min-w-0");
 		expect(filesLabel).not.toHaveClass("@max-[350px]/inspector:hidden");
-		expect(screen.getByTestId("browser-unseen-indicator")).toBeInTheDocument();
-		fireEvent.click(screen.getByRole("tab", { name: "Browser" }));
-		expect(onViewChange).toHaveBeenCalledWith("browser");
+		expect(screen.getByTestId("tab-badge-indicator")).toBeInTheDocument();
+		fireEvent.click(screen.getByRole("tab", { name: "Reviews" }));
+		expect(onViewChange).toHaveBeenCalledWith("reviews");
 		fireEvent.keyDown(screen.getByRole("tab", { name: "Summary" }), { key: "ArrowRight" });
 		expect(onViewChange).toHaveBeenLastCalledWith("reviews");
 		expect(screen.getByRole("tab", { name: "Reviews" })).toHaveFocus();
@@ -118,33 +115,12 @@ describe("SessionInspectorShellView", () => {
       <SessionInspectorShellView
         activeView="reviews"
         ariaLabel="Session inspector"
-        browserPoppedOut={false}
         onViewChange={onViewChange}
         reviewsView={<div role="tabpanel">reviews slot</div>}
         tabs={tabs}
       />,
     );
     expect(screen.getByText("reviews slot")).toBeInTheDocument();
-
-    rerender(
-      <SessionInspectorShellView
-        activeView="browser"
-        ariaLabel="Session inspector"
-        browserPoppedOut={false}
-        browserView={<div role="tabpanel">browser slot</div>}
-        onViewChange={onViewChange}
-        summaryView={<div role="tabpanel">summary slot</div>}
-        tabs={tabs}
-      />,
-    );
-    const body = screen.getByRole("tablist").parentElement?.nextElementSibling;
-    expect(body).toHaveClass(
-      "session-inspector__body--browser",
-      "p-0",
-      "overflow-hidden",
-    );
-    expect(body).not.toHaveClass("p-3");
-    expect(screen.getByText("browser slot")).toBeInTheDocument();
   });
 
   it("renders the loading state without tab chrome", () => {
@@ -152,7 +128,6 @@ describe("SessionInspectorShellView", () => {
       <SessionInspectorShellView
         activeView="summary"
         ariaLabel="Session inspector"
-        browserPoppedOut={false}
         loadingText="Loading session…"
         onViewChange={vi.fn()}
         tabs={tabs}
@@ -907,8 +882,7 @@ describe("portable inspector presentations", () => {
     expect(preview.closest('[role="button"]')).toHaveAttribute("aria-expanded", "true");
   });
 
-  it("offers AO browser, system browser, and worker-send actions for summaries", async () => {
-    const onOpenInAOBrowser = vi.fn();
+  it("offers system browser and worker-send actions for summaries", async () => {
     const onSendReviewSummary = vi.fn().mockResolvedValue(undefined);
     render(
       <InspectorReviewsView
@@ -931,7 +905,6 @@ describe("portable inspector presentations", () => {
         }]}
         isLoading={false}
         labels={reviewLabels}
-        onOpenInAOBrowser={onOpenInAOBrowser}
         onSendReviewSummary={onSendReviewSummary}
         renderAvatar={() => null}
         renderMarkdown={(body) => <p>{body}</p>}
@@ -948,8 +921,6 @@ describe("portable inspector presentations", () => {
     fireEvent.pointerDown(document.body);
     expect(screen.queryByRole("link", { name: "Open in System Browser" })).not.toBeInTheDocument();
     fireEvent.click(reviewActions);
-    fireEvent.click(screen.getByRole("button", { name: "Open in AO Browser" }));
-    expect(onOpenInAOBrowser).toHaveBeenCalledWith("https://github.com/example/repo/pull/12#pullrequestreview-1");
     expect(screen.getByRole("link", { name: "Open in System Browser" })).toHaveAttribute(
       "href",
       "https://github.com/example/repo/pull/12#pullrequestreview-1",
@@ -974,7 +945,6 @@ const reviewLabels: InspectorReviewLabels = {
   noPastReviewSummaries: "No summaries",
   notInjected: "Not injected",
   openComments: "Open comments",
-  openInAOBrowser: "Open in AO Browser",
   openInSystemBrowser: "Open in System Browser",
   openInlineComments: (count) => `${count} open comments`,
   requestRereviewPR: "Request to re-review PR",

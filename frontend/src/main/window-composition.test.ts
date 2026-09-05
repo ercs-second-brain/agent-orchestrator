@@ -51,17 +51,12 @@ function setup() {
 }
 
 describe("createWindowComposition", () => {
-	it("creates a transparent shell at window bounds and reorders it for overlays", () => {
-		const { addChildView, composition, view } = setup();
+	it("creates a transparent shell at window bounds", () => {
+		const { addChildView, view } = setup();
 
 		expect(view.setBackgroundColor).toHaveBeenCalledWith("#00000000");
 		expect(addChildView).toHaveBeenNthCalledWith(1, view, 0);
 		expect(view.setBounds).toHaveBeenCalledWith({ x: 0, y: 0, width: 900, height: 640 });
-
-		composition.setOverlayOpen(true);
-		expect(addChildView).toHaveBeenLastCalledWith(view);
-		composition.setOverlayOpen(false);
-		expect(addChildView).toHaveBeenLastCalledWith(view, 0);
 	});
 
 	it("resizes and disposes the explicit shell without recreating it", () => {

@@ -86,7 +86,7 @@ function mockReviewsResponse(session: WorkspaceSession): ReviewsResponse {
 						batchId: `demo-batch-${session.id}`,
 						body:
 							pr.review === "approved"
-								? "Demo review **approved** the README screenshot flow.\n\n- Layout is stable\n- Browser preview opens cleanly"
+								? "Demo review **approved** the README screenshot flow.\n\n- Layout is stable\n- Terminal polish lands cleanly"
 								: "Demo review found **polish feedback** for the terminal presentation.\n\n- Tighten toolbar density\n- Recheck contrast",
 						createdAt: reviewedAt,
 						githubReviewId: `${pr.number}01`,
@@ -204,7 +204,7 @@ function mockReviewsResponse(session: WorkspaceSession): ReviewsResponse {
 function mockReviewTitle(prNumber: number): string {
 	switch (prNumber) {
 		case 319:
-			return "Browser preview rail renders inside AO";
+			return "Session terminal rail renders inside AO";
 		case 320:
 			return "Review tab keeps stacked PR rows visible";
 		case 321:

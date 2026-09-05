@@ -20,7 +20,6 @@ import {
 	type AttachableTerminal,
 	type TerminalSessionState,
 } from "../hooks/useTerminalSession";
-import { useSessionBrowserLink } from "../hooks/useSessionBrowserLink";
 import { getApiBaseUrl } from "../lib/api-client";
 import {
 	createTerminalMux,
@@ -706,7 +705,7 @@ function workerPreviewLines(session: WorkspaceSession | undefined, provider: str
 			"",
 			"Already covered — don't spawn (session → PR):",
 			"— terminal polish → PR #318, changes requested",
-			"— browser preview stack → PRs #319/#320, in review",
+			"— terminal polish → PR #318b, in review",
 			"— README screenshot assets → PR #323, approved and mergeable",
 			"",
 			"Plan: 3 sessions worth spawning",
@@ -732,11 +731,8 @@ function workerPreviewLines(session: WorkspaceSession | undefined, provider: str
 	}
 	if (session?.id === "demo-review-stack") {
 		return [
-			'$ rg "previewUrl|Browser" frontend/src/renderer',
-			"frontend/src/renderer/components/SessionInspector.tsx: Browser tab selected after ao preview",
-			"frontend/src/renderer/hooks/useBrowserView.ts: preview revision re-navigates the view",
-			"$ ao preview http://localhost:5173",
-			"DONE preview target set for demo-review-stack",
+			'$ rg "chatdriver" backend/internal',
+			"no matches found",
 			"$ npm --prefix frontend run typecheck",
 			"PASS TypeScript project references are clean",
 			"TODO wait for reviewer on PR #320 before merging the stack",
@@ -799,7 +795,7 @@ function workerPreviewLines(session: WorkspaceSession | undefined, provider: str
 function reviewerPreviewLines(session: WorkspaceSession | undefined): string[] {
 	return [
 		"$ ao review submit --session " + (session?.id ?? "demo-session"),
-		"Reviewing PR #319: browser preview rail renders inside AO",
+		"Reviewing PR #319: terminal session rail renders inside AO",
 		"PASS implementation matches the requested README screenshot flow",
 		"Reviewing PR #320: stacked PR review rows",
 		"WARN keep multiple review rows visible before taking the screenshot",
@@ -936,7 +932,6 @@ function AttachedTerminal({
 			return;
 		}
 	}, [initFailed, onFatal, onTerminalStateChange]);
-	const handleLinkOpen = useSessionBrowserLink();
 	const restoreSession = useCallback(async () => {
 		if (!session?.id || !canRestoreSession || isRestoring) return;
 		setIsRestoring(true);
@@ -1033,7 +1028,6 @@ function AttachedTerminal({
 					isVisible={isVisible}
 					onChangeFontSize={onChangeFontSize}
 					onError={handleInitError}
-					onLinkOpen={handleLinkOpen}
 					onReady={handleReady}
 					onToggleFullscreen={onToggleFullscreen}
 					onVisibleSize={syncVisibleSize}

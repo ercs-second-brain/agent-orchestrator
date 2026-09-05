@@ -54,8 +54,6 @@ import type { WorkspaceSession, WorkspaceSummary } from "../types/workspace";
 import { findProjectOrchestrator, sortedPRs } from "../types/workspace";
 import { getAgentActivityView, getSessionTimelinePillView } from "../lib/session-presentation";
 import { aoBridge } from "../lib/bridge";
-import { BrowserPanelView, type BrowserAnnotationQueueModel } from "./BrowserPanel";
-import type { BrowserViewModel } from "../hooks/useBrowserView";
 import { useUiStore } from "../stores/ui-store";
 import { Button } from "./ui/button";
 import { cn } from "../lib/utils";
@@ -75,7 +73,6 @@ import {
 	type PRReviewState,
 	type ReviewRunFacts,
 } from "../lib/session-reviews";
-import { useRemoteConnection } from "../hooks/useRemoteConnection";
 
 type ProjectConfig = components["schemas"]["ProjectConfig"];
 type OpenReviewerTerminal = (target: { handleId: string; harness: string }) => void;
@@ -84,7 +81,7 @@ export type { InspectorView } from "@ercs-second-brain/product-ui";
 
 const VIEW_DEFS: {
 	id: InspectorView;
-	labelKey: "Summary" | "Reviews" | "Browser" | "Files";
+	labelKey: "Summary" | "Reviews" | "Files";
 	icon: ReactNode;
 }[] = [
 	{
@@ -107,17 +104,6 @@ const VIEW_DEFS: {
 		icon: <MessageSquare aria-hidden="true" />,
 	},
 	{
-		id: "browser",
-		labelKey: "Browser",
-		icon: (
-			<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden="true">
-				<circle cx="12" cy="12" r="9" />
-				<line x1="3" y1="12" x2="21" y2="12" />
-				<path d="M12 3a14 14 0 0 1 0 18 14 14 0 0 1 0-18" />
-			</svg>
-		),
-	},
-	{
 		id: "files",
 		labelKey: "Files",
 		icon: <FilesIcon aria-hidden="true" />,
@@ -132,42 +118,30 @@ const prStateLabels: Record<SessionPRSummary["state"], string> = {
 };
 
 /**
- * Tabbed inspector rail beside the terminal (Summary · Reviews · Browser · Files).
+ * Tabbed inspector rail beside the terminal (Summary · Reviews · Files).
  */
 export function SessionInspector({
 	session,
 	onOpenReviewerTerminal,
-	browserPoppedOut = false,
-	browserAnnotationQueue,
 	isInspectorVisible = true,
-	onToggleBrowserPopOut,
 	onOpenFiles,
 	onOpenReviewFile,
 	filesView,
-	browserView,
 	view: viewProp,
 	onViewChange,
 }: {
 	session?: WorkspaceSession;
 	onOpenReviewerTerminal?: OpenReviewerTerminal;
-	browserPoppedOut?: boolean;
-	browserAnnotationQueue?: BrowserAnnotationQueueModel;
 	isInspectorVisible?: boolean;
-	onToggleBrowserPopOut?: (next: boolean, sourceRect?: DOMRectReadOnly) => void;
 	onOpenFiles?: () => void;
 	onOpenReviewFile?: (target: { line?: number; path: string }) => void;
 	filesView?: ReactNode;
-	browserView?: BrowserViewModel;
 	/** Controlled active tab. Omit to let the inspector own its own selection. */
 	view?: InspectorView;
 	onViewChange?: (view: InspectorView) => void;
 }) {
 	const [internalView, setInternalView] = useState<InspectorView>("summary");
 	const requestedView = viewProp ?? internalView;
-	// Badge the Browser tab when a preview target arrived without us opening it.
-	const browserUnseen = useUiStore((state) =>
-		session ? Boolean(state.inspectorSessions[session.id]?.browserUnseen) : false,
-	);
 	const filesChangedCount = useSessionWorkspaceFilesChangedCount(session?.id);
 	const setView = useCallback((next: InspectorView) => {
 		setInternalView(next);
@@ -178,10 +152,7 @@ export function SessionInspector({
 	// A persisted/controlled Reviews selection can outlive the last reviewable PR.
 	// Keep the shell on a real, visible tab instead of rendering an empty, unlabelled body.
 	const reviewsAvailable = reviewsTabVisible(session);
-	const isRemote = useRemoteConnection();
-	const availableViewDefs = (reviewsAvailable ? VIEW_DEFS : VIEW_DEFS.filter((entry) => entry.id !== "reviews")).filter(
-		(entry) => !(isRemote && entry.id === "browser"),
-	);
+	const availableViewDefs = reviewsAvailable ? VIEW_DEFS : VIEW_DEFS.filter((entry) => entry.id !== "reviews");
 	const view: InspectorView = availableViewDefs.some((entry) => entry.id === requestedView) ? requestedView : "summary";
 	useEffect(() => {
 		if (view === requestedView) return;
@@ -192,7 +163,6 @@ export function SessionInspector({
 		const label = entry.labelKey;
 		return {
 			...entry,
-			badge: entry.id === "browser" && browserUnseen,
 			displayLabel:
 				entry.id === "files" && filesChangedCount !== undefined
 					? (filesChangedCount) === 1 ? `${filesChangedCount} File` : `${filesChangedCount} Files`
@@ -202,28 +172,13 @@ export function SessionInspector({
 	});
 	return (
 		// SessionInspectorShellView (packages/product-ui) doesn't accept a
-		// className, but styles.css's native-composition transparency cascade
-		// targets a `.session-inspector` ancestor around it (to punch a
-		// see-through hole for the live browser page when the compositor's
-		// shell is raised for an overlay). `contents` keeps this wrapper out of
-		// layout/flex entirely — it exists purely as a CSS selector anchor.
+		// className, but styles.css targets a `.session-inspector` ancestor
+		// around it. `contents` keeps this wrapper out of layout/flex entirely —
+		// it exists purely as a CSS selector anchor.
 		<div className="session-inspector contents">
 			<SessionInspectorShellView
 				activeView={view}
 				ariaLabel={"Session inspector"}
-				browserPoppedOut={browserPoppedOut}
-				browserView={
-					session ? (
-						<BrowserView
-							browserPoppedOut={browserPoppedOut}
-							browserAnnotationQueue={browserAnnotationQueue}
-							browserView={browserView}
-							isActive={isInspectorVisible && !browserPoppedOut}
-							onTogglePopOut={onToggleBrowserPopOut}
-							session={session}
-						/>
-					) : undefined
-				}
 				filesView={session ? <FilesView filesView={filesView} onOpenFiles={onOpenFiles} /> : undefined}
 				headerActions={<span aria-hidden="true" className="session-inspector-actions-spacer" />}
 				isVisible={isInspectorVisible}
@@ -1881,7 +1836,6 @@ function reviewLabels(): InspectorReviewLabels {
 		noPastReviewSummaries: "No past review summaries yet.",
 		notInjected: "Not injected",
 		openComments: "Open comments",
-		openInAOBrowser: "Open in AO Browser",
 		openInSystemBrowser: "Open in System Browser",
 		openInlineComments: (count) => `${count} open comments`,
 		requestRereviewPR: "Request to re-review PR",
@@ -2331,54 +2285,6 @@ function reviewVerdict(reviewState: PRReviewState): {
 			return { label: "Not run", tone: "neutral" };
 	}
 	return { label: "Not run", tone: "neutral" };
-}
-
-function BrowserView({
-	session,
-	isActive,
-	browserPoppedOut,
-	browserAnnotationQueue,
-	onTogglePopOut,
-	browserView,
-}: {
-	session: WorkspaceSession;
-	isActive: boolean;
-	browserPoppedOut: boolean;
-	browserAnnotationQueue?: BrowserAnnotationQueueModel;
-	onTogglePopOut?: (next: boolean, sourceRect?: DOMRectReadOnly) => void;
-	browserView?: BrowserViewModel;
-}) {
-	// While maximized, the browser is a full-window overlay that covers the rail,
-	// so the inspector's Browser tab has nothing to show (and must not mount a
-	// second BrowserPanelView — it would fight the overlay over the shared native
-	// view slot). Exit is via the overlay's own minimize button.
-	if (browserPoppedOut) {
-		return (
-			<div className="h-full min-h-0" data-browser-dock-target="" role="tabpanel">
-				<div className={cn(inspectorEmptyClass, "flex flex-col items-center gap-2 py-10 px-5 text-center")}>
-					<p className="text-md-sm text-muted-foreground">{"Browser preview is in the center pane."}</p>
-					<Button onClick={() => onTogglePopOut?.(false)} size="sm" type="button" variant="outline">
-						{"Return to panel"}
-					</Button>
-				</div>
-			</div>
-		);
-	}
-
-	if (!browserView || !browserAnnotationQueue) {
-		return null;
-	}
-
-	return (
-		<BrowserPanelView
-			active={isActive}
-			annotationQueue={browserAnnotationQueue}
-			browserView={browserView}
-			onTogglePopOut={(next, sourceRect) => onTogglePopOut?.(next, sourceRect)}
-			poppedOut={false}
-			session={session}
-		/>
-	);
 }
 
 function FilesView({ filesView, onOpenFiles }: { filesView?: ReactNode; onOpenFiles?: () => void }) {

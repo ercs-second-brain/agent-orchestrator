@@ -97,8 +97,6 @@ function toWorkspaceSession(
 		lastUserMessageAt: session.lastUserMessageAt ?? undefined,
 		activity,
 		activeAgentSwitch: session.activeAgentSwitch ? toAgentSwitchSummary(session.activeAgentSwitch) : undefined,
-		previewUrl: session.previewUrl,
-		previewRevision: session.previewRevision,
 		isPinned: session.isPinned ?? false,
 		pinnedAt: session.pinnedAt ?? undefined,
 		prs: (session.prs ?? []).map(toPullRequestFacts),

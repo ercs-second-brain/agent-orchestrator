@@ -9,7 +9,6 @@ export type WebContentsViewConstructor = new (options: {
 export type WindowComposition = {
 	shellView: WebContentsView;
 	shellWebContents: WebContents;
-	setOverlayOpen: (open: boolean) => void;
 	resize: () => void;
 	dispose: () => void;
 };
@@ -18,9 +17,7 @@ export type WindowComposition = {
  * Owns the explicit shell surface used by the native compositor.
  *
  * The native path uses a BaseWindow so there is no implicit BrowserWindow
- * renderer competing with this explicit shell surface. The main process can
- * then move the shell above/below the live browser page without a hidden blank
- * renderer covering it.
+ * renderer competing with this explicit shell surface.
  */
 export function createWindowComposition(options: {
 	mainWindow: MainWindowHost;
@@ -39,7 +36,6 @@ export function createWindowComposition(options: {
 	shellView.setBackgroundColor("#00000000");
 	options.mainWindow.contentView.addChildView(shellView, 0);
 
-	let overlayOpen = false;
 	const resize = (): void => {
 		if (options.mainWindow.isDestroyed?.()) return;
 		const bounds = options.mainWindow.contentView.getBounds();
@@ -48,47 +44,11 @@ export function createWindowComposition(options: {
 	};
 	options.mainWindow.contentView.on("bounds-changed", resize);
 
-	// Forces the compositor to rebuild the shell's surface. Identical bounds are
-	// ignored, so shrink by a pixel and restore on the next tick — the two calls
-	// would otherwise coalesce into a single no-op resize.
-	const forceSurfaceRefresh = (): void => {
-		if (options.mainWindow.isDestroyed?.()) return;
-		const bounds = options.mainWindow.contentView.getBounds();
-		if (bounds.width <= 0 || bounds.height <= 0) return;
-		shellView.setBounds({ x: 0, y: 0, width: bounds.width, height: Math.max(1, bounds.height - 1) });
-		setTimeout(() => {
-			if (options.mainWindow.isDestroyed?.()) return;
-			const current = options.mainWindow.contentView.getBounds();
-			shellView.setBounds({ x: 0, y: 0, width: current.width, height: current.height });
-		}, 0);
-	};
-
-	const setOverlayOpen = (open: boolean): void => {
-		if (overlayOpen === open) return;
-		overlayOpen = open;
-		if (open) {
-			// Re-adding an existing child raises it above all page/DevTools views.
-			options.mainWindow.contentView.addChildView(shellView);
-		} else {
-			// Index zero leaves every live native surface above the transparent shell.
-			options.mainWindow.contentView.addChildView(shellView, 0);
-		}
-		// Restacking alone does not re-establish the shell's compositing surface:
-		// on macOS the freshly-raised shell can present a stale surface that hides
-		// the live page beneath it, leaving the viewport blank until some real
-		// geometry change rebuilds it. (Symptom: blank on a fresh launch, but
-		// correct at every size once the window has been resized or fullscreened
-		// even once.) Re-applying identical bounds is a no-op, so nudge the height
-		// by a pixel and restore it on the next tick to force a real resize.
-		if (open) forceSurfaceRefresh();
-	};
-
 	resize();
 
 	return {
 		shellView,
 		shellWebContents: shellView.webContents,
-		setOverlayOpen,
 		resize,
 		dispose: () => {
 			options.mainWindow.contentView.removeListener("bounds-changed", resize);

@@ -56,15 +56,6 @@ export async function installFakeBridge(page: Page, opts: FakeBridgeOptions = {}
 			let currentUpdateSettings = updateSettings;
 			const status: DaemonStatus =
 				daemonState === "ready" ? { state: "ready", port: daemonPort } : { state: daemonState };
-			const navState = (viewId: string) => ({
-				viewId,
-				url: "",
-				title: "",
-				canGoBack: false,
-				canGoForward: false,
-				isLoading: false,
-			});
-
 			// Full AoBridge surface (mirrors src/preload.ts) so any renderer call
 			// resolves — an incomplete object would throw the moment the app touched
 			// a missing method.
@@ -127,76 +118,6 @@ export async function installFakeBridge(page: Page, opts: FakeBridgeOptions = {}
 					onClearQueues: () => () => false,
 					capture: async () => false,
 					signalAgentSwitchVisibility: () => false,
-				},
-				browser: {
-					nativeCompositionEnabled: true,
-					ensure: async (sessionId: string) => navState(`preview:${sessionId}`),
-					setBounds: () => undefined,
-					setOverlayOpen: () => undefined,
-					navigate: async ({ viewId }: { viewId: string }) => navState(viewId),
-					historySuggestions: async () => [],
-					clear: async (viewId: string) => navState(viewId),
-					goBack: async (viewId: string) => navState(viewId),
-					goForward: async (viewId: string) => navState(viewId),
-					reload: async (viewId: string) => navState(viewId),
-					stop: async (viewId: string) => navState(viewId),
-					getTabs: async (viewId: string) => ({
-						viewId,
-						activeTabId: "t1",
-						tabs: [{ id: "t1", url: "", title: "", active: true }],
-					}),
-					selectTab: async ({ viewId, tabId }: { viewId: string; tabId: string }) => ({
-						viewId,
-						activeTabId: tabId,
-						tabs: [{ id: tabId, url: "", title: "", active: true }],
-					}),
-					closeTab: async ({ viewId }: { viewId: string; tabId: string }) => ({
-						viewId,
-						activeTabId: "t1",
-						tabs: [{ id: "t1", url: "", title: "", active: true }],
-					}),
-					openTab: async ({ viewId }: { viewId: string; url?: string }) => ({
-						viewId,
-						activeTabId: "t1",
-						tabs: [{ id: "t1", url: "", title: "", active: true }],
-					}),
-					getProfile: async (viewId: string) => ({ viewId, profileId: null, temporary: true }),
-					showProfileMenu: async () => undefined,
-					notifyPanelUsed: () => undefined,
-					notifyPanelBlur: () => undefined,
-					onFocusLocation: unsubscribe,
-					onReopenClosedTab: unsubscribe,
-					devtools: async (input: { viewId: string }) => ({ viewId: input.viewId, open: false, activeTabId: "" }),
-					destroy: () => undefined,
-					// Annotation contract (mirrors src/preload.ts): useBrowserView subscribes
-					// to these whenever SessionView mounts with window.ao.browser present, so
-					// an incomplete browser shape would crash the session-detail/preview specs.
-					setAnnotationMode: async () => undefined,
-					onAnnotationSubmit: unsubscribe,
-					onAnnotationCancel: unsubscribe,
-					onNavState: unsubscribe,
-					onTabsState: unsubscribe,
-					onAgentActivity: unsubscribe,
-					onDevToolsState: unsubscribe,
-					onProfileState: unsubscribe,
-					onProfileManage: unsubscribe,
-					onPageFocus: unsubscribe,
-				},
-				browserProfiles: {
-					list: async () => ({ profiles: [] }),
-					create: async (name: string) => {
-						const now = new Date().toISOString();
-						return { id: `fake-${name}`, name, createdAt: now, updatedAt: now };
-					},
-					rename: async ({ id, name }: { id: string; name: string }) => {
-						const now = new Date().toISOString();
-						return { id, name, createdAt: now, updatedAt: now };
-					},
-					clear: async () => undefined,
-					delete: async () => undefined,
-					discoverImportSources: async () => ({ sources: [] }),
-					import: async () => ({ sourceName: "", entries: [] }),
-					onImportProgress: () => () => undefined,
 				},
 				notifications: {
 					show: async () => undefined,
@@ -262,8 +183,7 @@ export async function installFakeBridge(page: Page, opts: FakeBridgeOptions = {}
 //
 //   1. A `window.ao` whose daemon is ready on a port — so the renderer sets its
 //      REST base URL and opens its SSE streams (the same seam the packaged app
-//      fills). The `browser.*` IPC is driven off a shared in-page state so the
-//      preview surface is controllable.
+//      fills).
 //   2. A fake `window.EventSource` — the daemon's CDC (`/api/v1/events`) and
 //      notification (`/api/v1/notifications/stream`) SSE streams. The controller
 //      pushes `session_updated` / `notification_created` frames into it, which is
@@ -310,8 +230,6 @@ export type FakeAgentController = {
 	removeWorker: (id: string) => void;
 	setStatus: (id: string, status: string, activity?: string) => void;
 	setTerminalHandle: (id: string, handleId: string) => void;
-	setPreview: (id: string, previewUrl: string, previewRevision?: number) => void;
-	setBrowserError: (message: string | null) => void;
 	notify: (n: { id: string; type: string; title: string; body?: string; sessionId?: string }) => void;
 };
 
@@ -430,7 +348,6 @@ export async function installFakeAgent(page: Page, opts: FakeAgentOptions = {}):
 			}
 
 			const state = {
-				browserError: null as string | null,
 				eventSources: [] as FakeEventSourceLike[],
 				workspaces: [project],
 			};
@@ -526,17 +443,6 @@ export async function installFakeAgent(page: Page, opts: FakeAgentOptions = {}):
 					touch(s);
 					pushWorkspaces();
 				},
-				setPreview: (id, previewUrl, previewRevision) => {
-					const s = findSession(id);
-					if (!s) return;
-					s.previewUrl = previewUrl;
-					s.previewRevision = previewRevision ?? (typeof s.previewRevision === "number" ? s.previewRevision : 0) + 1;
-					touch(s);
-					pushWorkspaces();
-				},
-				setBrowserError: (message) => {
-					state.browserError = message;
-				},
 				notify: (n) => {
 					const payload = JSON.stringify({
 						id: n.id,
@@ -556,15 +462,6 @@ export async function installFakeAgent(page: Page, opts: FakeAgentOptions = {}):
 
 			const unsubscribe = () => () => undefined;
 			const status: DaemonStatus = { state: "ready", port: daemonPort };
-			const navState = (viewId: string, url = "", error?: string) => ({
-				viewId,
-				url,
-				title: url ? "AO preview" : "",
-				canGoBack: false,
-				canGoForward: false,
-				isLoading: false,
-				...(error ? { error } : {}),
-			});
 			const ao = {
 					app: {
 						getVersion: async () => version,
@@ -621,77 +518,6 @@ export async function installFakeAgent(page: Page, opts: FakeAgentOptions = {}):
 					onClearQueues: () => () => false,
 					capture: async () => false,
 					signalAgentSwitchVisibility: () => false,
-				},
-				browser: {
-					nativeCompositionEnabled: true,
-					ensure: async (sessionId: string) => navState(`preview:${sessionId}`),
-					setBounds: () => undefined,
-					setOverlayOpen: () => undefined,
-					navigate: async ({ viewId, url }: { viewId: string; url: string }) =>
-						state.browserError ? navState(viewId, "", state.browserError) : navState(viewId, url),
-					historySuggestions: async () => [],
-					clear: async (viewId: string) => navState(viewId),
-					goBack: async (viewId: string) => navState(viewId),
-					goForward: async (viewId: string) => navState(viewId),
-					reload: async (viewId: string) => navState(viewId),
-					stop: async (viewId: string) => navState(viewId),
-					getTabs: async (viewId: string) => ({
-						viewId,
-						activeTabId: "t1",
-						tabs: [{ id: "t1", url: "", title: "", active: true }],
-					}),
-					selectTab: async ({ viewId, tabId }: { viewId: string; tabId: string }) => ({
-						viewId,
-						activeTabId: tabId,
-						tabs: [{ id: tabId, url: "", title: "", active: true }],
-					}),
-					closeTab: async ({ viewId }: { viewId: string; tabId: string }) => ({
-						viewId,
-						activeTabId: "t1",
-						tabs: [{ id: "t1", url: "", title: "", active: true }],
-					}),
-					openTab: async ({ viewId }: { viewId: string; url?: string }) => ({
-						viewId,
-						activeTabId: "t1",
-						tabs: [{ id: "t1", url: "", title: "", active: true }],
-					}),
-					getProfile: async (viewId: string) => ({ viewId, profileId: null, temporary: true }),
-					showProfileMenu: async () => undefined,
-					notifyPanelUsed: () => undefined,
-					notifyPanelBlur: () => undefined,
-					onFocusLocation: unsubscribe,
-					onReopenClosedTab: unsubscribe,
-					devtools: async (input: { viewId: string }) => ({ viewId: input.viewId, open: false, activeTabId: "" }),
-					destroy: () => undefined,
-					// Annotation contract (mirrors src/preload.ts): useBrowserView subscribes
-					// to these whenever SessionView mounts with window.ao.browser present, so
-					// an incomplete browser shape would crash the session-detail/preview specs.
-					setAnnotationMode: async () => undefined,
-					onAnnotationSubmit: unsubscribe,
-					onAnnotationCancel: unsubscribe,
-					onNavState: unsubscribe,
-					onTabsState: unsubscribe,
-					onAgentActivity: unsubscribe,
-					onDevToolsState: unsubscribe,
-					onProfileState: unsubscribe,
-					onProfileManage: unsubscribe,
-					onPageFocus: unsubscribe,
-				},
-				browserProfiles: {
-					list: async () => ({ profiles: [] }),
-					create: async (name: string) => {
-						const now = new Date().toISOString();
-						return { id: `fake-${name}`, name, createdAt: now, updatedAt: now };
-					},
-					rename: async ({ id, name }: { id: string; name: string }) => {
-						const now = new Date().toISOString();
-						return { id, name, createdAt: now, updatedAt: now };
-					},
-					clear: async () => undefined,
-					delete: async () => undefined,
-					discoverImportSources: async () => ({ sources: [] }),
-					import: async () => ({ sourceName: "", entries: [] }),
-					onImportProgress: () => () => undefined,
 				},
 				notifications: {
 					show: async () => undefined,

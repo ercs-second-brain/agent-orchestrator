@@ -221,7 +221,6 @@ describe("attachAppShortcuts", () => {
 			() => ({}),
 			() => false,
 			() => true,
-			undefined,
 			() => terminalFocused,
 		);
 
