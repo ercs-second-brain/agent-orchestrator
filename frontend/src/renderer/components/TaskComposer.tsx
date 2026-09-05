@@ -19,9 +19,6 @@ import {
 } from "../hooks/useAgentReadinessQuery";
 import { type FileAttachmentPayload, useFileAttachments } from "../hooks/useFileAttachments";
 import { useSettings } from "../hooks/useSettings";
-import { useCloudCp } from "../hooks/useCloudCp";
-import { useCloudOrg } from "../hooks/useCloudOrg";
-import { cloudSessionsQueryKey, useCloudProjectsQuery } from "../hooks/useWorkspaceQuery";
 import {
 	agentModelsQueryKey,
 	agentModelsQueryOptions,
@@ -111,40 +108,9 @@ export function TaskComposer({
 		clear: clearAttachments,
 		toSettledPayload,
 	} = useFileAttachments();
-	// Cloud vs local is decided here and nowhere else: a cloud project routes task
-	// creation to the control plane (which provisions a sandbox), while a local
-	// project keeps the existing daemon flow untouched.
-	const { client: cloudClient } = useCloudCp();
-	const { org: cloudOrg } = useCloudOrg();
-	const cloudProjects = useCloudProjectsQuery();
-	const isCloudProject =
-		Boolean(projectId) && (cloudProjects.data ?? []).some((project) => project.id === projectId);
-	// A cloud project is unknown to the local daemon, so the local model catalog
-	// must be queried agent-level (no project scope); otherwise the request 404s
-	// and the model dropdown spins forever. Local projects keep their scope.
-	const modelsProjectId = isCloudProject ? "" : (projectId ?? "");
-
-	const createCloudTask = useCallback(
-		async (input: CreateTaskInput): Promise<string> => {
-			if (!cloudOrg?.id) throw new Error(t("newTask.unableToStart"));
-			try {
-				const { session } = await cloudClient.createSession(cloudOrg.id, {
-					projectId: input.projectId,
-					kind: "worker",
-					harness: input.agent ?? "claude-code",
-					displayName: input.brief.trim().slice(0, 80) || (input.agent ?? "claude-code"),
-					prompt: input.brief,
-				});
-				// The control plane provisions the sandbox asynchronously; surface the
-				// new session on the board immediately.
-				void queryClient.invalidateQueries({ queryKey: cloudSessionsQueryKey });
-				return session.id;
-			} catch (err) {
-				throw err instanceof Error ? err : new Error(t("newTask.unableToStart"));
-			}
-		},
-		[cloudClient, cloudOrg, queryClient, t],
-	);
+	// Every task is local now: creation goes to the daemon's orchestrator
+	// delegate flow.
+	const modelsProjectId = projectId ?? "";
 
 	const createLocalTask = useCallback(
 		async (input: CreateTaskInput): Promise<string> => {
@@ -190,16 +156,13 @@ export function TaskComposer({
 	);
 
 	const createTask = useCallback(
-		(input: CreateTaskInput): Promise<string> =>
-			isCloudProject ? createCloudTask(input) : createLocalTask(input),
-		[isCloudProject, createCloudTask, createLocalTask],
+		(input: CreateTaskInput): Promise<string> => createLocalTask(input),
+		[createLocalTask],
 	);
 
 	const projectQuery = useQuery({
-		// A cloud project lives in the control plane, not the local daemon, so this
-		// local lookup would 404 (PROJECT_NOT_FOUND); skip it for cloud projects.
 		queryKey: ["project", projectId],
-		enabled: Boolean(projectId) && !isCloudProject,
+		enabled: Boolean(projectId),
 		queryFn: async () => {
 			const { data, error: apiError } = await apiClient.GET("/api/v1/projects/{id}", {
 				params: { path: { id: projectId ?? "" } },

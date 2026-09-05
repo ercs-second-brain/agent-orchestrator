@@ -214,29 +214,6 @@ export const aoBridge: AoBridge =
 			list: async () => [],
 			getActive: async () => null,
 		},
-		cloud: {
-			getSession: async () => null,
-			signIn: async () => undefined,
-			signOut: async () => undefined,
-			localAuthAvailable: async () => false,
-			localRegister: async () => {
-				throw new Error("AO Cloud sign-in requires the desktop app.");
-			},
-			localLogin: async () => {
-				throw new Error("AO Cloud sign-in requires the desktop app.");
-			},
-			onSessionChanged: () => () => undefined,
-		},
-		cloudCp: {
-			request: async () => {
-				throw new Error("AO Cloud requests require the desktop app.");
-			},
-			openStream: async () => {
-				throw new Error("AO Cloud event streams require the desktop app.");
-			},
-			closeStream: () => undefined,
-			onStreamEvent: () => () => undefined,
-		},
 		desktopRemote: {
 			getConfig: async () => null,
 			connect: async () => ({ ok: false as const, error: "Desktop app is required for remote connection." }),

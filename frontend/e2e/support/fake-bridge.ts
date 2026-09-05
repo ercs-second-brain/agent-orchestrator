@@ -238,25 +238,6 @@ export async function installFakeBridge(page: Page, opts: FakeBridgeOptions = {}
 					list: async () => [],
 					getActive: async () => null,
 				},
-				cloud: {
-					getSession: async () => null,
-					signIn: async () => undefined,
-					signOut: async () => undefined,
-					localAuthAvailable: async () => false,
-					localRegister: async () => {
-						throw new Error("local auth is unavailable in e2e");
-					},
-					localLogin: async () => {
-						throw new Error("local auth is unavailable in e2e");
-					},
-					onSessionChanged: unsubscribe,
-				},
-				cloudCp: {
-					request: async () => ({ status: 401, headers: {}, body: "" }),
-					openStream: async () => ({ streamId: "stream_test" }),
-					closeStream: () => undefined,
-					onStreamEvent: unsubscribe,
-				},
 				desktopRemote: {
 					getConfig: async () => null,
 					connect: async () => ({ ok: false as const, error: "unavailable in e2e" }),
@@ -746,25 +727,6 @@ export async function installFakeAgent(page: Page, opts: FakeAgentOptions = {}):
 				featureBuilds: {
 					list: async () => [],
 					getActive: async () => null,
-				},
-				cloud: {
-					getSession: async () => null,
-					signIn: async () => undefined,
-					signOut: async () => undefined,
-					localAuthAvailable: async () => false,
-					localRegister: async () => {
-						throw new Error("local auth is unavailable in e2e");
-					},
-					localLogin: async () => {
-						throw new Error("local auth is unavailable in e2e");
-					},
-					onSessionChanged: unsubscribe,
-				},
-				cloudCp: {
-					request: async () => ({ status: 401, headers: {}, body: "" }),
-					openStream: async () => ({ streamId: "stream_test" }),
-					closeStream: () => undefined,
-					onStreamEvent: unsubscribe,
 				},
 				desktopRemote: {
 					getConfig: async () => null,

@@ -950,7 +950,7 @@ export function SessionPaneTab({
 	const tabIcon = session ? <AgentAvatar className="size-terminal-agent-icon" decorative provider={session.provider} /> : icon;
 	const connected = appearance === "connected";
 	// A session object supplies the tab presentation; refresh wiring explicitly
-	// opts the owning surface into rename so shared preview/cloud tabs cannot
+	// opts the owning surface into rename so shared preview tabs cannot
 	// persist a title without updating their query cache.
 	const renameSession = onRenamed ? session : undefined;
 	const rename = useSessionRename(renameSession, onRenamed);

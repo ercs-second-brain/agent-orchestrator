@@ -28,8 +28,6 @@ import {
 	Folder,
 	FolderOpen,
 	LayoutDashboard,
-	LogIn,
-	LogOut,
 	MoreVertical,
 	PanelLeft,
 	Pencil,
@@ -41,7 +39,6 @@ import {
 	Settings,
 	Smartphone,
 	Trash2,
-	User,
 	X,
 } from "lucide-react";
 import {
@@ -75,21 +72,16 @@ import { deriveSessionAgentSwitchPresentation } from "../lib/agent-switch-presen
 import { aoBridge } from "../lib/bridge";
 import { useCommandPaletteEnabled } from "../hooks/useCommandPaletteEnabled";
 import {
-	cloudSessionsQueryKey,
 	pendingOrchestratorSession,
 	seedWorkspaceSession,
 	workspaceQueryKey,
 } from "../hooks/useWorkspaceQuery";
 import { usePinSession, useUnpinSession } from "../hooks/usePinSession";
-import { spawnCloudOrchestrator } from "../lib/cloud-orchestrator";
 import { formatOrchestratorStartupError } from "../lib/orchestrator-startup-error";
 import { spawnOrchestrator } from "../lib/spawn-orchestrator";
 import { formatTimeCompact, formatTimeTerse } from "../lib/format-time";
 import { useTerminateSession } from "../hooks/useTerminateSession";
 import { useResizable } from "../hooks/useResizable";
-import { useCloudGate } from "../hooks/useCloudGate";
-import { useCloudLocalAuth } from "../hooks/useCloudLocalAuth";
-import { useLocalSignInDialogStore } from "../stores/local-signin-dialog-store";
 import { useShellMaybe } from "../lib/shell-context";
 import { useSidebarUpdateDismissal } from "../hooks/useSidebarUpdateDismissal";
 import { useUpdateStatus } from "../hooks/useUpdateStatus";
@@ -126,7 +118,6 @@ import {
 } from "./ui/sidebar";
 import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip";
 import { OrchestratorIcon } from "./icons";
-import { Badge } from "./ui/badge";
 import aoLogo from "../../../assets/ao-logo.svg";
 import { cn } from "../lib/utils";
 import { useUiStore } from "../stores/ui-store"
@@ -135,7 +126,6 @@ import { ConfirmDialog } from "./ConfirmDialog";
 import { CreateProjectFlow, type CloneProjectInput, type CreateProjectInput, type CreateRepositoryInput } from "./CreateProjectFlow";
 import { ResizeHandle } from "./ResizeHandle";
 import { isMacPlatform, isWindowsPlatform } from "../lib/platform";
-import { useCloudSession } from "../lib/cloud-session";
 
 // macOS paints framed chrome: the fixed TitlebarNav cluster carries the
 // sidebar toggle + history arrows above this surface. Windows hangs the sidebar
@@ -885,8 +875,6 @@ export function Sidebar({
 						status={updateStatus}
 						tabIndex={isCollapsed ? -1 : 0}
 					/>
-					<CloudSignInRow tabIndex={isCollapsed ? -1 : 0} />
-					<CloudAccountRow tabIndex={isCollapsed ? -1 : 0} />
 					<button
 						aria-label={t("settings.connectMobile")}
 						className={cn(
@@ -924,8 +912,6 @@ export function Sidebar({
 						status={updateStatus}
 						tabIndex={isCollapsed ? 0 : -1}
 					/>
-					<CloudSignInRailButton tabIndex={isCollapsed ? 0 : -1} />
-					<CloudAccountRailButton tabIndex={isCollapsed ? 0 : -1} />
 					<Tooltip>
 						<TooltipTrigger asChild>
 							<button
@@ -1166,22 +1152,6 @@ const ProjectItemContent = memo(function ProjectItemContent({
 			selection.goSession(workspace.id, orchestrator.id);
 			return;
 		}
-		// A cloud project has no local orchestrator-agent config, so the settings
-		// fallback below would dead-end it. Spawn the orchestrator as a cloud
-		// session in its own sandbox instead.
-		if (workspace.kind === "cloud") {
-			setIsSpawning(true);
-			try {
-				const sessionId = await spawnCloudOrchestrator(queryClient, workspace.id);
-				await queryClient.invalidateQueries({ queryKey: cloudSessionsQueryKey });
-				selection.goSession(workspace.id, sessionId);
-			} catch (err) {
-				console.error("Failed to spawn cloud orchestrator:", err);
-			} finally {
-				setIsSpawning(false);
-			}
-			return;
-		}
 		if (!hasConfiguredOrchestratorAgent(workspace)) {
 			selection.goSettings(workspace.id);
 			return;
@@ -1368,14 +1338,6 @@ const ProjectItemContent = memo(function ProjectItemContent({
 									>
 										{workspace.name}
 									</span>
-									{workspace.kind === "cloud" && (
-										<Badge
-											variant="outline"
-											className="sidebar-expanded-chrome h-4 shrink-0 px-1.5 text-2xs group-data-[collapsible=icon]:hidden"
-										>
-											{t("shell.cloudProjectBadge")}
-										</Badge>
-									)}
 								</SidebarMenuButton>
 								{/* Folder disclosure toggle: sibling of the nav button, absolutely positioned over
 	    the icon area so it intercepts clicks there without nesting buttons. */}
@@ -2010,134 +1972,6 @@ const SessionActions = memo(function SessionActions({
 		</div>
 	);
 });
-
-// CloudSignInRow: the entry point that starts the WorkOS sign-in flow. Shown
-// only when the cloud offering is enabled (entitled client + flag + control
-// plane), WorkOS is configured, and no one is signed in yet.
-function CloudSignInRow({ tabIndex }: { tabIndex: number }) {
-	const { t } = useTranslation();
-	const { cloudEnabled } = useCloudGate();
-	const { configured, status, signIn } = useCloudSession();
-	// Dev + loopback CP: open the local email/password dialog instead of WorkOS.
-	const { available: localAuthAvailable } = useCloudLocalAuth();
-	const openLocalSignIn = useLocalSignInDialogStore((s) => s.openDialog);
-	const onSignIn = () => (localAuthAvailable ? openLocalSignIn() : signIn());
-	if (!configured || !cloudEnabled || status !== "unauthenticated") return null;
-
-	return (
-		<button
-			aria-label={t("shell.signInToAOCloud")}
-			className={cn(
-				NAV_ROW_CLASS,
-				"flex h-9 w-full items-center text-left [&_svg]:size-icon-md [&_svg]:shrink-0",
-			)}
-			onClick={onSignIn}
-			tabIndex={tabIndex}
-			type="button"
-		>
-			<LogIn aria-hidden="true" />
-			<span className="tracking-tight">{t("shell.signInToAOCloud")}</span>
-		</button>
-	);
-}
-
-// Icon-rail variant for the collapsed sidebar.
-function CloudSignInRailButton({ tabIndex }: { tabIndex: number }) {
-	const { t } = useTranslation();
-	const { cloudEnabled } = useCloudGate();
-	const { configured, status, signIn } = useCloudSession();
-	// Dev + loopback CP: open the local email/password dialog instead of WorkOS.
-	const { available: localAuthAvailable } = useCloudLocalAuth();
-	const openLocalSignIn = useLocalSignInDialogStore((s) => s.openDialog);
-	const onSignIn = () => (localAuthAvailable ? openLocalSignIn() : signIn());
-	if (!configured || !cloudEnabled || status !== "unauthenticated") return null;
-
-	return (
-		<Tooltip>
-			<TooltipTrigger asChild>
-				<button
-					aria-label={t("shell.signInToAOCloud")}
-					className="grid size-control-board place-items-center rounded-lg text-muted-foreground transition-colors hover:bg-interactive-hover hover:text-foreground [&_svg]:size-icon-base"
-					onClick={onSignIn}
-					tabIndex={tabIndex}
-					type="button"
-				>
-					<LogIn aria-hidden="true" />
-				</button>
-			</TooltipTrigger>
-			<TooltipContent side="right">{t("shell.signInToAOCloud")}</TooltipContent>
-		</Tooltip>
-	);
-}
-
-// CloudAccountRow: shown above the Settings button for an existing cloud
-// session (the signed-in state). The sign-in entry point is CloudSignInRow.
-function CloudAccountRow({ tabIndex }: { tabIndex: number }) {
-	const { t } = useTranslation();
-	const { cloudEnabled } = useCloudGate();
-	const { configured, session, status, signOut } = useCloudSession();
-	if (!configured || !cloudEnabled || status !== "authenticated") return null;
-
-	return (
-		<DropdownMenu>
-			<DropdownMenuTrigger asChild>
-				<button
-					aria-label={t("shell.signedInAs", {
-						email: session?.user.email ?? "AO Cloud",
-					})}
-					className={cn(NAV_ROW_CLASS, "flex h-9 w-full items-center text-left [&_svg]:size-icon-md [&_svg]:shrink-0")}
-					tabIndex={tabIndex}
-					type="button"
-				>
-					<User aria-hidden="true" />
-					<span className="min-w-0 flex-1 truncate tracking-tight">
-						{session?.user.email ?? "AO Cloud"}
-					</span>
-				</button>
-			</DropdownMenuTrigger>
-			<DropdownMenuContent side="top" align="start" className="min-w-44">
-				<DropdownMenuItem
-					className="text-destructive focus:text-destructive [&_svg]:text-destructive"
-					onSelect={() => void signOut()}
-				>
-					<LogOut aria-hidden="true" />
-					{t("shell.signOut")}
-				</DropdownMenuItem>
-			</DropdownMenuContent>
-		</DropdownMenu>
-	);
-}
-
-// Icon-rail variant for collapsed sidebar.
-function CloudAccountRailButton({ tabIndex }: { tabIndex: number }) {
-	const { t } = useTranslation();
-	const { cloudEnabled } = useCloudGate();
-	const { configured, session, status, signOut } = useCloudSession();
-	if (!configured || !cloudEnabled || status !== "authenticated") return null;
-
-	return (
-		<Tooltip>
-			<TooltipTrigger asChild>
-				<button
-					aria-label={t("shell.signedInAs", {
-						email: session?.user.email ?? "AO Cloud",
-					})}
-					className="grid size-control-board place-items-center rounded-lg text-muted-foreground transition-colors hover:bg-interactive-hover hover:text-foreground [&_svg]:size-icon-base"
-					onClick={() => void signOut()}
-					tabIndex={tabIndex}
-					type="button"
-				>
-					<User aria-hidden="true" />
-				</button>
-			</TooltipTrigger>
-			<TooltipContent side="right">
-				{t("shell.signOutWithEmail", {
-					email: session?.user.email ?? "AO Cloud",
-				})}
-			</TooltipContent>
-		</Tooltip>
-	);
-}
 
 /**
  * What the sidebar should act on, derived from the live update status.
