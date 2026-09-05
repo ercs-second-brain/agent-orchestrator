@@ -16,11 +16,11 @@ import (
 
 	"github.com/go-chi/chi/v5/middleware"
 
-	"github.com/aoagents/agent-orchestrator/backend/internal/domain"
-	"github.com/aoagents/agent-orchestrator/backend/internal/httpd/apierr"
-	"github.com/aoagents/agent-orchestrator/backend/internal/observe/ownership"
-	"github.com/aoagents/agent-orchestrator/backend/internal/ports"
-	sessionmanager "github.com/aoagents/agent-orchestrator/backend/internal/session_manager"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/domain"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/httpd/apierr"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/observe/ownership"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/ports"
+	sessionmanager "github.com/ercs-second-brain/agent-orchestrator/backend/internal/session_manager"
 )
 
 type fakeTelemetrySink struct{ events []ports.TelemetryEvent }
@@ -4438,8 +4438,8 @@ func TestListPRSummariesCollapsesTransferredRepoAliases(t *testing.T) {
 	st := newFakeStore()
 	st.sessions["mer-1"] = domain.SessionRecord{ID: "mer-1", ProjectID: "mer", Kind: domain.KindWorker}
 	now := time.Date(2026, 7, 31, 10, 0, 0, 0, time.UTC)
-	oldURL := "https://github.com/AgentWrapper/agent-orchestrator/pull/3193"
-	newURL := "https://github.com/Untrivial-ai/agent-orchestrator/pull/3193"
+	oldURL := "https://github.com/former-owner/agent-orchestrator/pull/3193"
+	newURL := "https://github.com/ercs-second-brain/agent-orchestrator/pull/3193"
 	stList := &multiPRFakeStore{fakeStore: st, prs: []domain.PullRequest{
 		{
 			URL:          oldURL,
@@ -4447,7 +4447,7 @@ func TestListPRSummariesCollapsesTransferredRepoAliases(t *testing.T) {
 			Number:       3193,
 			Provider:     "github",
 			Host:         "github.com",
-			Repo:         "AgentWrapper/agent-orchestrator",
+			Repo:         "former-owner/agent-orchestrator",
 			SourceBranch: "ao/mer-1/fix-sigpipe",
 			TargetBranch: "main",
 			HeadSHA:      "same-head",
@@ -4462,7 +4462,7 @@ func TestListPRSummariesCollapsesTransferredRepoAliases(t *testing.T) {
 			Number:       3193,
 			Provider:     "github",
 			Host:         "github.com",
-			Repo:         "Untrivial-ai/agent-orchestrator",
+			Repo:         "ercs-second-brain/agent-orchestrator",
 			SourceBranch: "ao/mer-1/fix-sigpipe",
 			TargetBranch: "main",
 			HeadSHA:      "same-head",
@@ -4543,7 +4543,7 @@ func TestDeduplicatePRFactsCollapsesTransferredRepoAliasesWithSameHead(t *testin
 	now := time.Date(2026, 7, 31, 10, 0, 0, 0, time.UTC)
 	got := deduplicatePRFacts([]domain.PRFacts{
 		{
-			URL:                      "https://github.com/AgentWrapper/agent-orchestrator/pull/3193",
+			URL:                      "https://github.com/former-owner/agent-orchestrator/pull/3193",
 			Number:                   3193,
 			ReviewComments:           true,
 			ExternalChangesRequested: true,
@@ -4554,7 +4554,7 @@ func TestDeduplicatePRFactsCollapsesTransferredRepoAliasesWithSameHead(t *testin
 			UpdatedAt:                now,
 		},
 		{
-			URL:              "https://github.com/Untrivial-ai/agent-orchestrator/pull/3193",
+			URL:              "https://github.com/ercs-second-brain/agent-orchestrator/pull/3193",
 			Number:           3193,
 			ExternalApproved: true,
 			SourceBranch:     "ao/mer-1/fix-sigpipe",
@@ -4566,7 +4566,7 @@ func TestDeduplicatePRFactsCollapsesTransferredRepoAliasesWithSameHead(t *testin
 	if len(got) != 1 {
 		t.Fatalf("facts = %d, want transferred aliases collapsed: %+v", len(got), got)
 	}
-	if got[0].URL != "https://github.com/Untrivial-ai/agent-orchestrator/pull/3193" ||
+	if got[0].URL != "https://github.com/ercs-second-brain/agent-orchestrator/pull/3193" ||
 		!got[0].ReviewComments ||
 		!got[0].ExternalChangesRequested ||
 		!got[0].ExternalComments ||
@@ -4584,8 +4584,8 @@ func TestToSessionWithFactsRemapsTransferredAliasReviewRuns(t *testing.T) {
 		AutoReviewEnabled: true,
 		AutoInjectReview:  true,
 	}
-	oldURL := "https://github.com/AgentWrapper/agent-orchestrator/pull/3193"
-	newURL := "https://github.com/Untrivial-ai/agent-orchestrator/pull/3193"
+	oldURL := "https://github.com/former-owner/agent-orchestrator/pull/3193"
+	newURL := "https://github.com/ercs-second-brain/agent-orchestrator/pull/3193"
 	st.prFacts[rec.ID] = []domain.PRFacts{
 		{
 			URL:                      oldURL,
@@ -4640,8 +4640,8 @@ func TestToSessionWithFactsCanonicalAliasRunSupersedesOlderAliasRun(t *testing.T
 		AutoReviewEnabled: true,
 		AutoInjectReview:  true,
 	}
-	oldURL := "https://github.com/AgentWrapper/agent-orchestrator/pull/4000"
-	newURL := "https://github.com/Untrivial-ai/agent-orchestrator/pull/4000"
+	oldURL := "https://github.com/former-owner/agent-orchestrator/pull/4000"
+	newURL := "https://github.com/ercs-second-brain/agent-orchestrator/pull/4000"
 	st.prFacts[rec.ID] = []domain.PRFacts{
 		{
 			URL:          oldURL,

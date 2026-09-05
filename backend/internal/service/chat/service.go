@@ -10,8 +10,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/aoagents/agent-orchestrator/backend/internal/domain"
-	"github.com/aoagents/agent-orchestrator/backend/internal/ports"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/domain"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/ports"
 )
 
 // ErrNoController reports a command for a session with no live Chat controller.

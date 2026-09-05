@@ -13,14 +13,14 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/aoagents/agent-orchestrator/backend/internal/config"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/config"
 )
 
 // releaseRepo is the GitHub "owner/repo" that `ao start` fetches the desktop app
 // from. It defaults to this repository's release target and is overridable at
 // build time:
 //
-//	go build -ldflags "-X github.com/aoagents/agent-orchestrator/backend/internal/cli.releaseRepo=owner/repo" ./cmd/ao
+//	go build -ldflags "-X github.com/ercs-second-brain/agent-orchestrator/backend/internal/cli.releaseRepo=owner/repo" ./cmd/ao
 //
 // Keep in sync with frontend/forge.config.ts DEFAULT_RELEASE_REPO and
 // frontend/src/shared/github-repo.ts. See docs/release-repo.md.

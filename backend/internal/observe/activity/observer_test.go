@@ -8,13 +8,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aoagents/agent-orchestrator/backend/internal/adapters/agent/claudecode"
-	"github.com/aoagents/agent-orchestrator/backend/internal/adapters/agent/codex"
-	"github.com/aoagents/agent-orchestrator/backend/internal/adapters/agent/crush"
-	"github.com/aoagents/agent-orchestrator/backend/internal/adapters/agent/droid"
-	"github.com/aoagents/agent-orchestrator/backend/internal/adapters/agent/muse"
-	"github.com/aoagents/agent-orchestrator/backend/internal/domain"
-	"github.com/aoagents/agent-orchestrator/backend/internal/ports"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/adapters/agent/claudecode"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/adapters/agent/codex"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/adapters/agent/crush"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/adapters/agent/droid"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/adapters/agent/muse"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/domain"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/ports"
 )
 
 type fakeSessions struct {

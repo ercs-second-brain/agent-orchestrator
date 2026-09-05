@@ -12,7 +12,16 @@ import { Button } from "../ui/button";
 // country to a "not available" page.
 export const IOS_APP_STORE_URL = "https://apps.apple.com/app/ao-mobile/id6792552173";
 
-/** Public Google Play listing for the Agent Orchestrator Android app. */
+/**
+ * Public Google Play listing for the Agent Orchestrator Android app.
+ *
+ * `aoagents.dev` is an intentional old-owner reference: the store package id
+ * belongs to the listing the app is actually published under today. The
+ * published build is a pure LAN client (ADR 0003 identity probe) that pairs
+ * with this daemon regardless of who published the store entry; keep the link
+ * working until issue #41 replaces store distribution with APKs from this
+ * repo's Releases.
+ */
 export const ANDROID_PLAY_STORE_URL = "https://play.google.com/store/apps/details?id=aoagents.dev&pcampaignid=web_share";
 
 /** Deliberately smaller than the pairing QR so it never competes with it. */

@@ -14,10 +14,10 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/aoagents/agent-orchestrator/backend/internal/daemon"
-	aoprocess "github.com/aoagents/agent-orchestrator/backend/internal/process"
-	"github.com/aoagents/agent-orchestrator/backend/internal/processalive"
-	"github.com/aoagents/agent-orchestrator/backend/internal/telemetrymeta"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/daemon"
+	aoprocess "github.com/ercs-second-brain/agent-orchestrator/backend/internal/process"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/processalive"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/telemetrymeta"
 )
 
 // Execute runs the ao CLI with process stdio.

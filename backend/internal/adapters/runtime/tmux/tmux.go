@@ -18,10 +18,10 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"github.com/aoagents/agent-orchestrator/backend/internal/adapters/runtime/ptyexec"
-	"github.com/aoagents/agent-orchestrator/backend/internal/domain"
-	"github.com/aoagents/agent-orchestrator/backend/internal/ports"
-	"github.com/aoagents/agent-orchestrator/backend/internal/tmuxbin"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/adapters/runtime/ptyexec"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/domain"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/ports"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/tmuxbin"
 )
 
 const (

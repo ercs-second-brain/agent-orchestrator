@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/aoagents/agent-orchestrator/backend/internal/adapters/chatdriver/persistenthost"
-	"github.com/aoagents/agent-orchestrator/backend/internal/domain"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/adapters/chatdriver/persistenthost"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/domain"
 )
 
 type persistentChatSessionStore interface {

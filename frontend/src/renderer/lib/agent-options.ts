@@ -3,7 +3,7 @@ export {
 	AGENT_OPTIONS,
 	agentLabel,
 	hasAgentCapability,
-} from "@aoagents/product-ui";
+} from "@ercs-second-brain/product-ui";
 export type {
 	AgentAvailability,
 	AgentCapability,
@@ -11,4 +11,4 @@ export type {
 	AgentIdentity,
 	AgentOption,
 	AgentProfile,
-} from "@aoagents/product-ui";
+} from "@ercs-second-brain/product-ui";

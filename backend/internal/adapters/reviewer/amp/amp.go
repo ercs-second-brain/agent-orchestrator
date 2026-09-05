@@ -8,9 +8,9 @@ import (
 	"os"
 	"path/filepath"
 
-	workeramp "github.com/aoagents/agent-orchestrator/backend/internal/adapters/agent/amp"
-	"github.com/aoagents/agent-orchestrator/backend/internal/domain"
-	"github.com/aoagents/agent-orchestrator/backend/internal/ports"
+	workeramp "github.com/ercs-second-brain/agent-orchestrator/backend/internal/adapters/agent/amp"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/domain"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/ports"
 )
 
 // Reviewer builds Amp's interactive reviewer command.

@@ -33,7 +33,7 @@ describe("parsePairingCode", () => {
 	});
 
 	it("reads the payload out of an https universal link", () => {
-		const got = parsePairingCode(pairingUrl(offer, "https://aoagents.dev/pair"));
+		const got = parsePairingCode(pairingUrl(offer, "https://ao.example.com/pair"));
 
 		expect(got?.hostId).toBe("h_b3e07f31");
 	});

@@ -9,10 +9,10 @@ import (
 	"path/filepath"
 	"strings"
 
-	workercontinue "github.com/aoagents/agent-orchestrator/backend/internal/adapters/agent/continueagent"
-	"github.com/aoagents/agent-orchestrator/backend/internal/domain"
-	"github.com/aoagents/agent-orchestrator/backend/internal/ports"
-	"github.com/aoagents/agent-orchestrator/backend/internal/reviewgateway"
+	workercontinue "github.com/ercs-second-brain/agent-orchestrator/backend/internal/adapters/agent/continueagent"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/domain"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/ports"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/reviewgateway"
 )
 
 const (

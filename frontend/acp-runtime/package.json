@@ -1,5 +1,5 @@
 {
-	"name": "@aoagents/acp-runtime",
+	"name": "@ercs-second-brain/acp-runtime",
 	"version": "0.1.0",
 	"private": true,
 	"description": "Pinned ACP adapters packaged with the AO desktop app (provider CLIs are not included)",

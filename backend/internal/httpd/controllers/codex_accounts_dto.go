@@ -3,8 +3,8 @@ package controllers
 import (
 	"strings"
 
-	"github.com/aoagents/agent-orchestrator/backend/internal/domain"
-	agentsvc "github.com/aoagents/agent-orchestrator/backend/internal/service/agent"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/domain"
+	agentsvc "github.com/ercs-second-brain/agent-orchestrator/backend/internal/service/agent"
 )
 
 func newCodexAccountsResponse(input agentsvc.CodexAccounts) CodexAccountsResponse {

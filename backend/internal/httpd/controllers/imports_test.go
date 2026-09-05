@@ -8,10 +8,10 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/aoagents/agent-orchestrator/backend/internal/config"
-	"github.com/aoagents/agent-orchestrator/backend/internal/httpd"
-	"github.com/aoagents/agent-orchestrator/backend/internal/httpd/controllers"
-	importsvc "github.com/aoagents/agent-orchestrator/backend/internal/service/importer"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/config"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/httpd"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/httpd/controllers"
+	importsvc "github.com/ercs-second-brain/agent-orchestrator/backend/internal/service/importer"
 )
 
 // fakeImportService is a test double for controllers.ImportService.

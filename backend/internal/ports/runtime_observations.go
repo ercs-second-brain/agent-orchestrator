@@ -3,7 +3,7 @@ package ports
 import (
 	"time"
 
-	"github.com/aoagents/agent-orchestrator/backend/internal/domain"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/domain"
 )
 
 // ProbeResult is a single liveness reading. "failed" means the probe errored

@@ -31,6 +31,7 @@ test("Android button opens the Google Play listing", async () => {
 	render(<ConnectMobileGetApp />);
 	expect(screen.getByText("Android")).toBeInTheDocument();
 	await userEvent.click(screen.getByRole("button", { name: "Open Agent Orchestrator on Google Play" }));
+	// aoagents.dev is the intentional, documented store id — see ConnectMobileGetApp.tsx.
 	expect(openExternal).toHaveBeenCalledWith("https://play.google.com/store/apps/details?id=aoagents.dev&pcampaignid=web_share");
 	expect(ANDROID_PLAY_STORE_URL).toBe("https://play.google.com/store/apps/details?id=aoagents.dev&pcampaignid=web_share");
 });

@@ -11,11 +11,11 @@ import (
 	"strconv"
 	"strings"
 
-	agentvibe "github.com/aoagents/agent-orchestrator/backend/internal/adapters/agent/vibe"
-	"github.com/aoagents/agent-orchestrator/backend/internal/domain"
-	"github.com/aoagents/agent-orchestrator/backend/internal/ports"
-	aoprocess "github.com/aoagents/agent-orchestrator/backend/internal/process"
-	"github.com/aoagents/agent-orchestrator/backend/internal/reviewgateway"
+	agentvibe "github.com/ercs-second-brain/agent-orchestrator/backend/internal/adapters/agent/vibe"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/domain"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/ports"
+	aoprocess "github.com/ercs-second-brain/agent-orchestrator/backend/internal/process"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/reviewgateway"
 )
 
 const (

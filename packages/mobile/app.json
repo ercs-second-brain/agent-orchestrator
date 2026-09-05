@@ -19,7 +19,7 @@
 		"ios": {
 			"icon": "./assets/AO.icon",
 			"supportsTablet": true,
-			"bundleIdentifier": "aoagents.ao",
+			"bundleIdentifier": "dev.ao.mobile",
 			"config": {
 				"usesNonExemptEncryption": false
 			},
@@ -50,7 +50,7 @@
 			}
 		},
 		"android": {
-			"package": "aoagents.dev",
+			"package": "dev.ao.mobile",
 			"googleServicesFile": "./google-services.json",
 			"adaptiveIcon": {
 				"backgroundColor": "#0a0b0d",
@@ -120,6 +120,6 @@
 				"projectId": "2d7dec61-2206-4943-8582-a37e160907ea"
 			}
 		},
-		"owner": "untrivial"
+		"owner": "ercs-second-brain"
 	}
 }

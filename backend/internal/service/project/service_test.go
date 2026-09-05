@@ -14,12 +14,12 @@ import (
 
 	"github.com/go-chi/chi/v5/middleware"
 
-	"github.com/aoagents/agent-orchestrator/backend/internal/domain"
-	"github.com/aoagents/agent-orchestrator/backend/internal/gitdefault"
-	"github.com/aoagents/agent-orchestrator/backend/internal/httpd/apierr"
-	"github.com/aoagents/agent-orchestrator/backend/internal/ports"
-	"github.com/aoagents/agent-orchestrator/backend/internal/service/project"
-	"github.com/aoagents/agent-orchestrator/backend/internal/storage/sqlite/sqlitetest"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/domain"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/gitdefault"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/httpd/apierr"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/ports"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/service/project"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/storage/sqlite/sqlitetest"
 )
 
 // newManager builds a Manager over a real, isolated sqlite store cloned from a

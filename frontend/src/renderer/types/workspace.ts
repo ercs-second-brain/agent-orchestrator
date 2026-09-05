@@ -9,7 +9,7 @@ import {
 	type SessionActivity,
 	type SessionActivityState,
 	type SessionStatus,
-} from "@aoagents/product-ui";
+} from "@ercs-second-brain/product-ui";
 
 import type { ReviewerHarnessId } from "../lib/reviewer-harnesses";
 

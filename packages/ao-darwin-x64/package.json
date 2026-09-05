@@ -1,5 +1,5 @@
 {
-	"name": "@aoagents/ao-darwin-x64",
+	"name": "@ercs-second-brain/ao-darwin-x64",
 	"version": "0.10.0",
 	"description": "Agent Orchestrator CLI binary for macOS x64.",
 	"license": "MIT",

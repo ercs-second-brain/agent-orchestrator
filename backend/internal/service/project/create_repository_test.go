@@ -7,8 +7,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/aoagents/agent-orchestrator/backend/internal/service/project"
-	"github.com/aoagents/agent-orchestrator/backend/internal/storage/sqlite/sqlitetest"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/service/project"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/storage/sqlite/sqlitetest"
 )
 
 func newCreateRepositoryManager(t *testing.T, create project.CreateHostedRepositoryFunc) project.Manager {

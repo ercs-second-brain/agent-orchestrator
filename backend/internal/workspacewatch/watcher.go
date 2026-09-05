@@ -16,7 +16,7 @@ import (
 
 	"github.com/fsnotify/fsnotify"
 
-	aoprocess "github.com/aoagents/agent-orchestrator/backend/internal/process"
+	aoprocess "github.com/ercs-second-brain/agent-orchestrator/backend/internal/process"
 )
 
 // Watch subscribes to relevant changes below the workspace roots until ctx is cancelled. The

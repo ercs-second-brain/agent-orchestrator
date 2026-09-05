@@ -1,5 +1,5 @@
 {
-	"name": "@aoagents/product-ui",
+	"name": "@ercs-second-brain/product-ui",
 	"version": "0.1.0",
 	"description": "Portable product presentation models, helpers, and leaf components for AO clients",
 	"type": "module",
@@ -48,7 +48,7 @@
 	"license": "MIT",
 	"repository": {
 		"type": "git",
-		"url": "https://github.com/aoagents/agent-orchestrator.git",
+		"url": "https://github.com/ercs-second-brain/agent-orchestrator.git",
 		"directory": "packages/product-ui"
 	}
 }

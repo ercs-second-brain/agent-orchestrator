@@ -5,9 +5,9 @@ import (
 	"context"
 	"strings"
 
-	workerautohand "github.com/aoagents/agent-orchestrator/backend/internal/adapters/agent/autohand"
-	"github.com/aoagents/agent-orchestrator/backend/internal/domain"
-	"github.com/aoagents/agent-orchestrator/backend/internal/ports"
+	workerautohand "github.com/ercs-second-brain/agent-orchestrator/backend/internal/adapters/agent/autohand"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/domain"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/ports"
 )
 
 // HostTrustWarning documents that Autohand retains its normal approval flow.

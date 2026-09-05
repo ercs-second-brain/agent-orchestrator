@@ -9,18 +9,18 @@ func TestGithubOwner(t *testing.T) {
 		remote string
 		want   string
 	}{
-		{"scp-style", "git@github.com:aoagents/agent-orchestrator.git", "aoagents"},
-		{"https", "https://github.com/aoagents/agent-orchestrator.git", "aoagents"},
-		{"https-no-suffix", "https://github.com/aoagents/agent-orchestrator", "aoagents"},
+		{"scp-style", "git@github.com:ercs-second-brain/agent-orchestrator.git", "ercs-second-brain"},
+		{"https", "https://github.com/ercs-second-brain/agent-orchestrator.git", "ercs-second-brain"},
+		{"https-no-suffix", "https://github.com/ercs-second-brain/agent-orchestrator", "ercs-second-brain"},
 		{"http", "http://github.com/octocat/hello", "octocat"},
 		{"ssh-url", "ssh://git@github.com/octocat/hello.git", "octocat"},
 		{"git-proto", "git://github.com/octocat/hello.git", "octocat"},
 		{"personal-account", "git@github.com:pulkit7070/dotfiles.git", "pulkit7070"},
-		{"whitespace", "  https://github.com/aoagents/x.git  ", "aoagents"},
+		{"whitespace", "  https://github.com/ercs-second-brain/x.git  ", "ercs-second-brain"},
 		{"empty", "", ""},
 		{"non-github", "git@gitlab.com:group/repo.git", ""},
-		{"owner-only-no-repo", "https://github.com/aoagents", ""},
-		{"gist-subdomain-not-matched", "https://gist.github.com/aoagents/abc", ""},
+		{"owner-only-no-repo", "https://github.com/ercs-second-brain", ""},
+		{"gist-subdomain-not-matched", "https://gist.github.com/ercs-second-brain/abc", ""},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {

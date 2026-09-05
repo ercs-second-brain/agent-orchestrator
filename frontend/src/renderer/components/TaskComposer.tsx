@@ -4,7 +4,7 @@ import {
 	type TaskComposerAgentControl,
 	type TaskComposerModelCatalog,
 	type TaskComposerModelControl,
-} from "@aoagents/product-ui";
+} from "@ercs-second-brain/product-ui";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Loader2 } from "lucide-react";

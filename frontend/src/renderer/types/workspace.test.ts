@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { AGENT_OPTIONS } from "@aoagents/product-ui";
+import { AGENT_OPTIONS } from "@ercs-second-brain/product-ui";
 import {
 	attentionZone,
 	canonicalTrackerIssueId,

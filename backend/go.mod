@@ -1,4 +1,4 @@
-module github.com/aoagents/agent-orchestrator/backend
+module github.com/ercs-second-brain/agent-orchestrator/backend
 
 go 1.25.7
 

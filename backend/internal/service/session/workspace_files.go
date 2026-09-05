@@ -17,10 +17,10 @@ import (
 
 	"golang.org/x/sync/errgroup"
 
-	"github.com/aoagents/agent-orchestrator/backend/internal/domain"
-	"github.com/aoagents/agent-orchestrator/backend/internal/httpd/apierr"
-	"github.com/aoagents/agent-orchestrator/backend/internal/ports"
-	aoprocess "github.com/aoagents/agent-orchestrator/backend/internal/process"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/domain"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/httpd/apierr"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/ports"
+	aoprocess "github.com/ercs-second-brain/agent-orchestrator/backend/internal/process"
 )
 
 const (

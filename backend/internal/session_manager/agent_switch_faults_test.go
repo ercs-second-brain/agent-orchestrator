@@ -8,9 +8,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aoagents/agent-orchestrator/backend/internal/domain"
-	"github.com/aoagents/agent-orchestrator/backend/internal/observe/ownership"
-	"github.com/aoagents/agent-orchestrator/backend/internal/ports"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/domain"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/observe/ownership"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/ports"
 )
 
 func TestPreAdmissionFailureClassificationsRemainOutsideSagaOwnership(t *testing.T) {
@@ -186,7 +186,7 @@ var _ ports.AgentSwitchReportingPolicy = staticAgentSwitchReportingPolicy{}
 
 func TestSanitizeAgentSwitchPanicStackExcludesValueAndBoundsFrames(t *testing.T) {
 	raw := []byte("panic: must-not-be-exported\n\n" +
-		"github.com/aoagents/agent-orchestrator/backend/internal/session_manager.(*Manager).executeAgentSwitch(0x1)\n" +
+		"github.com/ercs-second-brain/agent-orchestrator/backend/internal/session_manager.(*Manager).executeAgentSwitch(0x1)\n" +
 		"\t/Users/private/reverb/backend/internal/session_manager/agent_switching.go:417 +0x45\n" +
 		"runtime.goexit()\n\t/usr/local/go/src/runtime/asm_amd64.s:1700 +0x1\n")
 	frames := sanitizeAgentSwitchPanicStack(raw)

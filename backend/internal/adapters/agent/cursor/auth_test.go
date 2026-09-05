@@ -5,8 +5,8 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/aoagents/agent-orchestrator/backend/internal/adapters/agent/authprobe"
-	"github.com/aoagents/agent-orchestrator/backend/internal/ports"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/adapters/agent/authprobe"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/ports"
 )
 
 func TestCursorCLIAuthStatusAuthorizedFromStatus(t *testing.T) {

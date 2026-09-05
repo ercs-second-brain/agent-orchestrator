@@ -8,9 +8,9 @@ import (
 
 	"github.com/go-chi/chi/v5/middleware"
 
-	"github.com/aoagents/agent-orchestrator/backend/internal/httpd/apierr"
-	"github.com/aoagents/agent-orchestrator/backend/internal/observe/ownership"
-	"github.com/aoagents/agent-orchestrator/backend/internal/ports"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/httpd/apierr"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/observe/ownership"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/ports"
 )
 
 // errCapture is a request-scoped slot WriteError records the raw service error

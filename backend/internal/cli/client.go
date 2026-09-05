@@ -10,8 +10,8 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/aoagents/agent-orchestrator/backend/internal/config"
-	"github.com/aoagents/agent-orchestrator/backend/internal/runfile"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/config"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/runfile"
 )
 
 // commandTimeout bounds a mutating daemon call. Spawns do real work (git

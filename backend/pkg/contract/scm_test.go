@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aoagents/agent-orchestrator/backend/pkg/contract"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/pkg/contract"
 )
 
 func TestSCMContractJSONUsesProviderNeutralFields(t *testing.T) {

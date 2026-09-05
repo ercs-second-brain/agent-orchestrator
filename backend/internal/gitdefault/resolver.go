@@ -10,7 +10,7 @@ import (
 	"sort"
 	"strings"
 
-	aoprocess "github.com/aoagents/agent-orchestrator/backend/internal/process"
+	aoprocess "github.com/ercs-second-brain/agent-orchestrator/backend/internal/process"
 )
 
 const (

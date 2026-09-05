@@ -10,11 +10,11 @@ import (
 	"strconv"
 	"strings"
 
-	agentagy "github.com/aoagents/agent-orchestrator/backend/internal/adapters/agent/agy"
-	"github.com/aoagents/agent-orchestrator/backend/internal/domain"
-	"github.com/aoagents/agent-orchestrator/backend/internal/ports"
-	aoprocess "github.com/aoagents/agent-orchestrator/backend/internal/process"
-	"github.com/aoagents/agent-orchestrator/backend/internal/reviewgateway"
+	agentagy "github.com/ercs-second-brain/agent-orchestrator/backend/internal/adapters/agent/agy"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/domain"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/ports"
+	aoprocess "github.com/ercs-second-brain/agent-orchestrator/backend/internal/process"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/reviewgateway"
 )
 
 // HarnessID identifies the Agy reviewer adapter.

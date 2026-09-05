@@ -1,4 +1,4 @@
-import type { ExternalLinkProps } from "@aoagents/product-ui";
+import type { ExternalLinkProps } from "@ercs-second-brain/product-ui";
 
 export function ProductExternalLink({
 	ariaLabel,

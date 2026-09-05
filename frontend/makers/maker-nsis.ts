@@ -6,7 +6,9 @@ import type { ForgePlatform } from "@electron-forge/shared-types";
 // `buildForge`, the same engine recordly's working Windows installer uses. We drop
 // Squirrel.Windows (per-user only, no custom install dir, fragile updates) for a
 // real NSIS installer: per-user or per-machine, custom install directory, and a
-// proper uninstaller. See https://github.com/aoagents/ReverbCode/issues/401.
+// proper uninstaller. The aoagents/ReverbCode link below is an intentional
+// old-owner reference: it cites the issue thread (in the previous owner's
+// electron-builder fork) that documents the uninstaller behavior we rely on.
 //
 // `buildForge` speaks Forge's legacy v5 function API, which Forge 7's class-based
 // maker loader cannot resolve, so this thin MakerBase subclass adapts it.

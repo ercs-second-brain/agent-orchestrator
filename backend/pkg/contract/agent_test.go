@@ -9,7 +9,7 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/aoagents/agent-orchestrator/backend/pkg/contract"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/pkg/contract"
 )
 
 var agentCapabilities = []contract.AgentCapability{

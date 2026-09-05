@@ -9,8 +9,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/aoagents/agent-orchestrator/backend/internal/adapters/agent/nativeconfig"
-	"github.com/aoagents/agent-orchestrator/backend/internal/ports"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/adapters/agent/nativeconfig"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/ports"
 )
 
 const codexHomeEnv = "CODEX_HOME"

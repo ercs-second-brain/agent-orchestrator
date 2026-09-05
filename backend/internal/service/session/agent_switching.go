@@ -4,8 +4,8 @@ import (
 	"context"
 	"encoding/json"
 
-	"github.com/aoagents/agent-orchestrator/backend/internal/domain"
-	sessionmanager "github.com/aoagents/agent-orchestrator/backend/internal/session_manager"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/domain"
+	sessionmanager "github.com/ercs-second-brain/agent-orchestrator/backend/internal/session_manager"
 )
 
 // SwitchAgentInput is the controller-facing command for replacing the active

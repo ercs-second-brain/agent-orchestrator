@@ -5,8 +5,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aoagents/agent-orchestrator/backend/internal/domain"
-	reviewcore "github.com/aoagents/agent-orchestrator/backend/internal/review"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/domain"
+	reviewcore "github.com/ercs-second-brain/agent-orchestrator/backend/internal/review"
 )
 
 type fakeStore struct {

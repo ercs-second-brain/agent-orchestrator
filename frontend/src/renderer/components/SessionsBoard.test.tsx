@@ -3,7 +3,7 @@ import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { WorkspaceSession, WorkspaceSummary } from "../types/workspace";
-import { toKanbanColumn } from "@aoagents/product-ui";
+import { toKanbanColumn } from "@ercs-second-brain/product-ui";
 import { appI18n } from "../i18n";
 
 // Instant motion updates so height tweens do not leave tests waiting on timers.
@@ -78,7 +78,7 @@ vi.mock("../lib/platform", async (importOriginal) => {
 	};
 });
 
-import { archiveToggleHeightClassName, archiveToggleOffsetClassName } from "@aoagents/product-ui";
+import { archiveToggleHeightClassName, archiveToggleOffsetClassName } from "@ercs-second-brain/product-ui";
 import { SessionsBoard } from "./SessionsBoard";
 import { toBoardSessionPresentation } from "./SessionsBoardAdapters";
 import { TooltipProvider } from "./ui/tooltip";

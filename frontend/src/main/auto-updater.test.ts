@@ -269,7 +269,7 @@ describe("startAutoUpdates", () => {
     );
     writeFileSync(
       nodePath.join(resourcesPath, "app-update.yml"),
-      "provider: github\nowner: Untrivial-ai\nrepo: agent-orchestrator\n",
+      "provider: github\nowner: ercs-second-brain\nrepo: agent-orchestrator\n",
     );
     const originalResourcesPath = Object.getOwnPropertyDescriptor(
       process,
@@ -317,19 +317,19 @@ describe("startAutoUpdates", () => {
       await module.checkForUpdatesNow(stateDir);
 
       expect(fetchMock).toHaveBeenCalledWith(
-        "https://api.github.com/repos/Untrivial-ai/agent-orchestrator/releases?per_page=100",
+        "https://api.github.com/repos/ercs-second-brain/agent-orchestrator/releases?per_page=100",
         expect.objectContaining({ signal: expect.any(AbortSignal) }),
       );
       expect(autoUpdater.setFeedURL).toHaveBeenNthCalledWith(1, {
         provider: "generic",
-        url: "https://github.com/Untrivial-ai/agent-orchestrator/releases/download/v1.0.1-nightly.202608231517",
+        url: "https://github.com/ercs-second-brain/agent-orchestrator/releases/download/v1.0.1-nightly.202608231517",
         channel: "nightly",
         useMultipleRangeRequest: false,
       });
       expect(autoUpdater.checkForUpdates).toHaveBeenCalledTimes(1);
       expect(autoUpdater.setFeedURL).toHaveBeenNthCalledWith(2, {
         provider: "github",
-        owner: "Untrivial-ai",
+        owner: "ercs-second-brain",
         repo: "agent-orchestrator",
       });
     } finally {
@@ -356,7 +356,7 @@ describe("startAutoUpdates", () => {
     const resourcesPath = mkdtempSync(nodePath.join(os.tmpdir(), "ao-nightly-notes-"));
     writeFileSync(
       nodePath.join(resourcesPath, "app-update.yml"),
-      "provider: github\nowner: Untrivial-ai\nrepo: agent-orchestrator\n",
+      "provider: github\nowner: ercs-second-brain\nrepo: agent-orchestrator\n",
     );
     const originalResourcesPath = Object.getOwnPropertyDescriptor(process, "resourcesPath");
     Object.defineProperty(process, "resourcesPath", { configurable: true, value: resourcesPath });
@@ -416,7 +416,7 @@ describe("startAutoUpdates", () => {
     );
     writeFileSync(
       nodePath.join(resourcesPath, "app-update.yml"),
-      "provider: github\nowner: Untrivial-ai\nrepo: agent-orchestrator\n",
+      "provider: github\nowner: ercs-second-brain\nrepo: agent-orchestrator\n",
     );
     const originalResourcesPath = Object.getOwnPropertyDescriptor(
       process,
@@ -462,7 +462,7 @@ describe("startAutoUpdates", () => {
 
       expect(autoUpdater.setFeedURL).toHaveBeenNthCalledWith(1, {
         provider: "generic",
-        url: "https://github.com/Untrivial-ai/agent-orchestrator/releases/download/v1.0.1-nightly.202608231517",
+        url: "https://github.com/ercs-second-brain/agent-orchestrator/releases/download/v1.0.1-nightly.202608231517",
         channel: "nightly",
         useMultipleRangeRequest: false,
       });
@@ -470,7 +470,7 @@ describe("startAutoUpdates", () => {
       // Later background checks start from the normal provider again.
       expect(autoUpdater.setFeedURL).toHaveBeenNthCalledWith(2, {
         provider: "github",
-        owner: "Untrivial-ai",
+        owner: "ercs-second-brain",
         repo: "agent-orchestrator",
       });
     } finally {
@@ -495,7 +495,7 @@ describe("startAutoUpdates", () => {
     );
     writeFileSync(
       nodePath.join(resourcesPath, "app-update.yml"),
-      "provider: github\nowner: Untrivial-ai\nrepo: agent-orchestrator\n",
+      "provider: github\nowner: ercs-second-brain\nrepo: agent-orchestrator\n",
     );
     const originalResourcesPath = Object.getOwnPropertyDescriptor(
       process,
@@ -544,14 +544,14 @@ describe("startAutoUpdates", () => {
 
       expect(autoUpdater.setFeedURL).toHaveBeenNthCalledWith(1, {
         provider: "generic",
-        url: "https://github.com/Untrivial-ai/agent-orchestrator/releases/download/v1.0.0-pr4473.202608271542",
+        url: "https://github.com/ercs-second-brain/agent-orchestrator/releases/download/v1.0.0-pr4473.202608271542",
         channel: "pr4473",
         useMultipleRangeRequest: false,
       });
       expect(autoUpdater.checkForUpdates).toHaveBeenCalledTimes(1);
       expect(autoUpdater.setFeedURL).toHaveBeenNthCalledWith(2, {
         provider: "github",
-        owner: "Untrivial-ai",
+        owner: "ercs-second-brain",
         repo: "agent-orchestrator",
       });
     } finally {
@@ -1088,7 +1088,7 @@ describe("startAutoUpdates", () => {
     vi.spyOn(console, "info").mockImplementation(() => undefined);
     const { module, updaterEvents } = await importAutoUpdater();
     const err = new Error(
-      'Cannot find latest-mac.yml in the latest release artifacts (https://github.com/AgentWrapper/agent-orchestrator/releases/download/v0.10.1/latest-mac.yml):\nHttpError: 404 "method: GET url: https://github.com/AgentWrapper/agent-orchestrator/releases/download/v0.10.1/latest-mac.yml"',
+      'Cannot find latest-mac.yml in the latest release artifacts (https://github.com/ercs-second-brain/agent-orchestrator/releases/download/v0.10.1/latest-mac.yml):\nHttpError: 404 "method: GET url: https://github.com/ercs-second-brain/agent-orchestrator/releases/download/v0.10.1/latest-mac.yml"',
     );
 
     await module.checkForUpdatesNow(stateDir);
@@ -1106,7 +1106,7 @@ describe("startAutoUpdates", () => {
     vi.spyOn(console, "error").mockImplementation(() => undefined);
     const { module, autoUpdater, updaterEvents } = await importAutoUpdater();
     const err = new Error(
-      'Cannot find latest-mac.yml in the latest release artifacts (https://github.com/AgentWrapper/agent-orchestrator/releases/download/v0.10.1/latest-mac.yml):\nHttpError: 404 "method: GET url: https://github.com/AgentWrapper/agent-orchestrator/releases/download/v0.10.1/latest-mac.yml"',
+      'Cannot find latest-mac.yml in the latest release artifacts (https://github.com/ercs-second-brain/agent-orchestrator/releases/download/v0.10.1/latest-mac.yml):\nHttpError: 404 "method: GET url: https://github.com/ercs-second-brain/agent-orchestrator/releases/download/v0.10.1/latest-mac.yml"',
     );
     autoUpdater.downloadUpdate.mockImplementationOnce(() => {
       updaterEvents.get("error")?.(err);
@@ -1125,7 +1125,7 @@ describe("startAutoUpdates", () => {
     vi.spyOn(console, "info").mockImplementation(() => undefined);
     const { module, autoUpdater } = await importAutoUpdater();
     const err = new Error(
-      'Cannot find latest-mac.yml in the latest release artifacts (https://github.com/AgentWrapper/agent-orchestrator/releases/download/v0.10.1/latest-mac.yml):\nHttpError: 404 "method: GET url: https://github.com/AgentWrapper/agent-orchestrator/releases/download/v0.10.1/latest-mac.yml"',
+      'Cannot find latest-mac.yml in the latest release artifacts (https://github.com/ercs-second-brain/agent-orchestrator/releases/download/v0.10.1/latest-mac.yml):\nHttpError: 404 "method: GET url: https://github.com/ercs-second-brain/agent-orchestrator/releases/download/v0.10.1/latest-mac.yml"',
     );
     autoUpdater.checkForUpdates.mockRejectedValueOnce(err);
 
@@ -1143,7 +1143,7 @@ describe("startAutoUpdates", () => {
     vi.spyOn(console, "error").mockImplementation(() => undefined);
     const { module, autoUpdater } = await importAutoUpdater();
     const err = new Error(
-      'Cannot find latest-mac.yml in the latest release artifacts (https://github.com/AgentWrapper/agent-orchestrator/releases/download/v0.10.1/latest-mac.yml):\nHttpError: 404 "method: GET url: https://github.com/AgentWrapper/agent-orchestrator/releases/download/v0.10.1/latest-mac.yml"',
+      'Cannot find latest-mac.yml in the latest release artifacts (https://github.com/ercs-second-brain/agent-orchestrator/releases/download/v0.10.1/latest-mac.yml):\nHttpError: 404 "method: GET url: https://github.com/ercs-second-brain/agent-orchestrator/releases/download/v0.10.1/latest-mac.yml"',
     );
     autoUpdater.downloadUpdate.mockRejectedValueOnce(err);
 
@@ -1159,7 +1159,7 @@ describe("startAutoUpdates", () => {
     vi.spyOn(console, "info").mockImplementation(() => undefined);
     const { module, updaterEvents } = await importAutoUpdater();
     const err = new Error(
-      'Cannot find latest-mac.yml in the latest release artifacts (https://github.com/AgentWrapper/agent-orchestrator/releases/download/v0.10.1/latest-mac.yml):\nHttpError: 404 "method: GET url: https://github.com/AgentWrapper/agent-orchestrator/releases/download/v0.10.1/latest-mac.yml"',
+      'Cannot find latest-mac.yml in the latest release artifacts (https://github.com/ercs-second-brain/agent-orchestrator/releases/download/v0.10.1/latest-mac.yml):\nHttpError: 404 "method: GET url: https://github.com/ercs-second-brain/agent-orchestrator/releases/download/v0.10.1/latest-mac.yml"',
     );
 
     await module.checkForUpdatesNow(stateDir);
@@ -1178,7 +1178,7 @@ describe("startAutoUpdates", () => {
     vi.spyOn(console, "info").mockImplementation(() => undefined);
     const { module, autoUpdater, updaterEvents } = await importAutoUpdater();
     const err = new Error(
-      'Cannot find latest-mac.yml in the latest release artifacts (https://github.com/AgentWrapper/agent-orchestrator/releases/download/v0.10.1/latest-mac.yml):\nHttpError: 404 "method: GET url: https://github.com/AgentWrapper/agent-orchestrator/releases/download/v0.10.1/latest-mac.yml"',
+      'Cannot find latest-mac.yml in the latest release artifacts (https://github.com/ercs-second-brain/agent-orchestrator/releases/download/v0.10.1/latest-mac.yml):\nHttpError: 404 "method: GET url: https://github.com/ercs-second-brain/agent-orchestrator/releases/download/v0.10.1/latest-mac.yml"',
     );
 
     await module.checkForUpdatesNow(stateDir);
@@ -1199,7 +1199,7 @@ describe("startAutoUpdates", () => {
     const { module, autoUpdater, updaterEvents, statusMessages } =
       await importAutoUpdater();
     const err = new Error(
-      'Cannot find latest-mac.yml in the latest release artifacts (https://github.com/AgentWrapper/agent-orchestrator/releases/download/v0.10.1/latest-mac.yml):\nHttpError: 404 "method: GET url: https://github.com/AgentWrapper/agent-orchestrator/releases/download/v0.10.1/latest-mac.yml"',
+      'Cannot find latest-mac.yml in the latest release artifacts (https://github.com/ercs-second-brain/agent-orchestrator/releases/download/v0.10.1/latest-mac.yml):\nHttpError: 404 "method: GET url: https://github.com/ercs-second-brain/agent-orchestrator/releases/download/v0.10.1/latest-mac.yml"',
     );
     autoUpdater.checkForUpdates.mockImplementationOnce(() => {
       updaterEvents.get("update-downloaded")?.({ version: "2.1.0" });
@@ -1230,7 +1230,7 @@ describe("startAutoUpdates", () => {
   it("still surfaces non-manifest 404 errors", async () => {
     const { module, updaterEvents } = await importAutoUpdater();
     const err = new Error(
-      'HttpError: 404 "method: GET url: https://github.com/AgentWrapper/agent-orchestrator/releases/download/v0.10.1/some-file.png"',
+      'HttpError: 404 "method: GET url: https://github.com/ercs-second-brain/agent-orchestrator/releases/download/v0.10.1/some-file.png"',
     );
 
     await module.checkForUpdatesNow(stateDir);

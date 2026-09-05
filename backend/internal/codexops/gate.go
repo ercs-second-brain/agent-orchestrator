@@ -6,7 +6,7 @@ import (
 	"context"
 	"sync"
 
-	"github.com/aoagents/agent-orchestrator/backend/internal/ports"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/ports"
 )
 
 // Gate admits concurrent readers until an exclusive request publishes intent.

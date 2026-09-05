@@ -12,10 +12,10 @@ import (
 	"strings"
 	"time"
 
-	workerqwen "github.com/aoagents/agent-orchestrator/backend/internal/adapters/agent/qwen"
-	"github.com/aoagents/agent-orchestrator/backend/internal/domain"
-	"github.com/aoagents/agent-orchestrator/backend/internal/ports"
-	"github.com/aoagents/agent-orchestrator/backend/internal/reviewgateway"
+	workerqwen "github.com/ercs-second-brain/agent-orchestrator/backend/internal/adapters/agent/qwen"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/domain"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/ports"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/reviewgateway"
 )
 
 // HostTrustWarning describes the security boundary operators accept by using

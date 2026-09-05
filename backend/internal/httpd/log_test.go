@@ -10,10 +10,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/aoagents/agent-orchestrator/backend/internal/httpd/apierr"
-	"github.com/aoagents/agent-orchestrator/backend/internal/httpd/envelope"
-	"github.com/aoagents/agent-orchestrator/backend/internal/observe/ownership"
-	"github.com/aoagents/agent-orchestrator/backend/internal/ports"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/httpd/apierr"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/httpd/envelope"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/observe/ownership"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/ports"
 )
 
 // TestRequestLoggerRecords5xxCause: the wire envelope collapses unrecognized

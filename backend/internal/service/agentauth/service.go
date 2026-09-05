@@ -7,8 +7,8 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/aoagents/agent-orchestrator/backend/internal/httpd/apierr"
-	"github.com/aoagents/agent-orchestrator/backend/internal/service/shellterm"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/httpd/apierr"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/service/shellterm"
 )
 
 // ExecutableFinder resolves an executable on the host PATH.

@@ -10,11 +10,11 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/aoagents/agent-orchestrator/backend/internal/config"
-	"github.com/aoagents/agent-orchestrator/backend/internal/domain"
-	"github.com/aoagents/agent-orchestrator/backend/internal/httpd"
-	"github.com/aoagents/agent-orchestrator/backend/internal/ports"
-	usagesvc "github.com/aoagents/agent-orchestrator/backend/internal/service/usage"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/config"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/domain"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/httpd"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/ports"
+	usagesvc "github.com/ercs-second-brain/agent-orchestrator/backend/internal/service/usage"
 )
 
 type fakeActivityRecorder struct {

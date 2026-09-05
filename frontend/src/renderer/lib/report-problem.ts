@@ -35,7 +35,10 @@ const REDACTED_LOCAL_URL = "[redacted-local-url]";
 const REDACTED_SECRET = "[redacted-secret]";
 const DISCORD_INVITE_URL = "https://discord.com/invite/UZv7JjxbwG";
 const GITHUB_NEW_ISSUE_URL = GITHUB_ISSUES_NEW_URL;
-const SUPPORT_EMAIL = "prateek@untrivial.ai";
+// Placeholder support address: the previous owner's personal inbox was removed
+// per issue #26 (reports must not route off-repo). Wire a real support address
+// before relying on the email channel; .invalid is reserved and undeliverable.
+const SUPPORT_EMAIL = "support@ao.invalid";
 
 const LOCAL_URL_PATTERN =
 	/(?:\bfile:\/\/\/\S+|\bapp:\/\/renderer\/\S+|\bhttps?:\/\/(?:localhost|127\.0\.0\.1|\[::1\])(?::\d+)?\S*)/gi;

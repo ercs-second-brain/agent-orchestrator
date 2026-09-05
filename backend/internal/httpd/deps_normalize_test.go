@@ -7,8 +7,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aoagents/agent-orchestrator/backend/internal/mobilebridge"
-	"github.com/aoagents/agent-orchestrator/backend/internal/presence"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/mobilebridge"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/presence"
 )
 
 // TestNormalizeAPIDepsDefaultsDeviceLiveToPresence pins finding 2(a): a caller

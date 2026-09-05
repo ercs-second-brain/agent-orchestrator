@@ -6,16 +6,16 @@ import (
 	"sort"
 	"time"
 
-	"github.com/aoagents/agent-orchestrator/backend/internal/domain"
-	"github.com/aoagents/agent-orchestrator/backend/internal/ports"
-	agentsvc "github.com/aoagents/agent-orchestrator/backend/internal/service/agent"
-	"github.com/aoagents/agent-orchestrator/backend/internal/service/agentauth"
-	projectsvc "github.com/aoagents/agent-orchestrator/backend/internal/service/project"
-	sessionsvc "github.com/aoagents/agent-orchestrator/backend/internal/service/session"
-	"github.com/aoagents/agent-orchestrator/backend/internal/service/systemcheck"
-	"github.com/aoagents/agent-orchestrator/backend/internal/service/systeminstall"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/domain"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/ports"
+	agentsvc "github.com/ercs-second-brain/agent-orchestrator/backend/internal/service/agent"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/service/agentauth"
+	projectsvc "github.com/ercs-second-brain/agent-orchestrator/backend/internal/service/project"
+	sessionsvc "github.com/ercs-second-brain/agent-orchestrator/backend/internal/service/session"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/service/systemcheck"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/service/systeminstall"
 
-	"github.com/aoagents/agent-orchestrator/backend/internal/mobilebridge"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/mobilebridge"
 )
 
 // HTTP response envelopes for the projects surface — the SINGLE definition of

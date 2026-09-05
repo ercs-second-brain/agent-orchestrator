@@ -8,8 +8,8 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/aoagents/agent-orchestrator/backend/internal/httpd/envelope"
-	"github.com/aoagents/agent-orchestrator/backend/internal/mobilebridge"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/httpd/envelope"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/mobilebridge"
 )
 
 // authState holds the current password hash for the LAN listener. Swapped

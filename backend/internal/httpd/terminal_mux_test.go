@@ -13,10 +13,10 @@ import (
 	"github.com/coder/websocket"
 	"github.com/coder/websocket/wsjson"
 
-	"github.com/aoagents/agent-orchestrator/backend/internal/adapters/runtime/ptyexec"
-	"github.com/aoagents/agent-orchestrator/backend/internal/config"
-	"github.com/aoagents/agent-orchestrator/backend/internal/ports"
-	"github.com/aoagents/agent-orchestrator/backend/internal/terminal"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/adapters/runtime/ptyexec"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/config"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/ports"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/terminal"
 )
 
 // stubSource attaches a throwaway shell command instead of a real mux pane, so

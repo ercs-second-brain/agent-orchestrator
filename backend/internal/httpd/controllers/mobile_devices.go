@@ -9,8 +9,8 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
-	"github.com/aoagents/agent-orchestrator/backend/internal/httpd/envelope"
-	"github.com/aoagents/agent-orchestrator/backend/internal/mobilebridge"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/httpd/envelope"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/mobilebridge"
 )
 
 // DeviceRoster is the management view of the push-device registry, satisfied by

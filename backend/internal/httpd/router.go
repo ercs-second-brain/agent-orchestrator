@@ -15,14 +15,14 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 
-	"github.com/aoagents/agent-orchestrator/backend/internal/config"
-	"github.com/aoagents/agent-orchestrator/backend/internal/daemonmeta"
-	"github.com/aoagents/agent-orchestrator/backend/internal/httpd/controllers"
-	"github.com/aoagents/agent-orchestrator/backend/internal/httpd/envelope"
-	agentswitchobs "github.com/aoagents/agent-orchestrator/backend/internal/observe/agentswitch"
-	"github.com/aoagents/agent-orchestrator/backend/internal/ports"
-	"github.com/aoagents/agent-orchestrator/backend/internal/telemetrymeta"
-	"github.com/aoagents/agent-orchestrator/backend/internal/terminal"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/config"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/daemonmeta"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/httpd/controllers"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/httpd/envelope"
+	agentswitchobs "github.com/ercs-second-brain/agent-orchestrator/backend/internal/observe/agentswitch"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/ports"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/telemetrymeta"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/terminal"
 )
 
 // ControlDeps carries the daemon-control hooks the router exposes, such as the
