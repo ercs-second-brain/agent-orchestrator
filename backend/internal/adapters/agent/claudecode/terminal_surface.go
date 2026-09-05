@@ -4,8 +4,8 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"github.com/aoagents/agent-orchestrator/backend/internal/adapters/agent/terminalui"
-	"github.com/aoagents/agent-orchestrator/backend/internal/ports"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/adapters/agent/terminalui"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/ports"
 )
 
 const claudeTerminalSurfaceLookbackLines = 12

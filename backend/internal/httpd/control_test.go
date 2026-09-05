@@ -9,10 +9,10 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/aoagents/agent-orchestrator/backend/internal/config"
-	"github.com/aoagents/agent-orchestrator/backend/internal/domain"
-	agentswitchobs "github.com/aoagents/agent-orchestrator/backend/internal/observe/agentswitch"
-	"github.com/aoagents/agent-orchestrator/backend/internal/ports"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/config"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/domain"
+	agentswitchobs "github.com/ercs-second-brain/agent-orchestrator/backend/internal/observe/agentswitch"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/ports"
 )
 
 // TestShutdownGuard verifies that POST /shutdown only fires for a trusted local

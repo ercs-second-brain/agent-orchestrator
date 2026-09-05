@@ -12,7 +12,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/aoagents/agent-orchestrator/backend/internal/domain"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/domain"
 )
 
 func readNativeTranscriptTail(path, configDir string) (tail string, truncated, ok bool) {

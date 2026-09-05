@@ -10,11 +10,11 @@ import (
 	"runtime"
 	"testing"
 
-	trackergitlab "github.com/aoagents/agent-orchestrator/backend/internal/adapters/tracker/gitlab"
-	trackermulti "github.com/aoagents/agent-orchestrator/backend/internal/adapters/tracker/multi"
-	"github.com/aoagents/agent-orchestrator/backend/internal/config"
-	"github.com/aoagents/agent-orchestrator/backend/internal/domain"
-	"github.com/aoagents/agent-orchestrator/backend/internal/ports"
+	trackergitlab "github.com/ercs-second-brain/agent-orchestrator/backend/internal/adapters/tracker/gitlab"
+	trackermulti "github.com/ercs-second-brain/agent-orchestrator/backend/internal/adapters/tracker/multi"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/config"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/domain"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/ports"
 )
 
 // TestNewGitLabTracker_PassesAllowedHosts verifies that AllowedHosts from

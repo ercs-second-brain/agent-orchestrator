@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/aoagents/agent-orchestrator/backend/internal/httpd/apierr"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/httpd/apierr"
 )
 
 func TestValidateProjectImportReadyRepositoryContinues(t *testing.T) {

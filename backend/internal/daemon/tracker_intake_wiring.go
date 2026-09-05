@@ -4,10 +4,10 @@ import (
 	"context"
 	"log/slog"
 
-	trackerintake "github.com/aoagents/agent-orchestrator/backend/internal/observe/trackerintake"
-	"github.com/aoagents/agent-orchestrator/backend/internal/ports"
-	sessionsvc "github.com/aoagents/agent-orchestrator/backend/internal/service/session"
-	"github.com/aoagents/agent-orchestrator/backend/internal/storage/sqlite"
+	trackerintake "github.com/ercs-second-brain/agent-orchestrator/backend/internal/observe/trackerintake"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/ports"
+	sessionsvc "github.com/ercs-second-brain/agent-orchestrator/backend/internal/service/session"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/storage/sqlite"
 )
 
 // startTrackerIntake wires the opt-in issue-intake loop. The observer always

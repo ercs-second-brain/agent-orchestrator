@@ -10,8 +10,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/aoagents/agent-orchestrator/backend/internal/adapters"
-	"github.com/aoagents/agent-orchestrator/backend/internal/ports"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/adapters"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/ports"
 )
 
 func TestManifest(t *testing.T) {

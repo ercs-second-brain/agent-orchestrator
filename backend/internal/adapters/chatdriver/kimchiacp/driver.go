@@ -7,10 +7,10 @@ import (
 	"log/slog"
 	"strings"
 
-	acpdriver "github.com/aoagents/agent-orchestrator/backend/internal/adapters/chatdriver/acp"
-	"github.com/aoagents/agent-orchestrator/backend/internal/adapters/chatdriver/nativeacp"
-	"github.com/aoagents/agent-orchestrator/backend/internal/domain"
-	"github.com/aoagents/agent-orchestrator/backend/internal/ports"
+	acpdriver "github.com/ercs-second-brain/agent-orchestrator/backend/internal/adapters/chatdriver/acp"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/adapters/chatdriver/nativeacp"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/domain"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/ports"
 )
 
 // New launches `kimchi --mode acp` from the exact binary resolved by the

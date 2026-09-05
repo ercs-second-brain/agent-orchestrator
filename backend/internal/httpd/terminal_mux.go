@@ -9,7 +9,7 @@ import (
 	"github.com/coder/websocket/wsjson"
 	"github.com/go-chi/chi/v5"
 
-	"github.com/aoagents/agent-orchestrator/backend/internal/terminal"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/terminal"
 )
 
 // terminalMuxReadLimit caps a single inbound frame. Client→server frames are small

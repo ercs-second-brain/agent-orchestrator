@@ -11,9 +11,9 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/aoagents/agent-orchestrator/backend/internal/ports"
-	agentsvc "github.com/aoagents/agent-orchestrator/backend/internal/service/agent"
-	"github.com/aoagents/agent-orchestrator/backend/internal/tmuxbin"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/ports"
+	agentsvc "github.com/ercs-second-brain/agent-orchestrator/backend/internal/service/agent"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/tmuxbin"
 )
 
 // Requirement is one named startup gate check.

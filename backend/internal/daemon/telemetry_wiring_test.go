@@ -4,9 +4,9 @@ import (
 	"log/slog"
 	"testing"
 
-	telemetryadapter "github.com/aoagents/agent-orchestrator/backend/internal/adapters/telemetry"
-	"github.com/aoagents/agent-orchestrator/backend/internal/config"
-	"github.com/aoagents/agent-orchestrator/backend/internal/storage/sqlite/sqlitetest"
+	telemetryadapter "github.com/ercs-second-brain/agent-orchestrator/backend/internal/adapters/telemetry"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/config"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/storage/sqlite/sqlitetest"
 )
 
 func TestNewTelemetrySink_DefaultsToNoopWhenDisabled(t *testing.T) {

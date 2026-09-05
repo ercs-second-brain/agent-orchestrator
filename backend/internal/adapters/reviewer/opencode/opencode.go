@@ -9,10 +9,10 @@ import (
 	"strings"
 	"time"
 
-	workeragent "github.com/aoagents/agent-orchestrator/backend/internal/adapters/agent/opencode"
-	"github.com/aoagents/agent-orchestrator/backend/internal/adapters/reviewer/agentrestore"
-	"github.com/aoagents/agent-orchestrator/backend/internal/domain"
-	"github.com/aoagents/agent-orchestrator/backend/internal/ports"
+	workeragent "github.com/ercs-second-brain/agent-orchestrator/backend/internal/adapters/agent/opencode"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/adapters/reviewer/agentrestore"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/domain"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/ports"
 )
 
 // Reviewer is the opencode code-review adapter.

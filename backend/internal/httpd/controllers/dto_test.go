@@ -6,9 +6,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aoagents/agent-orchestrator/backend/internal/domain"
-	"github.com/aoagents/agent-orchestrator/backend/internal/httpd/controllers"
-	sessionsvc "github.com/aoagents/agent-orchestrator/backend/internal/service/session"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/domain"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/httpd/controllers"
+	sessionsvc "github.com/ercs-second-brain/agent-orchestrator/backend/internal/service/session"
 )
 
 func TestNewSessionPRSummaryMapsProviderReviewEntries(t *testing.T) {

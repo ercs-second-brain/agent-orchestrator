@@ -20,17 +20,17 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aoagents/agent-orchestrator/backend/internal/attachmentstore"
-	"github.com/aoagents/agent-orchestrator/backend/internal/config"
-	"github.com/aoagents/agent-orchestrator/backend/internal/domain"
-	"github.com/aoagents/agent-orchestrator/backend/internal/httpd"
-	"github.com/aoagents/agent-orchestrator/backend/internal/httpd/apierr"
-	"github.com/aoagents/agent-orchestrator/backend/internal/httpd/controllers"
-	"github.com/aoagents/agent-orchestrator/backend/internal/ports"
-	previewutil "github.com/aoagents/agent-orchestrator/backend/internal/preview"
-	"github.com/aoagents/agent-orchestrator/backend/internal/previewserver"
-	sessionsvc "github.com/aoagents/agent-orchestrator/backend/internal/service/session"
-	"github.com/aoagents/agent-orchestrator/backend/pkg/contract"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/attachmentstore"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/config"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/domain"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/httpd"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/httpd/apierr"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/httpd/controllers"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/ports"
+	previewutil "github.com/ercs-second-brain/agent-orchestrator/backend/internal/preview"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/previewserver"
+	sessionsvc "github.com/ercs-second-brain/agent-orchestrator/backend/internal/service/session"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/pkg/contract"
 )
 
 type fakeSessionService struct {

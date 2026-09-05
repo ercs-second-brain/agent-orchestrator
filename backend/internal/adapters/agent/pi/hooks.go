@@ -12,9 +12,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/aoagents/agent-orchestrator/backend/internal/adapters/agent/hookutil"
-	"github.com/aoagents/agent-orchestrator/backend/internal/agentlaunch"
-	"github.com/aoagents/agent-orchestrator/backend/internal/ports"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/adapters/agent/hookutil"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/agentlaunch"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/ports"
 )
 
 const (

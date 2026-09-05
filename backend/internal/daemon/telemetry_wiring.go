@@ -7,11 +7,11 @@ import (
 	"log/slog"
 	"time"
 
-	telemetryadapter "github.com/aoagents/agent-orchestrator/backend/internal/adapters/telemetry"
-	"github.com/aoagents/agent-orchestrator/backend/internal/config"
-	agentswitchobs "github.com/aoagents/agent-orchestrator/backend/internal/observe/agentswitch"
-	"github.com/aoagents/agent-orchestrator/backend/internal/ports"
-	"github.com/aoagents/agent-orchestrator/backend/internal/storage/sqlite"
+	telemetryadapter "github.com/ercs-second-brain/agent-orchestrator/backend/internal/adapters/telemetry"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/config"
+	agentswitchobs "github.com/ercs-second-brain/agent-orchestrator/backend/internal/observe/agentswitch"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/ports"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/storage/sqlite"
 )
 
 func newAgentSwitchFailureDispatcher(

@@ -4,9 +4,9 @@ import (
 	"context"
 	"testing"
 
-	workspacerouter "github.com/aoagents/agent-orchestrator/backend/internal/adapters/workspace/router"
-	"github.com/aoagents/agent-orchestrator/backend/internal/domain"
-	"github.com/aoagents/agent-orchestrator/backend/internal/ports"
+	workspacerouter "github.com/ercs-second-brain/agent-orchestrator/backend/internal/adapters/workspace/router"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/domain"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/ports"
 )
 
 type projectStore struct {

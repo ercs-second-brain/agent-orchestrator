@@ -5,12 +5,12 @@ import (
 	"log/slog"
 	"os"
 
-	"github.com/aoagents/agent-orchestrator/backend/internal/config"
-	"github.com/aoagents/agent-orchestrator/backend/internal/domain"
-	projectsvc "github.com/aoagents/agent-orchestrator/backend/internal/service/project"
-	sessionsvc "github.com/aoagents/agent-orchestrator/backend/internal/service/session"
-	shelltermsvc "github.com/aoagents/agent-orchestrator/backend/internal/service/shellterm"
-	"github.com/aoagents/agent-orchestrator/backend/internal/storage/sqlite"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/config"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/domain"
+	projectsvc "github.com/ercs-second-brain/agent-orchestrator/backend/internal/service/project"
+	sessionsvc "github.com/ercs-second-brain/agent-orchestrator/backend/internal/service/session"
+	shelltermsvc "github.com/ercs-second-brain/agent-orchestrator/backend/internal/service/shellterm"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/storage/sqlite"
 )
 
 // startShellTerminals builds the standalone shell terminal service and sweeps

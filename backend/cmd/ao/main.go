@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/aoagents/agent-orchestrator/backend/internal/cli"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/cli"
 )
 
 func main() {

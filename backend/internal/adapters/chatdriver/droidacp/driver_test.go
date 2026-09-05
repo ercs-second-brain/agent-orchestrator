@@ -8,8 +8,8 @@ import (
 	"reflect"
 	"testing"
 
-	acpdriver "github.com/aoagents/agent-orchestrator/backend/internal/adapters/chatdriver/acp"
-	"github.com/aoagents/agent-orchestrator/backend/internal/ports"
+	acpdriver "github.com/ercs-second-brain/agent-orchestrator/backend/internal/adapters/chatdriver/acp"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/ports"
 )
 
 func TestConfigureUsesUserDroidACPDaemonAndStandingInstructions(t *testing.T) {

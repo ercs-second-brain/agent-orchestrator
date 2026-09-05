@@ -31,11 +31,11 @@ import (
 	"sync"
 	"unicode/utf8"
 
-	"github.com/aoagents/agent-orchestrator/backend/internal/adapters"
-	"github.com/aoagents/agent-orchestrator/backend/internal/adapters/agent/agentbase"
-	"github.com/aoagents/agent-orchestrator/backend/internal/adapters/agent/binaryutil"
-	"github.com/aoagents/agent-orchestrator/backend/internal/adapters/agent/hookutil"
-	"github.com/aoagents/agent-orchestrator/backend/internal/ports"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/adapters"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/adapters/agent/agentbase"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/adapters/agent/binaryutil"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/adapters/agent/hookutil"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/ports"
 )
 
 const adapterID = "vibe"

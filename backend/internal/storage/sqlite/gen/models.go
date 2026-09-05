@@ -8,8 +8,8 @@ import (
 	"database/sql"
 	"time"
 
-	"github.com/aoagents/agent-orchestrator/backend/internal/cdc"
-	"github.com/aoagents/agent-orchestrator/backend/internal/domain"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/cdc"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/domain"
 )
 
 type AgentInstallJob struct {

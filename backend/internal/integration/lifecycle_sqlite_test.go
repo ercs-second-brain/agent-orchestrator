@@ -5,15 +5,15 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aoagents/agent-orchestrator/backend/internal/cdc"
-	"github.com/aoagents/agent-orchestrator/backend/internal/domain"
-	"github.com/aoagents/agent-orchestrator/backend/internal/lifecycle"
-	"github.com/aoagents/agent-orchestrator/backend/internal/ports"
-	prsvc "github.com/aoagents/agent-orchestrator/backend/internal/service/pr"
-	sessionsvc "github.com/aoagents/agent-orchestrator/backend/internal/service/session"
-	sessionmanager "github.com/aoagents/agent-orchestrator/backend/internal/session_manager"
-	"github.com/aoagents/agent-orchestrator/backend/internal/storage/sqlite"
-	"github.com/aoagents/agent-orchestrator/backend/internal/storage/sqlite/sqlitetest"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/cdc"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/domain"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/lifecycle"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/ports"
+	prsvc "github.com/ercs-second-brain/agent-orchestrator/backend/internal/service/pr"
+	sessionsvc "github.com/ercs-second-brain/agent-orchestrator/backend/internal/service/session"
+	sessionmanager "github.com/ercs-second-brain/agent-orchestrator/backend/internal/session_manager"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/storage/sqlite"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/storage/sqlite/sqlitetest"
 )
 
 type stubRuntime struct {

@@ -5,13 +5,13 @@ import (
 	"errors"
 	"log/slog"
 
-	scmgithub "github.com/aoagents/agent-orchestrator/backend/internal/adapters/scm/github"
-	scmgitlab "github.com/aoagents/agent-orchestrator/backend/internal/adapters/scm/gitlab"
-	scmmulti "github.com/aoagents/agent-orchestrator/backend/internal/adapters/scm/multi"
-	"github.com/aoagents/agent-orchestrator/backend/internal/config"
-	"github.com/aoagents/agent-orchestrator/backend/internal/lifecycle"
-	scmobserve "github.com/aoagents/agent-orchestrator/backend/internal/observe/scm"
-	"github.com/aoagents/agent-orchestrator/backend/internal/storage/sqlite"
+	scmgithub "github.com/ercs-second-brain/agent-orchestrator/backend/internal/adapters/scm/github"
+	scmgitlab "github.com/ercs-second-brain/agent-orchestrator/backend/internal/adapters/scm/gitlab"
+	scmmulti "github.com/ercs-second-brain/agent-orchestrator/backend/internal/adapters/scm/multi"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/config"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/lifecycle"
+	scmobserve "github.com/ercs-second-brain/agent-orchestrator/backend/internal/observe/scm"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/storage/sqlite"
 )
 
 // startSCMObserver wires the provider-neutral SCM observer with both GitHub

@@ -17,15 +17,15 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/aoagents/agent-orchestrator/backend/internal/adapters/agent/modelcatalog"
-	"github.com/aoagents/agent-orchestrator/backend/internal/agentlaunch"
-	"github.com/aoagents/agent-orchestrator/backend/internal/attachmentstore"
-	"github.com/aoagents/agent-orchestrator/backend/internal/domain"
-	"github.com/aoagents/agent-orchestrator/backend/internal/ports"
-	aoprocess "github.com/aoagents/agent-orchestrator/backend/internal/process"
-	"github.com/aoagents/agent-orchestrator/backend/internal/sessionguard"
-	"github.com/aoagents/agent-orchestrator/backend/internal/skillassets"
-	"github.com/aoagents/agent-orchestrator/backend/internal/tmuxbin"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/adapters/agent/modelcatalog"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/agentlaunch"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/attachmentstore"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/domain"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/ports"
+	aoprocess "github.com/ercs-second-brain/agent-orchestrator/backend/internal/process"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/sessionguard"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/skillassets"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/tmuxbin"
 )
 
 // Sentinel errors returned by the Session Manager; callers match them with

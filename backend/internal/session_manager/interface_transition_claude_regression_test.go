@@ -8,8 +8,8 @@ import (
 	"testing"
 	"time"
 
-	claudeagent "github.com/aoagents/agent-orchestrator/backend/internal/adapters/agent/claudecode"
-	"github.com/aoagents/agent-orchestrator/backend/internal/domain"
+	claudeagent "github.com/ercs-second-brain/agent-orchestrator/backend/internal/adapters/agent/claudecode"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/domain"
 )
 
 func TestInterfaceTransitionClaudeStaleIdleEmptyComposerCompletes(t *testing.T) {

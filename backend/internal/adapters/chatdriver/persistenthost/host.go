@@ -23,7 +23,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/aoagents/agent-orchestrator/backend/internal/processalive"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/processalive"
 )
 
 const (

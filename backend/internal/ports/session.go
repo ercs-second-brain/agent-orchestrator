@@ -3,7 +3,7 @@ package ports
 import (
 	"errors"
 
-	"github.com/aoagents/agent-orchestrator/backend/internal/domain"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/domain"
 )
 
 // ErrSessionNotFound reports an observation for an unknown session id.

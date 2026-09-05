@@ -3,7 +3,7 @@ package domain
 import (
 	"time"
 
-	"github.com/aoagents/agent-orchestrator/backend/pkg/contract"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/pkg/contract"
 )
 
 // ---- PR read model ----

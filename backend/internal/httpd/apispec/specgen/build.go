@@ -15,10 +15,10 @@ import (
 	openapi "github.com/swaggest/openapi-go"
 	"github.com/swaggest/openapi-go/openapi31"
 
-	"github.com/aoagents/agent-orchestrator/backend/internal/httpd/controllers"
-	"github.com/aoagents/agent-orchestrator/backend/internal/httpd/envelope"
-	importsvc "github.com/aoagents/agent-orchestrator/backend/internal/service/importer"
-	projectsvc "github.com/aoagents/agent-orchestrator/backend/internal/service/project"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/httpd/controllers"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/httpd/envelope"
+	importsvc "github.com/ercs-second-brain/agent-orchestrator/backend/internal/service/importer"
+	projectsvc "github.com/ercs-second-brain/agent-orchestrator/backend/internal/service/project"
 )
 
 // Build reflects the Go contract types and the operation registry below into

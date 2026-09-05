@@ -10,7 +10,7 @@ import (
 
 	_ "modernc.org/sqlite" // register sqlite driver for OMP auth database probes
 
-	"github.com/aoagents/agent-orchestrator/backend/internal/ports"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/ports"
 )
 
 var _ ports.AgentAuthChecker = (*Plugin)(nil)

@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/aoagents/agent-orchestrator/backend/internal/ports"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/ports"
 )
 
 func validMergeRequest() ports.SCMMergeRequest {

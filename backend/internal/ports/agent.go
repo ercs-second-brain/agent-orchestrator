@@ -5,7 +5,7 @@ import (
 	"errors"
 	"time"
 
-	"github.com/aoagents/agent-orchestrator/backend/internal/domain"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/domain"
 )
 
 // ErrAgentBinaryNotFound is returned by agent adapters when neither PATH nor

@@ -8,7 +8,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
-	"github.com/aoagents/agent-orchestrator/backend/internal/config"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/config"
 )
 
 func TestCLIInvokedRouteEmitsTelemetryForUserCommands(t *testing.T) {

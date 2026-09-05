@@ -7,9 +7,9 @@ import (
 	"os"
 	"strings"
 
-	workercline "github.com/aoagents/agent-orchestrator/backend/internal/adapters/agent/cline"
-	"github.com/aoagents/agent-orchestrator/backend/internal/domain"
-	"github.com/aoagents/agent-orchestrator/backend/internal/ports"
+	workercline "github.com/ercs-second-brain/agent-orchestrator/backend/internal/adapters/agent/cline"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/domain"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/ports"
 )
 
 // HostTrustWarning documents that Cline retains its normal approval flow. AO
