@@ -3,7 +3,6 @@ package controllers
 import (
 	"encoding/json"
 	"errors"
-	"sort"
 	"time"
 
 	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/domain"
@@ -2281,22 +2280,6 @@ type UpdateSessionInterfaceRequest struct {
 // capability the driver reports as false is one it cannot do, which is the same
 // answer as not naming it, and listing both states would invite a client to read
 // presence rather than value.
-func capabilityNames(caps ports.ChatCapabilities) []string {
-	if len(caps) == 0 {
-		return nil
-	}
-	names := make([]string, 0, len(caps))
-	for name, has := range caps {
-		if has {
-			names = append(names, string(name))
-		}
-	}
-	if len(names) == 0 {
-		return nil
-	}
-	sort.Strings(names)
-	return names
-}
 
 // TriggerReviewRequest is the optional body of the review trigger route. An
 // empty harness keeps the project's configured reviewer; setting one overrides

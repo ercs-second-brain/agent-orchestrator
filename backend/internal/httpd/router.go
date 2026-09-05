@@ -68,7 +68,6 @@ func NewRouterWithControl(cfg config.Config, log *slog.Logger, termMgr *terminal
 	// rejected before the general CORS layer can answer them.
 	r.Use(codexAccountOriginMiddleware(cfg.AllowedOrigins))
 	r.Use(corsMiddleware(cfg.AllowedOrigins))
-	r.Use(previewOriginMiddleware(api.sessions))
 
 	// JSON envelopes for unmatched routes / methods — chi's defaults are
 	// text/plain, which would break consumers that parse every response as
@@ -144,17 +143,6 @@ func mountAgentSwitchPolicyControl(r chi.Router, policy AgentSwitchPolicyControl
 		}
 		writeAck(w, acknowledgement)
 	})
-}
-
-func previewOriginMiddleware(sessions *controllers.SessionsController) func(http.Handler) http.Handler {
-	return func(next http.Handler) http.Handler {
-		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			if sessions != nil && sessions.PreviewOrigin(w, r) {
-				return
-			}
-			next.ServeHTTP(w, r)
-		})
-	}
 }
 
 // mountHealth registers the liveness and readiness probes the Electron

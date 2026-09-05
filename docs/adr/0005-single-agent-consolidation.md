@@ -200,6 +200,10 @@ them to an in-repo fork:
   a direct event channel to the daemon.
 - **Chat via native RPC.** Replacing the third-party `pi-acp` wrapper with
   pi's native `--mode rpc` behind the persistent host (ADR 0003).
+  **SUPERSEDED by #39 (2026-09): the chat concept itself was removed** — no
+  chat driver of any kind survives, so there is no pi rpc chat driver to
+  build. #39 also went further than the deletion wave below: the embedded
+  browser runtime and preview server were removed with the chat stack.
 
 These are candidates for a future ADR if and when the need outweighs the fork
 cost. Nothing in this ADR's milestones depends on them.

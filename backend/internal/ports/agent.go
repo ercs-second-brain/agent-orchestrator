@@ -221,6 +221,11 @@ type AgentModelDiscoverer interface {
 	Manual(agentID string) AgentModelCatalog
 }
 
+// ErrChatUnsupported means the requested chat mode cannot be honored. Chat
+// mode was removed; sessions run through the terminal only. It survives as the
+// stable error code behind the spawn refusal.
+var ErrChatUnsupported = errors.New("chat mode unsupported for harness")
+
 // AgentExitDetectionMode describes how AO learns that an agent CLI process
 // ended while its terminal runtime remains alive.
 type AgentExitDetectionMode string

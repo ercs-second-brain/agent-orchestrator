@@ -37,19 +37,11 @@ type APIDeps struct {
 	Push               controllers.PushRegistry
 	Import             controllers.ImportService
 	ShellTerminals     controllers.ShellTerminalService
-	// Conversations is nil until a Chat driver is wired; the controller then
-	// answers 501 rather than panicking, matching the other optional surfaces.
-	Conversations controllers.ConversationService
-	// Settings is the daemon-owned preference surface.
-	Settings            controllers.SettingsService
-	CDC                 cdc.Source
-	Events              cdcSubscriber
-	Telemetry           ports.EventSink
-	Mobile              *controllers.MobileController
-	Browser             controllers.BrowserService
-	PreviewServer       controllers.ManagedPreviewServer
-	SessionCapabilities controllers.SessionCapabilityValidator
-	SystemChecks        controllers.SystemChecker
+	CDC                cdc.Source
+	Events             cdcSubscriber
+	Telemetry          ports.EventSink
+	Mobile             *controllers.MobileController
+	SystemChecks       controllers.SystemChecker
 	// HostID is this machine's stable, machine-bound identity, served by the
 	// unauthenticated GET /api/v1/identity probe so a phone can confirm which
 	// machine answered before presenting a credential.
@@ -114,9 +106,6 @@ type API struct {
 	push          *controllers.PushController
 	imports       *controllers.ImportController
 	shellTerms    *controllers.ShellTerminalsController
-	conversations *controllers.ConversationsController
-	settings      *controllers.SettingsController
-	browser       *controllers.BrowserController
 	system        *controllers.SystemController
 	identity      *controllers.IdentityController
 	endpoints     *controllers.EndpointsController
@@ -140,12 +129,10 @@ func NewAPI(cfg config.Config, deps APIDeps) *API {
 			Mgr: deps.Projects,
 		},
 		sessions: &controllers.SessionsController{
-			Svc:           deps.Sessions,
-			Activity:      deps.Activity,
-			Usage:         deps.UsageHooks,
-			Attachments:   attachmentstore.New(cfg.DataDir),
-			PreviewServer: deps.PreviewServer,
-			Capabilities:  deps.SessionCapabilities,
+			Svc:         deps.Sessions,
+			Activity:    deps.Activity,
+			Usage:       deps.UsageHooks,
+			Attachments: attachmentstore.New(cfg.DataDir),
 		},
 		desktop:       &controllers.DesktopWorkspaceController{Svc: deps.DesktopWorkspaces},
 		usage:         &controllers.UsageController{Svc: deps.UsageSummary},
@@ -155,9 +142,6 @@ func NewAPI(cfg config.Config, deps APIDeps) *API {
 		push:          &controllers.PushController{Registry: deps.Push},
 		imports:       &controllers.ImportController{Svc: deps.Import},
 		shellTerms:    &controllers.ShellTerminalsController{Svc: deps.ShellTerminals},
-		conversations: &controllers.ConversationsController{Svc: deps.Conversations},
-		settings:      &controllers.SettingsController{Svc: deps.Settings},
-		browser:       &controllers.BrowserController{Svc: deps.Browser},
 		system:        &controllers.SystemController{Checks: deps.SystemChecks},
 		identity:      &controllers.IdentityController{HostID: deps.HostID},
 		endpoints:     &controllers.EndpointsController{Source: deps.Endpoints},
@@ -193,9 +177,6 @@ func (a *API) Register(root chi.Router) {
 			a.push.Register(r)
 			a.imports.Register(r)
 			a.shellTerms.Register(r)
-			a.conversations.Register(r)
-			a.settings.Register(r)
-			a.browser.Register(r)
 			a.system.Register(r)
 			a.identity.Register(r)
 			a.endpoints.Register(r)

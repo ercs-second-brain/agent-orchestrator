@@ -229,21 +229,12 @@ func (m *Manager) StartCodexAccountSwitch(ctx context.Context, cfg ports.CodexAc
 			cleanupAdmission()
 		}
 	}()
-	abortChatIntake, err := m.armCodexSwitchChatInterrupt(ctx, preliminary)
-	if err != nil {
-		return domain.CodexAccountSwitch{}, err
-	}
-	previousCleanup := cleanupAdmission
-	cleanupAdmission = func() { abortChatIntake(); previousCleanup() }
 	releaseTerminalInput, err := m.freezeCodexSwitchTerminalInput(ctx, preliminary)
 	if err != nil {
 		return domain.CodexAccountSwitch{}, err
 	}
-	previousCleanup = cleanupAdmission
+	previousCleanup := cleanupAdmission
 	cleanupAdmission = func() { releaseTerminalInput(); previousCleanup() }
-	if err := m.prepareCodexSwitchChatInterrupt(ctx, preliminary); err != nil {
-		return domain.CodexAccountSwitch{}, err
-	}
 	sw.Sessions, err = m.buildCodexAccountSwitchSnapshot(ctx)
 	if err != nil {
 		return domain.CodexAccountSwitch{}, err
@@ -264,7 +255,6 @@ func (m *Manager) StartCodexAccountSwitch(ctx context.Context, cfg ports.CodexAc
 		defer m.agentSwitchWorkers.Done()
 		m.runCodexAccountSwitchWithAdmission(m.backgroundContext, credentials, store, sw, &codexSwitchAdmission{
 			releaseOperations: releaseOperations,
-			abortChatIntake:   abortChatIntake,
 			releaseInput:      releaseTerminalInput,
 		})
 	}()
@@ -308,11 +298,7 @@ func (m *Manager) buildCodexAccountSwitchSnapshot(ctx context.Context) ([]domain
 		nativeID := ""
 		generation := strings.TrimSpace(rec.Metadata.RuntimeLaunchID)
 		wasRunning := false
-		if rec.Harness == domain.HarnessCodex && mode == domain.SessionModeChat {
-			nativeID = strings.TrimSpace(rec.Metadata.ProviderConversationID)
-			generation = strings.TrimSpace(rec.Metadata.ControllerGeneration)
-			wasRunning = m.chat != nil && m.chat.HasLiveChatController(rec.ID)
-		} else if rec.Harness == domain.HarnessCodex {
+		if rec.Harness == domain.HarnessCodex {
 			nativeID = strings.TrimSpace(rec.Metadata.AgentSessionID)
 			if strings.TrimSpace(rec.Metadata.RuntimeHandleID) != "" {
 				wasRunning, err = m.codexTUIWorkloadRunning(ctx, rec)
@@ -353,7 +339,6 @@ func (m *Manager) buildCodexAccountSwitchSnapshot(ctx context.Context) ([]domain
 
 type codexSwitchAdmission struct {
 	releaseOperations func()
-	abortChatIntake   func()
 	releaseInput      func()
 }
 
@@ -426,32 +411,6 @@ func validateCodexSwitchWorkerIdentity(rec domain.SessionRecord, item domain.Cod
 	return nil
 }
 
-func (m *Manager) ensureCodexSwitchChatController(ctx context.Context, rec domain.SessionRecord, item domain.CodexAccountSwitchSession, generation string) (domain.SessionRecord, error) {
-	if m.chat == nil {
-		return rec, errors.New("codex Chat lifecycle is unavailable")
-	}
-	if m.chat.HasLiveChatController(rec.ID) {
-		if rec.ID != item.SessionID ||
-			strings.TrimSpace(rec.Metadata.ProviderConversationID) != item.NativeSessionID ||
-			strings.TrimSpace(rec.Metadata.ControllerGeneration) != strings.TrimSpace(generation) {
-			return rec, errors.New("codex Chat recovery found a different controller identity")
-		}
-		return rec, nil
-	}
-	result, err := m.resumeAgentRecordWithReservedGeneration(
-		ctx, "Codex account switch recovery", rec, false, true, generation,
-	)
-	if err != nil {
-		return rec, err
-	}
-	if result.Session.ID != item.SessionID ||
-		strings.TrimSpace(result.Session.Metadata.ProviderConversationID) != item.NativeSessionID ||
-		strings.TrimSpace(result.Session.Metadata.ControllerGeneration) != strings.TrimSpace(generation) {
-		return rec, errors.New("codex Chat recovery attached a different controller identity")
-	}
-	return result.Session, nil
-}
-
 func (m *Manager) runCodexAccountSwitchWithAdmission(ctx context.Context, credentials ports.CodexAccountCredentialManager, store ports.CodexAccountSwitchStore, sw domain.CodexAccountSwitch, admission *codexSwitchAdmission) {
 	ctx = codexExclusiveOperationContext(ctx)
 	defer func() { m.finishCodexAccountSwitchMutation(credentials, retainCodexAccountSwitchFence(sw.Phase)) }()
@@ -478,40 +437,19 @@ func (m *Manager) runCodexAccountSwitchWithAdmission(ctx context.Context, creden
 			releaseOperations()
 		}
 	}()
-	if admission.abortChatIntake == nil {
-		admission.abortChatIntake = func() {}
+	if admission.releaseInput == nil {
 		admission.releaseInput = func() {}
 		if sw.Phase == domain.CodexAccountSwitchRequested || sw.Phase == domain.CodexAccountSwitchStoppingSessions {
-			admission.abortChatIntake, err = m.armCodexSwitchChatInterrupt(ctx, sessions)
+			releaseTerminalInput, err := m.freezeCodexSwitchTerminalInput(ctx, sessions)
 			if err != nil {
 				m.failCodexAccountSwitchAndLog(ctx, store, &sw, "stop_unconfirmed")
 				return
 			}
-			admission.releaseInput, err = m.freezeCodexSwitchTerminalInput(ctx, sessions)
-			if err != nil {
-				admission.abortChatIntake()
-				m.failCodexAccountSwitchAndLog(ctx, store, &sw, "stop_unconfirmed")
-				return
-			}
-			if err := m.prepareCodexSwitchChatInterrupt(ctx, sessions); err != nil {
-				admission.releaseInput()
-				admission.abortChatIntake()
-				m.failCodexAccountSwitchAndLog(ctx, store, &sw, "stop_unconfirmed")
-				return
-			}
+			admission.releaseInput = releaseTerminalInput
 		}
 	}
-	abortChatIntake := admission.abortChatIntake
-	chatStopped := false
-	defer func() {
-		if !chatStopped {
-			abortChatIntake()
-		}
-	}()
-	releaseTerminalInput := admission.releaseInput
-	defer releaseTerminalInput()
+	defer admission.releaseInput()
 	m.dispatchCodexAccountSwitch(ctx, credentials, store, &sw, sessions)
-	chatStopped = sw.Phase != domain.CodexAccountSwitchRequested && sw.Phase != domain.CodexAccountSwitchStoppingSessions
 }
 
 func (m *Manager) dispatchCodexAccountSwitch(ctx context.Context, credentials ports.CodexAccountCredentialManager, store ports.CodexAccountSwitchStore, sw *domain.CodexAccountSwitch, sessions []domain.CodexAccountSwitchSession) {
@@ -734,13 +672,6 @@ func (m *Manager) stopCodexSwitchSessions(ctx context.Context, store ports.Codex
 				return errors.Join(errors.New("codex source generation changed before shutdown"), m.persistCodexSwitchSession(ctx, store, switchID, *item, previousStop, item.RestartState))
 			}
 			alreadyStopped := rec.Activity.State == domain.ActivityExited
-			if item.InterfaceMode == domain.SessionModeChat && !alreadyStopped && (m.chat == nil || !m.chat.HasLiveChatController(rec.ID)) {
-				rec, readErr = m.ensureCodexSwitchChatController(ctx, rec, *item, item.SourceGeneration)
-				if readErr != nil {
-					item.StopState, item.ErrorCode = "failed", "stop_unconfirmed"
-					return errors.Join(readErr, m.persistCodexSwitchSession(ctx, store, switchID, *item, previousStop, item.RestartState))
-				}
-			}
 			stopErr := error(nil)
 			if !alreadyStopped {
 				stopErr = m.stopAgentController(ctx, rec)
@@ -818,17 +749,6 @@ func (m *Manager) restartCodexSwitchSessions(ctx context.Context, store ports.Co
 	reviewers := m.codexReviewerLifecycle()
 	for i := range sessions {
 		item := &sessions[i]
-		if item.WasRunning && item.StopState == "stopped" && item.RestartState == "restarted" && item.InterfaceMode == domain.SessionModeChat {
-			rec, ok, readErr := m.store.GetSession(ctx, item.SessionID)
-			if readErr != nil || !ok {
-				errs = append(errs, fmt.Errorf("reattach restarted Chat session %s: %w", item.SessionID, errors.Join(errors.New("session missing"), readErr)))
-				continue
-			}
-			if _, attachErr := m.ensureCodexSwitchChatController(ctx, rec, *item, rec.Metadata.ControllerGeneration); attachErr != nil {
-				errs = append(errs, fmt.Errorf("reattach restarted Chat session %s: %w", item.SessionID, attachErr))
-				continue
-			}
-		}
 		if item.WasRunning && item.StopState == "stopped" && item.RestartState != "restarted" && item.RestartState != "skipped" {
 			previousRestart := item.RestartState
 			generation := codexSwitchReservedGeneration(*item)
@@ -855,12 +775,7 @@ func (m *Manager) restartCodexSwitchSessions(ctx context.Context, store ports.Co
 			}
 			adopted := false
 			if codexSwitchTargetOwner(rec, *item, generation) {
-				if item.InterfaceMode == domain.SessionModeChat {
-					rec, readErr = m.ensureCodexSwitchChatController(ctx, rec, *item, generation)
-					adopted = readErr == nil
-				} else {
-					adopted, readErr = m.exactTargetGenerationAlive(ctx, ports.RuntimeHandle{ID: item.SourceHandleID}, item.SessionID, domain.AgentGenerationID(generation))
-				}
+				adopted, readErr = m.exactTargetGenerationAlive(ctx, ports.RuntimeHandle{ID: item.SourceHandleID}, item.SessionID, domain.AgentGenerationID(generation))
 				if readErr != nil {
 					workerErr = readErr
 				}
@@ -873,16 +788,6 @@ func (m *Manager) restartCodexSwitchSessions(ctx context.Context, store ports.Co
 				result, workerErr = m.resumeAgentRecordWithReservedGeneration(
 					ctx, "Codex account switch", rec, forceFresh, requireNativeHistory, generation,
 				)
-				// An interrupted Codex Chat turn can take slightly longer than the
-				// first bounded history-read window to flush its native checkpoint.
-				// Retry that exact native ID and reserved generation once. The first
-				// attempt has already waited for settlement, so this remains bounded
-				// and avoids requiring a manual recovery click for the common race.
-				if workerErr != nil && item.InterfaceMode == domain.SessionModeChat && errors.Is(workerErr, ports.ErrChatHistoryUnsettled) && ctx.Err() == nil {
-					result, workerErr = m.resumeAgentRecordWithReservedGeneration(
-						ctx, "Codex account switch", rec, forceFresh, requireNativeHistory, generation,
-					)
-				}
 				if workerErr == nil && result.Session.ID != item.SessionID {
 					workerErr = errors.New("codex resumed a different AO session")
 				}
@@ -964,51 +869,6 @@ func (m *Manager) restartCodexSwitchSessions(ctx context.Context, store ports.Co
 		}
 	}
 	return errors.Join(errs...)
-}
-
-func (m *Manager) armCodexSwitchChatInterrupt(ctx context.Context, sessions []domain.CodexAccountSwitchSession) (func(), error) {
-	handoff, ok := m.chat.(chatHandoffLauncher)
-	if !ok {
-		for _, item := range sessions {
-			if item.WasRunning && item.InterfaceMode == domain.SessionModeChat {
-				return func() {}, errors.New("codex Chat drain is unavailable")
-			}
-		}
-		return func() {}, nil
-	}
-	armed := make([]domain.SessionID, 0)
-	for _, item := range sessions {
-		if !item.WasRunning || item.InterfaceMode != domain.SessionModeChat {
-			continue
-		}
-		if err := handoff.ArmChatHandoff(ctx, item.SessionID, domain.SessionInterfaceTransitionInterrupt); err != nil {
-			for _, id := range armed {
-				handoff.AbortChatHandoff(id)
-			}
-			return func() {}, err
-		}
-		armed = append(armed, item.SessionID)
-	}
-	return func() {
-		for _, id := range armed {
-			handoff.AbortChatHandoff(id)
-		}
-	}, nil
-}
-
-func (m *Manager) prepareCodexSwitchChatInterrupt(ctx context.Context, sessions []domain.CodexAccountSwitchSession) error {
-	handoff, ok := m.chat.(chatHandoffLauncher)
-	if !ok {
-		return nil
-	}
-	for _, item := range sessions {
-		if item.WasRunning && item.InterfaceMode == domain.SessionModeChat {
-			if err := handoff.PrepareChatHandoff(ctx, item.SessionID, domain.SessionInterfaceTransitionInterrupt); err != nil {
-				return err
-			}
-		}
-	}
-	return nil
 }
 
 func (m *Manager) freezeCodexSwitchTerminalInput(ctx context.Context, sessions []domain.CodexAccountSwitchSession) (func(), error) {

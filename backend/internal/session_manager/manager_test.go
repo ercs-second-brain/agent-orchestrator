@@ -301,15 +301,6 @@ func (l *fakeLCM) ActivateAgentSwitchTarget(ctx context.Context, activation doma
 	}
 	return store.ActivateAgentSwitchTarget(ctx, activation)
 }
-func (l *fakeLCM) ActivateChatAgentSwitchTarget(ctx context.Context, activation domain.AgentSwitchChatTargetActivation) (bool, error) {
-	store, ok := l.store.agentSwitchStore.(interface {
-		ActivateChatAgentSwitchTarget(context.Context, domain.AgentSwitchChatTargetActivation) (bool, error)
-	})
-	if !ok {
-		return false, errors.New("fake lifecycle: Chat agent-switch target activation persistence unavailable")
-	}
-	return store.ActivateChatAgentSwitchTarget(ctx, activation)
-}
 func (l *fakeLCM) MarkTerminated(_ context.Context, id domain.SessionID) error {
 	if l.terminated == nil {
 		l.terminated = map[domain.SessionID]int{}
@@ -354,26 +345,6 @@ func (r *fakeRuntime) Interrupt(_ context.Context, handle ports.RuntimeHandle) e
 		r.onInterrupt(handle)
 	}
 	return r.interruptErr
-}
-
-type fakePreviewLifecycle struct {
-	stopped []domain.SessionID
-	err     error
-}
-
-type fakeBrowserLifecycle struct {
-	destroyed []domain.SessionID
-	err       error
-}
-
-func (f *fakeBrowserLifecycle) DestroySession(_ context.Context, id domain.SessionID) error {
-	f.destroyed = append(f.destroyed, id)
-	return f.err
-}
-
-func (f *fakePreviewLifecycle) StopSession(_ context.Context, id domain.SessionID) error {
-	f.stopped = append(f.stopped, id)
-	return f.err
 }
 
 type fakeRestartRuntime struct {
@@ -1915,50 +1886,6 @@ func TestResumeAgent_ReportsActiveAgentSwitch(t *testing.T) {
 	}
 }
 
-func TestResumeAgent_ReleasesInputGateAfterInterfaceTransitionRejection(t *testing.T) {
-	tests := []struct {
-		name       string
-		activeErr  error
-		transition domain.SessionInterfaceTransition
-		wantError  string
-	}{
-		{
-			name:      "transition lookup error",
-			activeErr: errors.New("transition store unavailable"),
-			wantError: "transition store unavailable",
-		},
-		{
-			name: "active transition",
-			transition: domain.SessionInterfaceTransition{
-				ID: "transition-1", SessionID: "mer-1", Phase: domain.SessionInterfaceTransitionDraining,
-			},
-			wantError: ErrInterfaceTransitionInProgress.Error(),
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			runtime := &fakeRuntime{aliveByHandle: map[string]bool{"tmux-mer-1": true}}
-			agent := supervisedLaunchAgent{launchArgvAgent{argv: []string{"codex", "resume", "agent-x"}}}
-			manager, store, _ := newExitedResumeManager(t, runtime, agent)
-			transitionStore := newTransitionStore()
-			transitionStore.projects = store.projects
-			transitionStore.sessions = store.sessions
-			transitionStore.activeErr = tt.activeErr
-			if tt.transition.ID != "" {
-				transitionStore.transitions[tt.transition.ID] = tt.transition
-			}
-			manager.store = transitionStore
-
-			if _, err := manager.ResumeAgentWithMode(ctx, "mer-1"); err == nil || !strings.Contains(err.Error(), tt.wantError) {
-				t.Fatalf("ResumeAgentWithMode error = %v, want %q", err, tt.wantError)
-			}
-			if manager.SessionMutationInProgress("mer-1") {
-				t.Fatal("interface-transition rejection left input admission closed")
-			}
-		})
-	}
-}
-
 func TestSpawn_RejectsMissingRoleHarness(t *testing.T) {
 	st := newFakeStore()
 	st.projects["mer"] = domain.ProjectRecord{ID: "mer"}
@@ -2668,11 +2595,7 @@ func TestSpawn_WorkspaceProjectRollsBackWhenWorktreeRowsFail(t *testing.T) {
 
 func TestKill_TearsDownRuntimeAndWorkspace(t *testing.T) {
 	m, st, rt, ws := newManager()
-	preview := &fakePreviewLifecycle{}
-	browser := &fakeBrowserLifecycle{}
 	reviewer := &fakeReviewerTerminator{}
-	m.preview = preview
-	m.browser = browser
 	m.SetReviewerTerminator(reviewer)
 	dataDir := t.TempDir()
 	m.dataDir = dataDir
@@ -2686,12 +2609,6 @@ func TestKill_TearsDownRuntimeAndWorkspace(t *testing.T) {
 	}
 	if rt.destroyed != 1 || ws.destroyed != 1 {
 		t.Fatal("kill should destroy runtime and workspace")
-	}
-	if !reflect.DeepEqual(preview.stopped, []domain.SessionID{"mer-1"}) {
-		t.Fatalf("preview stops = %v, want [mer-1]", preview.stopped)
-	}
-	if !reflect.DeepEqual(browser.destroyed, []domain.SessionID{"mer-1"}) {
-		t.Fatalf("browser destroys = %v, want [mer-1]", browser.destroyed)
 	}
 	if !reflect.DeepEqual(reviewer.calls, []domain.SessionID{"mer-1"}) {
 		t.Fatalf("reviewer terminates = %v, want [mer-1]", reviewer.calls)
@@ -6287,65 +6204,6 @@ func TestSaveAndTeardownAll_SkipsScratchSessions(t *testing.T) {
 	}
 }
 
-func TestRetireForReplacementCapturesAndReleasesWorkspace(t *testing.T) {
-	m, st, rt, ws := newLifecycleManager()
-	browser := &fakeBrowserLifecycle{}
-	m.browser = browser
-	var sharedLog []string
-	st.sharedLog = &sharedLog
-	ws.sharedLog = &sharedLog
-	ws.stashRef = "refs/ao/preserved/mer-orch"
-	st.sessions["mer-orch"] = domain.SessionRecord{
-		ID:        "mer-orch",
-		ProjectID: "mer",
-		Kind:      domain.KindOrchestrator,
-		Metadata:  domain.SessionMetadata{WorkspacePath: "/ws/mer-orch", Branch: "ao/mer-orchestrator", RuntimeHandleID: "orch-handle"},
-		Activity:  domain.Activity{State: domain.ActivityActive},
-	}
-	st.worktrees["mer-orch"] = []domain.SessionWorktreeRecord{{
-		SessionID:    "mer-orch",
-		RepoName:     domain.RootWorkspaceRepoName,
-		Branch:       "ao/mer-orchestrator",
-		WorktreePath: "/ws/mer-orch",
-		PreservedRef: "refs/ao/preserved/old",
-	}}
-
-	if err := m.RetireForReplacement(ctx, "mer-orch"); err != nil {
-		t.Fatalf("RetireForReplacement err = %v", err)
-	}
-
-	if rows := st.worktrees["mer-orch"]; len(rows) != 0 {
-		t.Fatalf("replacement retirement must not write restore markers, got %#v", rows)
-	}
-	if !st.sessions["mer-orch"].IsTerminated {
-		t.Fatal("retired orchestrator must be marked terminated")
-	}
-	if rt.destroyed != 1 || rt.destroyedIDs[0] != "orch-handle" {
-		t.Fatalf("runtime destroyed = %d ids=%v, want orch-handle", rt.destroyed, rt.destroyedIDs)
-	}
-
-	stashIdx, deleteIdx, forceIdx := -1, -1, -1
-	for i, c := range sharedLog {
-		switch c {
-		case "StashUncommitted:mer-orch":
-			stashIdx = i
-		case "DeleteSessionWorktrees:mer-orch":
-			deleteIdx = i
-		case "ForceDestroy:mer-orch":
-			forceIdx = i
-		}
-	}
-	if stashIdx == -1 || deleteIdx == -1 || forceIdx == -1 {
-		t.Fatalf("missing expected calls in shared log: %v", sharedLog)
-	}
-	if stashIdx >= forceIdx || forceIdx >= deleteIdx {
-		t.Fatalf("replacement retire must capture, force release, then clear restore marker; log=%v", sharedLog)
-	}
-	if len(browser.destroyed) != 1 || browser.destroyed[0] != "mer-orch" {
-		t.Fatalf("browser targets destroyed = %v, want mer-orch", browser.destroyed)
-	}
-}
-
 func TestRetireForReplacement_NativeTerminationFailurePreservesRuntimeAndWorkspace(t *testing.T) {
 	m, st, rt, ws := newLifecycleManager()
 	agent := &nativeTerminatingAgent{wantID: "native-7", err: errors.New("prime stop failed")}
@@ -7697,9 +7555,8 @@ func TestReconcileLive_RuntimeFailureAfterLaunchMetadataUpdateLeavesSessionResum
 	m := New(Deps{
 		Runtime: rt, Agents: fakeAgents{}, Workspace: ws, Store: st,
 		Messenger: &fakeMessenger{}, Lifecycle: lcm,
-		BrowserCapabilities: fixedBrowserCapability("capability-1"),
-		Clock:               func() time.Time { return launchUpdatedAt },
-		LookPath:            func(string) (string, error) { return "/bin/true", nil },
+		Clock:    func() time.Time { return launchUpdatedAt },
+		LookPath: func(string) (string, error) { return "/bin/true", nil },
 	})
 	rec := domain.SessionRecord{
 		ID: "s1", ProjectID: "p1", Harness: domain.HarnessCodex,
@@ -7720,11 +7577,8 @@ func TestReconcileLive_RuntimeFailureAfterLaunchMetadataUpdateLeavesSessionResum
 	if failed.IsTerminated || failed.Activity.State != domain.ActivityExited {
 		t.Fatalf("failed relaunch session = %+v, want live/exited", failed)
 	}
-	if failed.Metadata.BrowserCapabilityVerifier != "verifier-1" {
-		t.Fatalf("browser capability verifier = %q, want launch metadata persisted", failed.Metadata.BrowserCapabilityVerifier)
-	}
-	if !failed.UpdatedAt.Equal(launchUpdatedAt) {
-		t.Fatalf("UpdatedAt = %v, want launch metadata timestamp %v", failed.UpdatedAt, launchUpdatedAt)
+	if !failed.UpdatedAt.Equal(bootUpdatedAt) {
+		t.Fatalf("UpdatedAt = %v, want boot timestamp %v", failed.UpdatedAt, bootUpdatedAt)
 	}
 	if failed.Metadata.AgentSessionID != "native-conversation-1" || failed.Metadata.WorkspacePath != "/wt/s1" {
 		t.Fatalf("native identity/worktree changed after failed relaunch: %+v", failed.Metadata)
@@ -8000,44 +7854,6 @@ func TestReconcileLive_ProbeErrorIsNotDeath(t *testing.T) {
 	}
 	if rt.destroyed != 0 {
 		t.Fatalf("Destroy calls = %d, want 0 (probe error is not death)", rt.destroyed)
-	}
-}
-
-func TestReconcileLive_InconclusiveChatRecoveryDoesNotTeardown(t *testing.T) {
-	st := newFakeStore()
-	st.projects["p1"] = domain.ProjectRecord{ID: "p1", Config: testRoleAgents()}
-	ws := &fakeWorkspace{stashRef: "refs/ao/preserved/chat-live"}
-	lcm := &fakeLCM{store: st}
-	chat := &recordingLauncher{
-		startErr: fmt.Errorf("persistent host unavailable: %w", ports.ErrChatRecoveryInconclusive),
-	}
-	m := New(Deps{
-		Runtime: &fakeRuntime{}, Agents: fakeAgents{}, Workspace: ws, Store: st,
-		Messenger: &fakeMessenger{}, Lifecycle: lcm, Chat: chat,
-		LookPath: func(string) (string, error) { return "/bin/true", nil },
-	})
-	rec := domain.SessionRecord{
-		ID: "chat-live", ProjectID: "p1", Harness: domain.HarnessCodex,
-		Mode: domain.SessionModeChat,
-		Metadata: domain.SessionMetadata{
-			Branch: "ao/chat-live", WorkspacePath: "/wt/chat-live",
-			ProviderConversationID: "thread-live", ControllerGeneration: "generation-old",
-		},
-	}
-	st.sessions[rec.ID] = rec
-
-	err := m.reconcileLive(context.Background(), rec)
-	if !errors.Is(err, ports.ErrChatRecoveryInconclusive) {
-		t.Fatalf("reconcileLive error = %v, want ErrChatRecoveryInconclusive", err)
-	}
-	if ws.stashCalls != 0 || lcm.terminated[rec.ID] != 0 {
-		t.Fatalf("inconclusive live host must remain intact: stash=%d terminated=%d",
-			ws.stashCalls, lcm.terminated[rec.ID])
-	}
-	for _, call := range ws.calls {
-		if call == "ForceDestroy:chat-live" {
-			t.Fatalf("inconclusive live host lost its worktree: calls=%v", ws.calls)
-		}
 	}
 }
 

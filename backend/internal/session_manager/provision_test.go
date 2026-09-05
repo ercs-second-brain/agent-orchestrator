@@ -13,37 +13,6 @@ import (
 	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/domain"
 )
 
-type fixedBrowserCapability string
-
-func (f fixedBrowserCapability) Issue(_ domain.SessionID) (string, string, error) {
-	return string(f), "verifier-1", nil
-}
-
-type browserCapabilityIssue struct {
-	token    string
-	verifier string
-	err      error
-}
-
-type scriptedBrowserCapabilities struct {
-	issues  []browserCapabilityIssue
-	calls   int
-	onIssue func(call int, id domain.SessionID)
-}
-
-func (s *scriptedBrowserCapabilities) Issue(id domain.SessionID) (string, string, error) {
-	call := s.calls
-	s.calls++
-	if s.onIssue != nil {
-		s.onIssue(call, id)
-	}
-	if call >= len(s.issues) {
-		return "", "", errors.New("unexpected browser capability issuance")
-	}
-	issue := s.issues[call]
-	return issue.token, issue.verifier, issue.err
-}
-
 func TestSpawnEnvProjectVarsCannotOverrideInternal(t *testing.T) {
 	env := spawnEnv("mer-1", "mer", "issue-9", "/data", map[string]string{
 		"FOO":        "bar",
@@ -58,40 +27,6 @@ func TestSpawnEnvProjectVarsCannotOverrideInternal(t *testing.T) {
 	}
 	if env[EnvProjectID] != "mer" {
 		t.Fatalf("AO_PROJECT_ID = %q, want mer (internal wins)", env[EnvProjectID])
-	}
-}
-
-func TestRuntimeEnvInjectsBrowserCapability(t *testing.T) {
-	manager := &Manager{
-		dataDir:             "/data",
-		browserCapabilities: fixedBrowserCapability("capability-1"),
-		executable:          func() (string, error) { return filepath.Join("/opt", "aod", "ao"), nil },
-		logger:              slog.New(slog.NewTextHandler(io.Discard, nil)),
-	}
-	env, verifier, err := manager.launchRuntimeEnv("mer-1", "mer", "", nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if env[EnvBrowserCapability] != "capability-1" {
-		t.Fatalf("%s = %q", EnvBrowserCapability, env[EnvBrowserCapability])
-	}
-	if verifier != "verifier-1" {
-		t.Fatalf("verifier = %q", verifier)
-	}
-}
-
-func TestRuntimeEnvClearsDaemonBrowserRuntimeSecrets(t *testing.T) {
-	manager := &Manager{
-		dataDir:    "/data",
-		executable: func() (string, error) { return filepath.Join("/opt", "aod", "ao"), nil },
-		logger:     slog.New(slog.NewTextHandler(io.Discard, nil)),
-	}
-	env := manager.runtimeEnv("mer-1", "mer", "", map[string]string{
-		EnvBrowserRuntimeToken:      "runtime-secret",
-		EnvBrowserRuntimeTokenStdin: "1",
-	})
-	if env[EnvBrowserRuntimeToken] != "" || env[EnvBrowserRuntimeTokenStdin] != "" {
-		t.Fatalf("daemon browser runtime credentials leaked to worker: token=%q stdin=%q", env[EnvBrowserRuntimeToken], env[EnvBrowserRuntimeTokenStdin])
 	}
 }
 

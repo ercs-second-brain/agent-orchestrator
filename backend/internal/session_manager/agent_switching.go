@@ -118,7 +118,6 @@ func (m *Manager) SwitchAgent(ctx context.Context, id domain.SessionID, cfg Swit
 		return record, nil
 	}
 	if err := m.startAgentSwitchWorker(admitted); err != nil {
-		m.abortChatAgentSwitchHandoff(admitted.session)
 		return record, ownership.Own(err, ownership.OwnerAgentSwitchSaga)
 	}
 	// The worker now owns the slot registered above and calls Done on exit.
@@ -262,13 +261,7 @@ func (m *Manager) admitAgentSwitch(ctx context.Context, id domain.SessionID, cfg
 		return domain.AgentSwitch{}, nil, fmt.Errorf("switch agent %s: %w: %s", id, ErrAlreadyUsingHarness, cfg.TargetHarness)
 	}
 	if mode == domain.SessionModeChat {
-		if m.chat == nil || !m.chat.SupportsChat(rec.Harness) || !m.chat.SupportsChat(cfg.TargetHarness) {
-			return domain.AgentSwitch{}, nil, fmt.Errorf("switch agent %s: %w: source and target require Chat drivers", id, ErrUnsupportedSwitchHarness)
-		}
-		if strings.TrimSpace(rec.Metadata.ProviderConversationID) == "" ||
-			strings.TrimSpace(rec.Metadata.ControllerGeneration) == "" {
-			return domain.AgentSwitch{}, nil, fmt.Errorf("switch agent %s: %w", id, ErrIncompleteHandle)
-		}
+		return domain.AgentSwitch{}, nil, fmt.Errorf("switch agent %s: %w: chat mode was removed; sessions run in the terminal only", id, ErrUnsupportedSwitchHarness)
 	}
 
 	project, err := m.loadProject(ctx, rec.ProjectID)
@@ -289,9 +282,6 @@ func (m *Manager) admitAgentSwitch(ctx context.Context, id domain.SessionID, cfg
 	}
 
 	sourceGeneration := domain.AgentGenerationID(strings.TrimSpace(rec.Metadata.RuntimeLaunchID))
-	if mode == domain.SessionModeChat {
-		sourceGeneration = domain.AgentGenerationID(strings.TrimSpace(rec.Metadata.ControllerGeneration))
-	}
 	if sourceGeneration == "" {
 		// Sessions created by older AO versions predate unconditional generation
 		// ids. A unique legacy fence still makes handoff submission idempotent;
@@ -301,9 +291,6 @@ func (m *Manager) admitAgentSwitch(ctx context.Context, id domain.SessionID, cfg
 	sourceEnv := m.runtimeEnv(rec.ID, rec.ProjectID, rec.IssueID, project.Config.Env)
 	m.augmentAgentRuntimeEnv(sourceAgent, sourceEnv)
 	sourceRecord := rec
-	if mode == domain.SessionModeChat {
-		sourceRecord.Metadata.AgentSessionID = rec.Metadata.ProviderConversationID
-	}
 	sourceNative, err := m.preserveCurrentNativeSession(ctx, store, sourceRecord, sourceAgent, sourceEnv, sourceGeneration)
 	if err != nil {
 		return domain.AgentSwitch{}, nil, classifyAgentSwitchAdmissionFailure(
@@ -364,29 +351,6 @@ func (m *Manager) admitAgentSwitch(ctx context.Context, id domain.SessionID, cfg
 	if !created {
 		return switchRec, nil, nil
 	}
-	if mode == domain.SessionModeChat {
-		handoff, ok := m.chat.(chatHandoffLauncher)
-		if !ok {
-			recorder := newAgentSwitchFlightRecorder(switchRec, mode, domain.AgentSwitchExecutionLive)
-			recorder.failurePoint = domain.AgentSwitchFailureAdmissionChatHandoffArm
-			recorder.callOutcome = domain.AgentSwitchCallNoEffectFailure
-			failed, failErr := m.failAgentSwitchWithRecorder(ctx, store, switchRec, domain.AgentSwitchErrorFailedPreStop, recorder)
-			if failErr == nil {
-				switchRec = failed
-			}
-			return switchRec, nil, ownership.Own(errors.Join(ErrInterfaceHandoffUnsupported, failErr), ownership.OwnerAgentSwitchSaga)
-		}
-		if err := handoff.ArmChatHandoff(ctx, id, domain.SessionInterfaceTransitionInterrupt); err != nil {
-			recorder := newAgentSwitchFlightRecorder(switchRec, mode, domain.AgentSwitchExecutionLive)
-			recorder.failurePoint = domain.AgentSwitchFailureAdmissionChatHandoffArm
-			recorder.callOutcome = domain.AgentSwitchCallNoEffectFailure
-			failed, failErr := m.failAgentSwitchWithRecorder(ctx, store, switchRec, domain.AgentSwitchErrorFailedPreStop, recorder)
-			if failErr == nil {
-				switchRec = failed
-			}
-			return switchRec, nil, ownership.Own(errors.Join(err, failErr), ownership.OwnerAgentSwitchSaga)
-		}
-	}
 	gateOwned = false
 	return switchRec, &admittedAgentSwitch{
 		record:             switchRec,
@@ -408,9 +372,6 @@ func (m *Manager) executeAgentSwitch(ctx context.Context, admitted *admittedAgen
 		return admitted.record, fmt.Errorf("switch agent %s: %w", admitted.session.ID, err)
 	}
 	defer releaseHarness()
-	if domain.NormalizeSessionMode(admitted.session.Mode) == domain.SessionModeChat {
-		return m.executeChatAgentSwitch(ctx, admitted)
-	}
 	workerCtx := ctx
 	result = admitted.record
 	store := admitted.store
@@ -1804,6 +1765,12 @@ func replaceAgentSwitchWaitContext(parent context.Context, currentCancel context
 	return context.WithTimeout(parent, timeout)
 }
 
+// runtimeInterrupter lets AO send the terminal interrupt key to a live pane
+// without going through the full fenced stop path.
+type runtimeInterrupter interface {
+	Interrupt(context.Context, ports.RuntimeHandle) error
+}
+
 func (m *Manager) interruptTimedOutSourceHandoff(ctx context.Context, rec domain.SessionRecord) error {
 	handle := ports.RuntimeHandle{ID: strings.TrimSpace(rec.Metadata.RuntimeHandleID)}
 	if handle.ID == "" {
@@ -1824,7 +1791,7 @@ func (m *Manager) interruptTimedOutSourceHandoff(ctx context.Context, rec domain
 	// resumed native session can finish and retry an already-stale handoff.
 	deadline := time.NewTimer(switchHandoffInterruptWait)
 	defer deadline.Stop()
-	ticker := time.NewTicker(interfaceTransitionPoll)
+	ticker := time.NewTicker(switchPollInterval)
 	defer ticker.Stop()
 	for {
 		current, found, err := m.store.GetSession(interruptCtx, rec.ID)
@@ -3237,9 +3204,6 @@ func (m *Manager) reconcileAgentSwitch(ctx context.Context, store ports.AgentSwi
 	if sw.RequiresSourceRestore() {
 		return false, fmt.Errorf("reconcile agent switch %s: source restoration remains unconfirmed", sw.ID)
 	}
-	if domain.NormalizeSessionMode(rec.Mode) == domain.SessionModeChat {
-		return m.reconcileChatAgentSwitch(ctx, store, rec, sw, execution)
-	}
 	recorder := newAgentSwitchFlightRecorder(sw, domain.SessionModeTUI, execution)
 	fail := func(code domain.AgentSwitchErrorCode) (bool, error) {
 		recorder.boundary(domain.AgentSwitchFailureRecoverySettlement)
@@ -3566,13 +3530,8 @@ func (m *Manager) failRecoveredSwitchWithSourceRollback(
 		return false, errors.Join(projectErr, markerErr)
 	}
 	var rollbackErr error
-	if domain.NormalizeSessionMode(rec.Mode) == domain.SessionModeChat {
-		recorder.boundary(domain.AgentSwitchFailureSourceControllerRestore)
-		rollbackErr = m.rollbackStoppedChatAgentSwitchSource(ctx, rec, project)
-	} else {
-		recorder.boundary(domain.AgentSwitchFailureSourceRuntimeRestore)
-		rollbackErr = m.rollbackStoppedAgentSwitchSource(ctx, store, sw, project)
-	}
+	recorder.boundary(domain.AgentSwitchFailureSourceRuntimeRestore)
+	rollbackErr = m.rollbackStoppedAgentSwitchSource(ctx, store, sw, project)
 	if rollbackErr != nil {
 		m.logger.Error("agent switch recovery: automatic source rollback failed", "sessionID", rec.ID, "switchID", sw.ID, "error", rollbackErr)
 		markerCtx, cancel := switchDurableContext(ctx)

@@ -110,3 +110,13 @@ func TestStageAttachmentsReportsAnUnknownSession(t *testing.T) {
 		t.Fatalf("status = %d, want 404 (%s)", status, body)
 	}
 }
+
+func containsAll(body []byte, parts ...string) bool {
+	value := string(body)
+	for _, part := range parts {
+		if !strings.Contains(value, part) {
+			return false
+		}
+	}
+	return true
+}

@@ -7,15 +7,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
-	"io/fs"
 	"log/slog"
 	"mime"
 	"net/http"
-	"net/url"
-	"os"
-	"path"
-	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -28,8 +22,6 @@ import (
 	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/httpd/apispec"
 	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/httpd/envelope"
 	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/ports"
-	previewutil "github.com/ercs-second-brain/agent-orchestrator/backend/internal/preview"
-	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/previewserver"
 	sessionsvc "github.com/ercs-second-brain/agent-orchestrator/backend/internal/service/session"
 	usagesvc "github.com/ercs-second-brain/agent-orchestrator/backend/internal/service/usage"
 	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/workspacewatch"
@@ -73,11 +65,6 @@ var blockedAttachmentMimes = map[string]bool{
 	"image/svg+xml": true,
 }
 
-var (
-	errPreviewFileNotFound         = errors.New("preview file not found")
-	errPreviewFileOutsideWorkspace = errors.New("preview file is outside the session workspace")
-)
-
 // SessionService is the controller-facing session service contract.
 type SessionService interface {
 	List(ctx context.Context, filter sessionsvc.ListFilter) ([]domain.Session, error)
@@ -95,7 +82,6 @@ type SessionService interface {
 	RollbackSpawn(ctx context.Context, id domain.SessionID) (sessionsvc.RollbackOutcome, error)
 	Cleanup(ctx context.Context, project domain.ProjectID) (sessionsvc.CleanupOutcome, error)
 	Rename(ctx context.Context, id domain.SessionID, displayName string) error
-	SetPreview(ctx context.Context, id domain.SessionID, previewURL string) (domain.Session, error)
 	SetTerminateOnPRMerge(ctx context.Context, id domain.SessionID, terminate bool) (domain.Session, error)
 	SetAutoInjectReview(ctx context.Context, id domain.SessionID, autoInject bool) (domain.Session, error)
 	SetAutoInjectCI(ctx context.Context, id domain.SessionID, autoInject bool) (domain.Session, error)
@@ -125,20 +111,6 @@ type ActivityRecorder interface {
 	ApplyActivitySignal(ctx context.Context, id domain.SessionID, s ports.ActivitySignal) error
 }
 
-// ManagedPreviewServer is the deterministic server lifecycle attached to a
-// worker. It is separate from static file rendering and browser automation.
-type ManagedPreviewServer interface {
-	Start(ctx context.Context, sessionID domain.SessionID, workspacePath, configurationName string) (previewserver.Status, error)
-	Stop(ctx context.Context, sessionID domain.SessionID) (previewserver.Status, error)
-	Status(sessionID domain.SessionID) previewserver.Status
-}
-
-// SessionCapabilityValidator verifies the daemon-issued token injected only
-// into the owning worker session.
-type SessionCapabilityValidator interface {
-	Valid(sessionID domain.SessionID, token, verifier string) bool
-}
-
 // UsageHookRecorder consumes transcript metadata from the same native hook
 // callback without changing activity-state semantics.
 type UsageHookRecorder interface {
@@ -148,12 +120,10 @@ type UsageHookRecorder interface {
 // SessionsController owns the session routes. Nil keeps routes registered but
 // returns OpenAPI-backed 501s.
 type SessionsController struct {
-	Svc           SessionService
-	Activity      ActivityRecorder
-	Usage         UsageHookRecorder
-	Attachments   *attachmentstore.Store
-	PreviewServer ManagedPreviewServer
-	Capabilities  SessionCapabilityValidator
+	Svc         SessionService
+	Activity    ActivityRecorder
+	Usage       UsageHookRecorder
+	Attachments *attachmentstore.Store
 }
 
 // Register mounts the session routes on the supplied router.
@@ -162,13 +132,6 @@ func (c *SessionsController) Register(r chi.Router) {
 	r.Post("/sessions", c.spawn)
 	r.Post("/sessions/cleanup", c.cleanup)
 	r.Get("/sessions/{sessionId}", c.get)
-	r.Get("/sessions/{sessionId}/preview", c.preview)
-	r.Post("/sessions/{sessionId}/preview", c.setPreview)
-	r.Delete("/sessions/{sessionId}/preview", c.clearPreview)
-	r.Get("/sessions/{sessionId}/preview/server", c.previewServerStatus)
-	r.Post("/sessions/{sessionId}/preview/server", c.startPreviewServer)
-	r.Delete("/sessions/{sessionId}/preview/server", c.stopPreviewServer)
-	r.Get("/sessions/{sessionId}/preview/files/*", c.previewFile)
 	r.Post("/sessions/{sessionId}/attachments", c.stageAttachments)
 	r.Get("/sessions/{sessionId}/workspace/files", c.listWorkspaceFiles)
 	r.Get("/sessions/{sessionId}/workspace/file", c.getWorkspaceFile)
@@ -189,10 +152,6 @@ func (c *SessionsController) Register(r chi.Router) {
 	r.Get("/sessions/{sessionId}/agent-switches", c.listAgentSwitches)
 	r.Post("/sessions/{sessionId}/agent-switches/{switchId}/recover", c.recoverAgentSwitch)
 	r.Post("/sessions/{sessionId}/agent-switches/{switchId}/handoff", c.submitAgentHandoff)
-	r.Get("/sessions/{sessionId}/interface-transition", c.interfaceTransitionStatus)
-	r.Post("/sessions/{sessionId}/interface-transition", c.startInterfaceTransition)
-	r.Delete("/sessions/{sessionId}/interface-transition", c.cancelInterfaceTransition)
-	r.Put("/sessions/{sessionId}/interface-transition/{transitionId}/notice-acknowledgement", c.acknowledgeInterfaceTransitionNotice)
 	r.Post("/sessions/{sessionId}/kill", c.kill)
 	r.Post("/sessions/{sessionId}/rollback", c.rollback)
 	r.Post("/sessions/{sessionId}/send", c.send)
@@ -401,149 +360,6 @@ func (c *SessionsController) get(w http.ResponseWriter, r *http.Request) {
 	envelope.WriteJSON(w, http.StatusOK, SessionResponse{Session: sessionView(sess)})
 }
 
-func (c *SessionsController) preview(w http.ResponseWriter, r *http.Request) {
-	if c.Svc == nil {
-		apispec.NotImplemented(w, r, "GET", "/api/v1/sessions/{sessionId}/preview")
-		return
-	}
-	sess, err := c.Svc.Get(r.Context(), sessionID(r))
-	if err != nil {
-		envelope.WriteError(w, r, err)
-		return
-	}
-	entry, ok := discoverPreviewEntry(sess.Metadata.WorkspacePath)
-	res := SessionPreviewResponse{SessionID: sessionID(r)}
-	if ok {
-		res.Entry = entry
-		res.PreviewURL, err = previewFileURL(r, sessionID(r), entry)
-		if err != nil {
-			writePreviewResolveError(w, r, err)
-			return
-		}
-	}
-	envelope.WriteJSON(w, http.StatusOK, res)
-}
-
-func (c *SessionsController) previewFile(w http.ResponseWriter, r *http.Request) {
-	if c.Svc == nil {
-		apispec.NotImplemented(w, r, "GET", "/api/v1/sessions/{sessionId}/preview/files/*")
-		return
-	}
-	sess, err := c.Svc.Get(r.Context(), sessionID(r))
-	if err != nil {
-		envelope.WriteError(w, r, err)
-		return
-	}
-	assetPath := chi.URLParam(r, "*")
-	if name, ok := attachmentstore.NameFromWorkspacePath(assetPath); ok && c.Attachments != nil {
-		file, info, openErr := c.Attachments.Open(r.Context(), sess.ID, name)
-		if openErr == nil {
-			defer func() { _ = file.Close() }()
-			serveOpenedPreviewFile(w, r, file, info, assetPath)
-			return
-		}
-	}
-	c.serveWorkspacePreviewFile(w, r, sess.Metadata.WorkspacePath, assetPath)
-}
-
-// PreviewOrigin serves a workspace preview from its isolated *.localhost
-// origin. It returns false when the request host is not a preview origin so the
-// daemon router can continue handling its normal API and control surfaces.
-//
-// The selected entry's directory is mounted at the origin root. For example,
-// dist/index.html is reachable at both /dist/ (the persisted URL) and /, while
-// /assets/app.css maps to dist/assets/app.css. This mirrors a production static
-// server and fixes root-relative URLs without rewriting user-generated files.
-func (c *SessionsController) PreviewOrigin(w http.ResponseWriter, r *http.Request) bool {
-	id, ok := previewutil.SessionIDFromHost(r.Host)
-	if !ok {
-		return false
-	}
-	if r.Method != http.MethodGet && r.Method != http.MethodHead {
-		w.Header().Set("Allow", "GET, HEAD")
-		envelope.WriteAPIError(w, r, http.StatusMethodNotAllowed, "method_not_allowed", "METHOD_NOT_ALLOWED",
-			r.Method+" not allowed on preview origin", nil)
-		return true
-	}
-	if c.Svc == nil {
-		envelope.WriteAPIError(w, r, http.StatusNotFound, "not_found", "PREVIEW_NOT_FOUND", "Preview not found", nil)
-		return true
-	}
-	sess, err := c.Svc.Get(r.Context(), id)
-	if err != nil {
-		envelope.WriteError(w, r, err)
-		return true
-	}
-	entry, ok := previewOriginEntry(sess)
-	if !ok {
-		envelope.WriteAPIError(w, r, http.StatusNotFound, "not_found", "NO_PREVIEW_ENTRY", "No preview entry point found in session workspace", nil)
-		return true
-	}
-	asset := previewOriginAssetPath(entry, r.URL.Path)
-	c.serveWorkspacePreviewFile(w, r, sess.Metadata.WorkspacePath, asset)
-	return true
-}
-
-func previewOriginEntry(sess domain.Session) (string, bool) {
-	if entry, ok := previewutil.StoredWorkspaceEntry(sess.Metadata.PreviewURL, sess.ID); ok {
-		if stored, exists := previewutil.EntryAtPath(sess.Metadata.WorkspacePath, entry); exists {
-			return stored.Path, true
-		}
-	}
-	return discoverPreviewEntry(sess.Metadata.WorkspacePath)
-}
-
-func previewOriginAssetPath(entry, requestPath string) string {
-	requested := strings.TrimPrefix(path.Clean("/"+requestPath), "/")
-	if requested == "" || requested == "." {
-		return entry
-	}
-	root := path.Dir(entry)
-	if root == "." {
-		return requested
-	}
-	if requested == root {
-		return entry
-	}
-	requested = strings.TrimPrefix(requested, root+"/")
-	return path.Join(root, requested)
-}
-
-// serveWorkspacePreviewFile is the single serving path for both the legacy API
-// route and isolated preview origins. OpenRoot keeps symlink traversal and the
-// subsequent read on the same workspace-confined file handle.
-func (c *SessionsController) serveWorkspacePreviewFile(w http.ResponseWriter, r *http.Request, workspacePath, assetPath string) {
-	file, info, clean, err := previewutil.OpenWorkspaceFile(workspacePath, assetPath)
-	if err != nil {
-		envelope.WriteAPIError(w, r, http.StatusNotFound, "not_found", "PREVIEW_FILE_NOT_FOUND", "Preview file not found", nil)
-		return
-	}
-	defer func() { _ = file.Close() }()
-	serveOpenedPreviewFile(w, r, file, info, clean)
-}
-
-func serveOpenedPreviewFile(w http.ResponseWriter, r *http.Request, file *os.File, info fs.FileInfo, clean string) {
-	if !previewutil.IsMarkdownPath(clean) {
-		http.ServeContent(w, r, info.Name(), info.ModTime(), file)
-		return
-	}
-
-	source, err := io.ReadAll(file)
-	if err != nil {
-		envelope.WriteAPIError(w, r, http.StatusNotFound, "not_found", "PREVIEW_FILE_NOT_FOUND", "Preview file not found", nil)
-		return
-	}
-	rendered, err := previewutil.RenderMarkdown(source, filepath.Base(clean))
-	if err != nil {
-		envelope.WriteError(w, r, err)
-		return
-	}
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	if r.Method != http.MethodHead {
-		_, _ = w.Write(rendered) //nolint:gosec // G705: preview content is workspace-local and agent-trusted
-	}
-}
-
 func (c *SessionsController) listWorkspaceFiles(w http.ResponseWriter, r *http.Request) {
 	if c.Svc == nil {
 		apispec.NotImplemented(w, r, "GET", "/api/v1/sessions/{sessionId}/workspace/files")
@@ -678,261 +494,6 @@ func (c *SessionsController) streamWorkspaceChanges(w http.ResponseWriter, r *ht
 			flusher.Flush()
 		}
 	}
-}
-
-// setPreview persists the browser preview URL the desktop app opens for a
-// session and fans out a session_updated CDC event so the dashboard's browser
-// panel reacts live. The target is resolved as follows:
-//
-//   - An empty url opens the workspace's static entry point (index.html and
-//     friends), falling back to the session's existing preview target only
-//     when no entry point exists.
-//   - An explicit workspace-local path (e.g. `index.html`, `./dist/index.html`)
-//     is served through the preview/files route so local files load.
-//   - Absolute paths and file: URLs are accepted only when their fully resolved
-//     target remains inside the fully resolved session workspace. They use the
-//     workspace-confined preview origin rather than an automatable file: URL.
-//   - External http(s) URLs and host:port dev servers are kept verbatim.
-//
-// Every call bumps the session's preview revision, so re-running `ao preview`
-// with the same target still refreshes the panel.
-func (c *SessionsController) setPreview(w http.ResponseWriter, r *http.Request) {
-	if c.Svc == nil {
-		apispec.NotImplemented(w, r, "POST", "/api/v1/sessions/{sessionId}/preview")
-		return
-	}
-	var in SetSessionPreviewRequest
-	if err := decodeJSON(r, &in); err != nil {
-		envelope.WriteAPIError(w, r, http.StatusBadRequest, "bad_request", "INVALID_JSON", "Invalid JSON body", nil)
-		return
-	}
-	// Get first so a missing session is rejected with the normal 404 before any
-	// write, and so autodetect/local resolution has the workspace path to probe.
-	sess, err := c.Svc.Get(r.Context(), sessionID(r))
-	if err != nil {
-		envelope.WriteError(w, r, err)
-		return
-	}
-	// Passive preview intentionally accepts an explicit external URL or an
-	// existing workspace-local file. Arbitrary local files are rejected by every
-	// browser surface because the target remains available to session automation.
-	// Managed process execution uses the separately capability-protected
-	// /preview/server route.
-	previewURL := strings.TrimSpace(in.URL)
-	if previewURL == "" {
-		if entry, ok := discoverPreviewEntry(sess.Metadata.WorkspacePath); ok {
-			previewURL, err = previewFileURL(r, sessionID(r), entry)
-			if err != nil {
-				writePreviewResolveError(w, r, err)
-				return
-			}
-		} else if existing := strings.TrimSpace(sess.Metadata.PreviewURL); existing != "" {
-			var resolveErr error
-			previewURL, resolveErr = resolvePreviewTarget(r, sessionID(r), sess.Metadata.WorkspacePath, existing)
-			if resolveErr != nil {
-				writePreviewResolveError(w, r, resolveErr)
-				return
-			}
-		} else {
-			envelope.WriteAPIError(w, r, http.StatusNotFound, "not_found", "NO_PREVIEW_ENTRY", "No preview entry point found in session workspace", nil)
-			return
-		}
-	} else {
-		var resolveErr error
-		previewURL, resolveErr = resolvePreviewTarget(r, sessionID(r), sess.Metadata.WorkspacePath, previewURL)
-		if resolveErr != nil {
-			writePreviewResolveError(w, r, resolveErr)
-			return
-		}
-	}
-	updated, err := c.Svc.SetPreview(r.Context(), sessionID(r), previewURL)
-	if err != nil {
-		envelope.WriteError(w, r, err)
-		return
-	}
-	envelope.WriteJSON(w, http.StatusOK, SessionResponse{Session: sessionView(updated)})
-}
-
-// clearPreview resets a session's browser preview to empty (`ao preview
-// clear`). Unlike setPreview with an empty url it never autodetects: it persists
-// an empty target so the desktop browser panel returns to its blank state. The
-// write still bumps the preview revision, so the panel hears the change over
-// CDC even though the url field is now empty.
-func (c *SessionsController) clearPreview(w http.ResponseWriter, r *http.Request) {
-	if c.Svc == nil {
-		apispec.NotImplemented(w, r, "DELETE", "/api/v1/sessions/{sessionId}/preview")
-		return
-	}
-	updated, err := c.Svc.SetPreview(r.Context(), sessionID(r), "")
-	if err != nil {
-		envelope.WriteError(w, r, err)
-		return
-	}
-	envelope.WriteJSON(w, http.StatusOK, SessionResponse{Session: sessionView(updated)})
-}
-
-func (c *SessionsController) previewServerStatus(w http.ResponseWriter, r *http.Request) {
-	if c.Svc == nil || c.PreviewServer == nil || c.Capabilities == nil {
-		apispec.NotImplemented(w, r, http.MethodGet, "/api/v1/sessions/{sessionId}/preview/server")
-		return
-	}
-	if !c.authorizePreviewServer(w, r) {
-		return
-	}
-	envelope.WriteJSON(w, http.StatusOK, previewServerStatusResponse(c.PreviewServer.Status(sessionID(r))))
-}
-
-func (c *SessionsController) startPreviewServer(w http.ResponseWriter, r *http.Request) {
-	if c.Svc == nil || c.PreviewServer == nil || c.Capabilities == nil {
-		apispec.NotImplemented(w, r, http.MethodPost, "/api/v1/sessions/{sessionId}/preview/server")
-		return
-	}
-	var in StartPreviewServerRequest
-	if err := decodeJSON(r, &in); err != nil {
-		envelope.WriteAPIError(w, r, http.StatusBadRequest, "bad_request", "INVALID_JSON", "Invalid JSON body", nil)
-		return
-	}
-	if !c.authorizePreviewServer(w, r) {
-		return
-	}
-	sess, err := c.Svc.Get(r.Context(), sessionID(r))
-	if err != nil {
-		envelope.WriteError(w, r, err)
-		return
-	}
-	previous := c.PreviewServer.Status(sessionID(r))
-	status, err := c.PreviewServer.Start(
-		r.Context(),
-		sessionID(r),
-		sess.Metadata.WorkspacePath,
-		strings.TrimSpace(in.Configuration),
-	)
-	if err != nil {
-		currentStatus := c.PreviewServer.Status(sessionID(r))
-		if previous.URL != "" &&
-			(currentStatus.State != previewserver.StateReady || currentStatus.URL != previous.URL) {
-			if current, getErr := c.Svc.Get(r.Context(), sessionID(r)); getErr == nil &&
-				current.Metadata.PreviewURL == previous.URL {
-				clearCtx, cancel := context.WithTimeout(context.WithoutCancel(r.Context()), 2*time.Second)
-				_, _ = c.Svc.SetPreview(clearCtx, sessionID(r), "")
-				cancel()
-			}
-		}
-		writePreviewServerError(w, r, err)
-		return
-	}
-	if status.TargetKind == previewserver.TargetApp {
-		if _, err := c.Svc.SetPreview(r.Context(), sessionID(r), status.URL); err != nil {
-			_, _ = c.PreviewServer.Stop(context.Background(), sessionID(r))
-			envelope.WriteError(w, r, err)
-			return
-		}
-	}
-	envelope.WriteJSON(w, http.StatusOK, previewServerStatusResponse(status))
-}
-
-func (c *SessionsController) stopPreviewServer(w http.ResponseWriter, r *http.Request) {
-	if c.Svc == nil || c.PreviewServer == nil || c.Capabilities == nil {
-		apispec.NotImplemented(w, r, http.MethodDelete, "/api/v1/sessions/{sessionId}/preview/server")
-		return
-	}
-	if !c.authorizePreviewServer(w, r) {
-		return
-	}
-	previous := c.PreviewServer.Status(sessionID(r))
-	status, err := c.PreviewServer.Stop(r.Context(), sessionID(r))
-	if err != nil {
-		writePreviewServerError(w, r, err)
-		return
-	}
-	current, getErr := c.Svc.Get(r.Context(), sessionID(r))
-	if getErr != nil {
-		envelope.WriteError(w, r, getErr)
-		return
-	}
-	if previous.URL != "" && current.Metadata.PreviewURL == previous.URL {
-		if _, err := c.Svc.SetPreview(r.Context(), sessionID(r), ""); err != nil {
-			envelope.WriteError(w, r, err)
-			return
-		}
-	}
-	envelope.WriteJSON(w, http.StatusOK, previewServerStatusResponse(status))
-}
-
-func (c *SessionsController) authorizePreviewServer(w http.ResponseWriter, r *http.Request) bool {
-	id := sessionID(r)
-	sess, err := c.Svc.Get(r.Context(), id)
-	if err != nil {
-		envelope.WriteError(w, r, err)
-		return false
-	}
-	if sess.IsTerminated {
-		envelope.WriteAPIError(w, r, http.StatusConflict, "conflict", "SESSION_TERMINATED", "Session is terminated", nil)
-		return false
-	}
-	if !c.Capabilities.Valid(
-		id,
-		strings.TrimSpace(r.Header.Get(browserCapabilityHeader)),
-		sess.Metadata.BrowserCapabilityVerifier,
-	) {
-		envelope.WriteAPIError(
-			w,
-			r,
-			http.StatusForbidden,
-			"forbidden",
-			"PREVIEW_CAPABILITY_INVALID",
-			"Preview capability is invalid",
-			nil,
-		)
-		return false
-	}
-	return true
-}
-
-func previewServerStatusResponse(status previewserver.Status) PreviewServerStatusResponse {
-	logs := status.Logs
-	if logs == nil {
-		logs = []string{}
-	}
-	return PreviewServerStatusResponse{
-		SessionID:     status.SessionID,
-		State:         string(status.State),
-		Configuration: status.Configuration,
-		TargetKind:    string(status.TargetKind),
-		URL:           status.URL,
-		Port:          status.Port,
-		StartedAt:     status.StartedAt,
-		Error:         status.Error,
-		Logs:          logs,
-	}
-}
-
-func writePreviewServerError(w http.ResponseWriter, r *http.Request, err error) {
-	var serviceErr previewserver.Error
-	if !errors.As(err, &serviceErr) {
-		envelope.WriteError(w, r, err)
-		return
-	}
-	status := http.StatusUnprocessableEntity
-	typeName := "unprocessable"
-	switch serviceErr.Code {
-	case "PREVIEW_CONFIG_NOT_FOUND", "PREVIEW_CONFIGURATION_NOT_FOUND":
-		status = http.StatusNotFound
-		typeName = "not_found"
-	case "PREVIEW_CONFIGURATION_REQUIRED":
-		status = http.StatusBadRequest
-		typeName = "bad_request"
-	case "PREVIEW_NOT_READY":
-		status = http.StatusGatewayTimeout
-		typeName = "timeout"
-	case "PREVIEW_START_CANCELED":
-		status = http.StatusRequestTimeout
-		typeName = "timeout"
-	case "PREVIEW_START_FAILED", "PREVIEW_EXITED", "PREVIEW_STOP_FAILED":
-		status = http.StatusInternalServerError
-		typeName = "internal_error"
-	}
-	envelope.WriteAPIError(w, r, status, typeName, serviceErr.Code, serviceErr.Message, nil)
 }
 
 func (c *SessionsController) listPRs(w http.ResponseWriter, r *http.Request) {
@@ -1666,169 +1227,6 @@ func writeSessionPRError(w http.ResponseWriter, r *http.Request, err error) {
 	default:
 		envelope.WriteError(w, r, err)
 	}
-}
-
-func discoverPreviewEntry(workspacePath string) (string, bool) {
-	// Use DiscoverWebEntrypoint (index.html variants only), not DiscoverEntry
-	// (which falls back to mostRecentPreviewable — the newest .md/.html in the
-	// workspace). Bare `ao preview` (no args) hits this path, and agent
-	// harnesses run that automatically on new sessions via the using-ao skill.
-	// With the .md fallback, every new session in a Markdown-rich repo opened
-	// its browser panel to an arbitrary repo doc (e.g. test/cli/README.md)
-	// instead of staying empty. Mirrors the poller fix from PR #2860.
-	// See issue #2859.
-	entry, ok := previewutil.DiscoverWebEntrypoint(workspacePath)
-	return entry.Path, ok
-}
-
-// resolveLocalPreview maps a workspace-local path (e.g. "index.html" or
-// "./dist/index.html") to its preview/files proxy URL when the path resolves to
-// a regular file inside the session workspace. It returns ok=false for anything
-// that already looks like a URL (an http(s)/file scheme, or a host:port dev
-// server) and for paths that do not point at a workspace file, so the caller
-// keeps those targets verbatim. Explicit parent traversal is rejected by
-// resolvePreviewTarget before this function is called.
-func resolveLocalPreview(r *http.Request, id domain.SessionID, workspacePath, raw string) (string, bool, error) {
-	if raw == "" || hasURLScheme(raw) {
-		return "", false, nil
-	}
-	entry, ok := previewutil.EntryAtPath(workspacePath, raw)
-	if !ok {
-		return "", false, nil
-	}
-	resolved, err := previewFileURL(r, id, entry.Path)
-	return resolved, true, err
-}
-
-func resolvePreviewTarget(r *http.Request, id domain.SessionID, workspacePath, raw string) (string, error) {
-	raw = strings.TrimSpace(raw)
-	if filePath, isFileURL, err := previewFileURLPath(raw); isFileURL {
-		if err != nil {
-			return "", err
-		}
-		return workspaceAbsolutePreviewURL(r, id, workspacePath, filePath)
-	}
-	if isAbsolutePreviewPath(raw) {
-		return workspaceAbsolutePreviewURL(r, id, workspacePath, raw)
-	}
-	if !hasURLScheme(raw) && containsParentPathSegment(raw) {
-		return "", errPreviewFileOutsideWorkspace
-	}
-	if resolved, ok, err := resolveLocalPreview(r, id, workspacePath, raw); ok || err != nil {
-		return resolved, err
-	}
-	return raw, nil
-}
-
-func containsParentPathSegment(raw string) bool {
-	raw = strings.ReplaceAll(raw, `\`, "/")
-	for _, segment := range strings.Split(raw, "/") {
-		if segment == ".." {
-			return true
-		}
-	}
-	return false
-}
-
-func isAbsolutePreviewPath(raw string) bool {
-	return filepath.IsAbs(raw) || isWindowsAbsolutePath(raw)
-}
-
-func isWindowsAbsolutePath(raw string) bool {
-	return len(raw) >= 3 && ((raw[0] >= 'a' && raw[0] <= 'z') || (raw[0] >= 'A' && raw[0] <= 'Z')) && raw[1] == ':' && (raw[2] == '\\' || raw[2] == '/')
-}
-
-func previewFileURLPath(raw string) (string, bool, error) {
-	if len(raw) < len("file:") || !strings.EqualFold(raw[:len("file:")], "file:") {
-		return "", false, nil
-	}
-	parsed, err := url.Parse(raw)
-	if err != nil {
-		return "", true, errPreviewFileNotFound
-	}
-	if parsed.Host != "" && !strings.EqualFold(parsed.Host, "localhost") {
-		return "", true, errPreviewFileOutsideWorkspace
-	}
-	filePath := parsed.Path
-	if len(filePath) > 1 && filePath[0] == '/' && isWindowsAbsolutePath(filePath[1:]) {
-		filePath = filePath[1:]
-	}
-	filePath = filepath.FromSlash(filePath)
-	if !isAbsolutePreviewPath(filePath) {
-		return "", true, errPreviewFileNotFound
-	}
-	return filePath, true, nil
-}
-
-func workspaceAbsolutePreviewURL(
-	r *http.Request,
-	id domain.SessionID,
-	workspacePath,
-	filePath string,
-) (string, error) {
-	workspaceAbs, err := filepath.Abs(workspacePath)
-	if err != nil {
-		return "", errPreviewFileNotFound
-	}
-	workspaceResolved, err := filepath.EvalSymlinks(workspaceAbs)
-	if err != nil {
-		return "", errPreviewFileNotFound
-	}
-	fileAbs, err := filepath.Abs(filePath)
-	if err != nil {
-		return "", errPreviewFileNotFound
-	}
-	fileResolved, err := filepath.EvalSymlinks(fileAbs)
-	if err != nil {
-		return "", errPreviewFileNotFound
-	}
-	rel, err := filepath.Rel(workspaceResolved, fileResolved)
-	if err != nil || rel == "." || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
-		return "", errPreviewFileOutsideWorkspace
-	}
-	entry, ok := previewutil.EntryAtPath(workspaceResolved, filepath.ToSlash(rel))
-	if !ok {
-		return "", errPreviewFileNotFound
-	}
-	return previewFileURL(r, id, entry.Path)
-}
-
-func writePreviewResolveError(w http.ResponseWriter, r *http.Request, err error) {
-	if errors.Is(err, errPreviewFileOutsideWorkspace) {
-		envelope.WriteAPIError(w, r, http.StatusForbidden, "forbidden", "PREVIEW_FILE_OUTSIDE_WORKSPACE", "Preview files must stay inside the session workspace", nil)
-		return
-	}
-	if errors.Is(err, errPreviewFileNotFound) {
-		envelope.WriteAPIError(w, r, http.StatusNotFound, "not_found", "PREVIEW_FILE_NOT_FOUND", "Preview file not found", nil)
-		return
-	}
-	if errors.Is(err, previewutil.ErrPreviewHostUnsupported) {
-		envelope.WriteAPIError(w, r, http.StatusUnprocessableEntity, "unprocessable", "PREVIEW_SESSION_ID_UNSUPPORTED", "Session ID is too long for an isolated preview hostname", nil)
-		return
-	}
-	envelope.WriteError(w, r, err)
-}
-
-// hasURLScheme reports whether raw begins with an RFC-3986 "scheme:" prefix
-// (http:, https:, file:, or a host:port like localhost:5173). It mirrors the
-// renderer's withDefaultScheme heuristic so the daemon and browser panel agree
-// on what counts as a URL versus a workspace-relative path.
-func hasURLScheme(raw string) bool {
-	for i := 0; i < len(raw); i++ {
-		c := raw[i]
-		if c == ':' {
-			return i > 0
-		}
-		isSchemeChar := c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z' || c >= '0' && c <= '9' || c == '+' || c == '.' || c == '-'
-		if !isSchemeChar {
-			return false
-		}
-	}
-	return false
-}
-
-func previewFileURL(r *http.Request, id domain.SessionID, entry string) (string, error) {
-	return previewutil.FileURL("http://"+r.Host, id, entry)
 }
 
 func sessionView(s domain.Session) SessionView {

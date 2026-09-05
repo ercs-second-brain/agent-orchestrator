@@ -77,16 +77,6 @@ type commander interface {
 	StageAttachments(ctx context.Context, id domain.SessionID, attachments []ports.SpawnAttachment) ([]string, error)
 }
 
-// interfaceTransitionCommander is an optional command capability. Keeping it
-// separate avoids widening every focused session-service fake while production
-// can expose the feature through the concrete Session Manager.
-type interfaceTransitionCommander interface {
-	InterfaceTransitionStatus(context.Context, domain.SessionID) (sessionmanager.InterfaceTransitionStatus, error)
-	StartInterfaceTransition(context.Context, domain.SessionID, domain.SessionMode, domain.SessionInterfaceTransitionPolicy) (domain.SessionInterfaceTransition, error)
-	CancelInterfaceTransition(context.Context, domain.SessionID) error
-	AcknowledgeInterfaceTransitionNotice(context.Context, domain.SessionID, string) (domain.SessionInterfaceTransition, error)
-}
-
 // exitAgentCommander keeps the process-only lifecycle optional for focused
 // service fakes while production delegates to Session Manager.
 type exitAgentCommander interface {
@@ -146,14 +136,6 @@ type ExitAgentOutcome struct {
 
 // InterfaceTransitionStatus describes whether this session can cross between
 // its TUI and Chat controllers and includes the latest durable handoff attempt.
-type InterfaceTransitionStatus struct {
-	Supported  bool
-	TargetMode domain.SessionMode
-	ReasonCode string
-	Reason     string
-	Transition *domain.SessionInterfaceTransition
-}
-
 type scmProvider interface {
 	ParseRepository(remote string) (ports.SCMRepo, bool)
 	FetchPullRequests(ctx context.Context, refs []ports.SCMPRRef) ([]ports.SCMObservation, error)
@@ -309,10 +291,6 @@ func (s *Service) invalidateAgentReadinessAfterLaunchFailure(harness domain.Agen
 	invalidated := false
 	if errors.Is(err, ports.ErrAgentBinaryNotFound) {
 		s.agentReadiness.InvalidateAgentInstallation(id)
-		invalidated = true
-	}
-	if errors.Is(err, ports.ErrChatAuthRequired) {
-		s.agentReadiness.InvalidateAgentAuthentication(id)
 		invalidated = true
 	}
 	if invalidated {
@@ -611,76 +589,6 @@ func (s *Service) ResumeAgent(ctx context.Context, id domain.SessionID) (ResumeA
 		return ResumeAgentOutcome{}, err
 	}
 	return ResumeAgentOutcome{Session: session, Mode: restoreModeView(res.Mode)}, nil
-}
-
-// InterfaceTransitionStatus returns capability and progress without launching
-// a provider process or mutating the session.
-func (s *Service) InterfaceTransitionStatus(ctx context.Context, id domain.SessionID) (InterfaceTransitionStatus, error) {
-	manager, ok := s.manager.(interfaceTransitionCommander)
-	if !ok {
-		return InterfaceTransitionStatus{}, apierr.Conflict(
-			"INTERFACE_HANDOFF_UNSUPPORTED", "This build cannot switch session interfaces", nil)
-	}
-	status, err := manager.InterfaceTransitionStatus(ctx, id)
-	if err != nil {
-		return InterfaceTransitionStatus{}, toAPIError(err)
-	}
-	return InterfaceTransitionStatus{
-		Supported: status.Supported, TargetMode: status.TargetMode,
-		ReasonCode: status.ReasonCode, Reason: status.Reason,
-		Transition: status.Transition,
-	}, nil
-}
-
-// StartInterfaceTransition begins a durable, asynchronous controller handoff.
-func (s *Service) StartInterfaceTransition(
-	ctx context.Context,
-	id domain.SessionID,
-	target domain.SessionMode,
-	policy domain.SessionInterfaceTransitionPolicy,
-) (domain.SessionInterfaceTransition, error) {
-	if !target.Valid() {
-		return domain.SessionInterfaceTransition{}, apierr.Invalid(
-			"INVALID_SESSION_MODE", "Target mode must be chat or tui", nil)
-	}
-	if !policy.Valid() {
-		return domain.SessionInterfaceTransition{}, apierr.Invalid(
-			"INVALID_TRANSITION_POLICY", "Policy must be drain or interrupt", nil)
-	}
-	manager, ok := s.manager.(interfaceTransitionCommander)
-	if !ok {
-		return domain.SessionInterfaceTransition{}, apierr.Conflict(
-			"INTERFACE_HANDOFF_UNSUPPORTED", "This build cannot switch session interfaces", nil)
-	}
-	transition, err := manager.StartInterfaceTransition(ctx, id, target, policy)
-	return transition, toAPIError(err)
-}
-
-// CancelInterfaceTransition cancels a handoff while its source controller is
-// still safe to reopen.
-func (s *Service) CancelInterfaceTransition(ctx context.Context, id domain.SessionID) error {
-	manager, ok := s.manager.(interfaceTransitionCommander)
-	if !ok {
-		return apierr.Conflict(
-			"INTERFACE_HANDOFF_UNSUPPORTED", "This build cannot switch session interfaces", nil)
-	}
-	return toAPIError(manager.CancelInterfaceTransition(ctx, id))
-}
-
-// AcknowledgeInterfaceTransitionNotice durably dismisses one terminal failure
-// or recovery notice while retaining the transition record for diagnostics.
-func (s *Service) AcknowledgeInterfaceTransitionNotice(
-	ctx context.Context,
-	id domain.SessionID,
-	transitionID string,
-) (domain.SessionInterfaceTransition, error) {
-	manager, ok := s.manager.(interfaceTransitionCommander)
-	if !ok {
-		return domain.SessionInterfaceTransition{}, apierr.Conflict(
-			"INTERFACE_HANDOFF_UNSUPPORTED", "This build cannot switch session interfaces", nil)
-	}
-	transition, err := manager.AcknowledgeInterfaceTransitionNotice(ctx, id, transitionID)
-	return transition, toAPIError(err)
 }
 
 func restoreModeView(mode sessionmanager.RestoreMode) RestoreModeView {
@@ -1033,28 +941,6 @@ func mapSessionError(err error) error {
 	case errors.Is(err, ports.ErrCodexAccountSwitchInProgress):
 		return apierr.Conflict("CODEX_ACCOUNT_SWITCH_IN_PROGRESS",
 			"AO is switching the global Codex account; Codex session mutations are temporarily blocked", nil)
-	case errors.Is(err, sessionmanager.ErrInterfaceTransitionInProgress):
-		return apierr.Conflict("INTERFACE_TRANSITION_IN_PROGRESS",
-			"This session is already switching interfaces", nil)
-	case errors.Is(err, sessionmanager.ErrInterfaceHandoffUnsupported):
-		return apierr.Conflict("INTERFACE_HANDOFF_UNSUPPORTED", err.Error(), nil)
-	case errors.Is(err, sessionmanager.ErrNativeConversationMissing):
-		return apierr.Conflict("NATIVE_SESSION_MISSING",
-			"The agent has not exposed a native conversation that can resume in the other interface", nil)
-	case errors.Is(err, sessionmanager.ErrNativeConversationUnverified):
-		return apierr.Conflict("NATIVE_SESSION_UNVERIFIED",
-			"The current terminal launch has not confirmed that it owns the stored native conversation yet", nil)
-	case errors.Is(err, sessionmanager.ErrInterfaceTransitionNotCancellable):
-		return apierr.Conflict("INTERFACE_TRANSITION_NOT_CANCELLABLE",
-			"The source controller has already stopped; AO must finish or recover the switch", nil)
-	case errors.Is(err, sessionmanager.ErrInterfaceTransitionNoticeNotAcknowledgeable):
-		return apierr.Conflict("INTERFACE_TRANSITION_NOTICE_NOT_ACKNOWLEDGEABLE",
-			"This interface switch has no failure or recovery notice to acknowledge", nil)
-	case errors.Is(err, sessionmanager.ErrInterfaceAlreadySelected):
-		return apierr.Conflict("INTERFACE_ALREADY_SELECTED",
-			"The session is already using the requested interface", nil)
-	case errors.Is(err, sessionmanager.ErrInterfaceTransitionNotFound):
-		return apierr.NotFound("INTERFACE_TRANSITION_NOT_FOUND", "Interface switch not found")
 	case errors.Is(err, sessionmanager.ErrAwaitingDecision):
 		return apierr.Conflict("SESSION_AWAITING_DECISION",
 			"Session is paused on a permission decision; answer it in the session terminal first", nil)
@@ -1131,29 +1017,6 @@ func mapSessionError(err error) error {
 		return apierr.Invalid("AGENT_BINARY_NOT_FOUND", err.Error(), nil)
 	case errors.Is(err, ports.ErrRuntimePrerequisite):
 		return apierr.Invalid("RUNTIME_PREREQUISITE_MISSING", err.Error(), nil)
-	case errors.Is(err, ports.ErrChatUnsupported):
-		var capabilityErr *ports.ChatCapabilityError
-		if errors.As(err, &capabilityErr) {
-			missing := make([]string, 0, len(capabilityErr.Missing))
-			for _, capability := range capabilityErr.Missing {
-				missing = append(missing, string(capability))
-			}
-			allowed := make([]string, 0, len(capabilityErr.AllowedPermissionModes))
-			for _, mode := range capabilityErr.AllowedPermissionModes {
-				allowed = append(allowed, string(mode))
-			}
-			return apierr.Conflict("SESSION_MODE_UNSUPPORTED", err.Error(), map[string]any{
-				"missingCapabilities":  missing,
-				"allowedApprovalModes": allowed,
-			})
-		}
-		return apierr.Conflict("SESSION_MODE_UNSUPPORTED", err.Error(), nil)
-	case errors.Is(err, ports.ErrChatDriverUnavailable):
-		return apierr.Conflict("CHAT_DRIVER_UNAVAILABLE", err.Error(), nil)
-	case errors.Is(err, ports.ErrChatDriverIncompatible):
-		return apierr.Conflict("CHAT_DRIVER_INCOMPATIBLE", err.Error(), nil)
-	case errors.Is(err, ports.ErrChatAuthRequired):
-		return apierr.Conflict("CHAT_AUTH_REQUIRED", "The agent is installed but not authenticated", nil)
 	case errors.Is(err, ports.ErrRuntimeWorkspaceCwdMismatch):
 		return apierr.Conflict("WORKSPACE_CWD_MISMATCH", err.Error(), nil)
 	case errors.Is(err, ports.ErrWorkspaceLocked):
@@ -1165,8 +1028,8 @@ func mapSessionError(err error) error {
 
 // toSpawnAPIError maps spawn failures to structured API errors so telemetry and
 // clients never land in the unclassified internal bucket when a stage sentinel
-// is present. Known inner sentinels (branch state, agent binary, chat
-// preflight) still win via toAPIError. Already-mapped *apierr.Error values are
+// is present. Known inner sentinels (branch state, agent binary) still win via
+// toAPIError. Already-mapped *apierr.Error values are
 // returned as-is so emitSpawnFailed can classify raw or pre-mapped errors.
 func toSpawnAPIError(err error) error {
 	if err == nil {
@@ -1214,8 +1077,6 @@ func toSpawnAPIError(err error) error {
 		return apierr.Internal("SPAWN_COMMIT_FAILED", err.Error())
 	case errors.Is(err, sessionmanager.ErrSpawnDeliverPrompt):
 		return apierr.Conflict("SPAWN_DELIVER_PROMPT_FAILED", err.Error(), nil)
-	case errors.Is(err, sessionmanager.ErrChatController):
-		return apierr.Conflict("CHAT_CONTROLLER_FAILED", err.Error(), nil)
 	default:
 		return apierr.Internal("SPAWN_INTERNAL", err.Error())
 	}
