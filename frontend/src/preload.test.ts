@@ -8,7 +8,8 @@ const electronMocks = vi.hoisted(() => {
 		exposeInMainWorld: vi.fn(),
 		getPathForFile: vi.fn(),
 		// Default-resolve so preload's module-scope `invoke("desktop-remote:getCspOrigins").then(...)` works.
-		invoke: vi.fn((..._args: unknown[]) => Promise.resolve<unknown>(undefined)),
+		// Typed loosely (unknown arg, unknown resolve) so tests can mockResolvedValueOnce any payload.
+		invoke: vi.fn((_channel: string, ..._args: unknown[]) => Promise.resolve<unknown>(undefined)),
 		listeners,
 		off: vi.fn(),
 		on: vi.fn((channel: string, listener: (...args: unknown[]) => void) => {
