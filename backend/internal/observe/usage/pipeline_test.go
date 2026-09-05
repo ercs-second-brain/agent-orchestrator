@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aoagents/agent-orchestrator/backend/internal/testenv"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/testenv"
 )
 
 func TestPipelineRetriesWatcherCreation(t *testing.T) {
