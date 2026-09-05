@@ -37,7 +37,7 @@ jobs:
         include:
           # `artifact` is the pinned upload-artifact name the downstream release
           # conductor consumes; the contained filenames keep the existing stable
-          # alias names so the cask/updater/landing stay compatible. Do not
+          # alias names so the cask/updater stay compatible. Do not
           # rename either without updating the conductor.
           - os: macos-latest
             platform: darwin-arm64
