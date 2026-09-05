@@ -7,10 +7,8 @@ import { aoBridge } from "../lib/bridge";
  * the updates:status push channel. Used by the sidebar restart-to-update row
  * and the Global Settings Updates section.
  *
- * Deliberately carries no telemetry. Two components mount this hook, so each
- * would report the same outcome, and the statuses it sees are the UI's view:
- * the main process suppresses them for automatic checks. Update telemetry is
- * owned by the main process and subscribed once in lib/update-telemetry.ts.
+ * Deliberately carries no telemetry. The statuses it sees are the UI's view;
+ * the main process suppresses them for automatic checks.
  */
 export function useUpdateStatus(onStatusEvent?: (status: UpdateStatus) => void): UpdateStatus {
 	const [status, setStatus] = useState<UpdateStatus>({ state: "idle" });

@@ -12,8 +12,6 @@ import { getInstallId } from "./installId";
 import { notificationTarget } from "./notificationView";
 import { configurePushHandler, ensureAndroidChannel, registerForPush, unpairFromServer } from "./push";
 import { useApp } from "./store";
-import { MOBILE_EVENTS } from "./telemetry/events";
-import { mobileTelemetry } from "./telemetry/runtime";
 
 // Set the foreground presentation policy before any notification can arrive.
 configurePushHandler();
@@ -121,8 +119,6 @@ export function PushManager(): null {
 		// where the tap actually lands: notificationTarget returns /session/:id
 		// only for a needs_input with a sessionId, and /prs for everything else.
 		const destination = notificationTarget({ type: data.type ?? "", sessionId: data.sessionId });
-		const target = destination.startsWith("/session") ? "session" : "prs";
-		mobileTelemetry()?.capture(MOBILE_EVENTS.notificationOpened, { target, cold_start: coldStart });
 		// Best-effort mark-read so unread counts stay consistent with the dashboard.
 		if (config && data.notificationId) {
 			markNotificationRead(config, data.notificationId).catch(() => {});

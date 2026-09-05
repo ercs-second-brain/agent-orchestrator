@@ -33,7 +33,6 @@
 		"api:ts": "openapi-typescript ../backend/internal/httpd/apispec/openapi.yaml -o src/api/schema.ts"
 	},
 	"devDependencies": {
-		"@electron/rebuild": "^4.0.4",
 		"@electron-forge/cli": "^7.8.0",
 		"@electron-forge/maker-base": "^7.8.0",
 		"@electron-forge/maker-deb": "^7.8.0",
@@ -42,6 +41,7 @@
 		"@electron-forge/plugin-auto-unpack-natives": "^7.8.0",
 		"@electron-forge/plugin-vite": "^7.8.0",
 		"@electron-forge/publisher-github": "^7.8.0",
+		"@electron/rebuild": "^4.0.4",
 		"@playwright/test": "^1.60.0",
 		"@tailwindcss/vite": "^4.3.0",
 		"@tanstack/router-plugin": "^1.168.18",
@@ -101,7 +101,6 @@
 		"lucide-react": "^1.17.0",
 		"motion": "^12.43.0",
 		"openapi-fetch": "^0.17.0",
-		"posthog-js": "^1.390.2",
 		"qr-code-styling": "^1.9.2",
 		"qrcode.react": "^4.2.0",
 		"radix-ui": "^1.5.0",

@@ -5,7 +5,6 @@ import type { ReactNode } from "react";
 import type { WorkspaceSummary } from "../types/workspace";
 
 const {
-	captureRendererEventMock,
 	cloudState,
 	getApiBaseUrlMock,
 	getMock,
@@ -14,7 +13,6 @@ const {
 	setQueryHealthyMock,
 	subscribeApiBaseUrlMock,
 } = vi.hoisted(() => ({
-	captureRendererEventMock: vi.fn().mockResolvedValue(undefined),
 	cloudState: { ready: false, org: undefined as { id: string } | undefined },
 	getApiBaseUrlMock: vi.fn(() => "http://127.0.0.1:3001"),
 	getMock: vi.fn(),
@@ -31,7 +29,6 @@ vi.mock("../lib/api-client", () => ({
 	subscribeApiBaseUrl: subscribeApiBaseUrlMock,
 }));
 
-vi.mock("../lib/telemetry", () => ({ captureRendererEvent: captureRendererEventMock }));
 vi.mock("../lib/agent-switch-visibility", () => ({ agentSwitchVisibility: { setQueryHealthy: setQueryHealthyMock } }));
 
 vi.mock("./useCloudCp", () => ({
@@ -66,7 +63,6 @@ function respondWith(payload: {
 }
 
 beforeEach(() => {
-	captureRendererEventMock.mockClear();
 	getMock.mockReset();
 	getApiBaseUrlMock.mockReset().mockReturnValue("http://127.0.0.1:3001");
 	hasTrustedApiBaseUrlMock.mockReset().mockReturnValue(true);
@@ -207,14 +203,6 @@ describe("useWorkspaceQuery", () => {
 			branch: undefined,
 			autoInjectReview: true,
 			autoInjectCI: true,
-		});
-		expect(captureRendererEventMock).toHaveBeenCalledWith("ao.renderer.session_state_unknown", {
-			field: "status",
-			reason: "unrecognized",
-		});
-		expect(captureRendererEventMock).toHaveBeenCalledWith("ao.renderer.session_state_unknown", {
-			field: "activity",
-			reason: "missing",
 		});
 	});
 

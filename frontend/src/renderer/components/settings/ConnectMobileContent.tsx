@@ -4,7 +4,6 @@ import { Fragment, useEffect, useRef, useState } from "react";
 import { ArrowUpRight, Check, Copy, Loader2, RotateCcw } from "lucide-react";
 import { apiClient, apiErrorMessage } from "../../lib/api-client";
 import { aoBridge } from "../../lib/bridge";
-import { captureRendererEvent } from "../../lib/telemetry";
 import { ANDROID_PLAY_STORE_URL, IOS_APP_STORE_URL } from "./ConnectMobileGetApp";
 import { reasonMessage, type SetupMode } from "./ConnectMobileSetup";
 // Returns with the commented-out connection picker below.
@@ -259,7 +258,6 @@ export function ConnectMobileContent({ active }: { active: boolean }) {
 		}
 		if (initialEnabled === undefined || reportedOpen.current) return;
 		reportedOpen.current = true;
-		void captureRendererEvent("ao.renderer.mobile_connect_opened", { bridge_enabled: initialEnabled });
 	}, [active, initialEnabled]);
 
 	const invalidate = () => {
@@ -386,18 +384,11 @@ export function ConnectMobileContent({ active }: { active: boolean }) {
 		}
 	};
 
-	const reportToggle = (next: boolean, outcome: "succeeded" | "failed") => {
-		void captureRendererEvent("ao.renderer.mobile_bridge_toggled", { enabled: next, outcome });
-	};
-
 	const startBridge = () => {
 		if (busy || enabled) return;
 		clearActionErrors();
 		setOptimisticEnabled(true);
-		enable.mutate(undefined, {
-			onSuccess: () => reportToggle(true, "succeeded"),
-			onError: () => reportToggle(true, "failed"),
-		});
+		enable.mutate(undefined, {});
 	};
 
 	const actionError =

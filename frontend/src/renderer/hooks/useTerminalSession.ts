@@ -15,7 +15,6 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { getApiBaseUrl } from "../lib/api-client";
-import { captureRendererEvent } from "../lib/telemetry";
 import { createTerminalMux, muxUrlFromApiBase, type TerminalMux } from "../lib/terminal-mux";
 import { sessionIsActive, type WorkspaceSession } from "../types/workspace";
 import { workspaceQueryKey } from "./useWorkspaceQuery";
@@ -634,7 +633,6 @@ export function useTerminalSession(session: WorkspaceSession | undefined, option
 				// and its error text inspectable while disposing the failed socket;
 				// an explicit session restore can create a fresh attachment later.
 				teardownMux();
-				void captureRendererEvent("ao.renderer.terminal_attach_failed", { reason: "pane_error" });
 				invalidateWorkspaces();
 			}),
 			mux.onConnectionChange((connectionState) => {
@@ -752,7 +750,6 @@ export function useTerminalSession(session: WorkspaceSession | undefined, option
 			// Only the first timeout of a reattach sequence is reported; the
 			// backoff loop retrying against a restarting daemon is not news.
 			if (r.attempts === 0) {
-				void captureRendererEvent("ao.renderer.terminal_attach_failed", { reason: "open_timeout" });
 			}
 			transition("reattaching");
 			teardownMux();

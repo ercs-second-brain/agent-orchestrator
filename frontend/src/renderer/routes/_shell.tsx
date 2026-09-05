@@ -38,10 +38,8 @@ import {
 import { apiClient, apiErrorCode, apiErrorMessage, getApiBaseUrl, hasTrustedApiBaseUrl, subscribeApiBaseUrl } from "../lib/api-client";
 import { refreshDaemonStatus, isDaemonReady } from "../lib/daemon-status";
 import { usesPreviewWorkspaceData } from "../lib/preview-mode";
-import { addRendererExceptionStep, captureRendererEvent, captureRendererException } from "../lib/telemetry";
 import { ShellProvider } from "../lib/shell-context";
 import { restartProjectOrchestrator } from "../lib/restart-orchestrator";
-import { captureOrchestratorReplacementFailure } from "../lib/orchestrator-replacement-telemetry";
 import { applyDocumentTheme, applyDocumentThemeStyle } from "../lib/theme";
 import { aoBridge } from "../lib/bridge";
 import { handleModifierLinkClick } from "../lib/external-link-policy";
@@ -59,7 +57,6 @@ import { sidebarIsVisible, sidebarOccupiesLayout, useUiStore } from "../stores/u
 import { matchesRendererShortcut } from "../stores/keybindings-store";
 import { sessionIsActive, toProjectKind, type WorkspaceSummary } from "../types/workspace";
 import type { components } from "../../api/schema";
-import { useAgentInventoryTelemetry } from "../hooks/useAgentInventoryTelemetry";
 
 export const Route = createFileRoute("/_shell")({
 	// Prefetch the workspace list for the whole shell (parent loaders run before
@@ -165,7 +162,6 @@ const ShellCenter = memo(function ShellCenter({
 // instead of Zustand. The daemon-status effect runs here exactly once.
 function ShellLayout() {
 	// Reports how many agents this install has available, once per launch.
-	useAgentInventoryTelemetry();
 	const { t } = useTranslation();
 	const navigate = useNavigate();
 	const matchRoute = useMatchRoute();
@@ -396,7 +392,6 @@ function ShellLayout() {
 				orchestratorAgent: input.orchestratorAgent as WorkspaceSummary["orchestratorAgent"],
 				sessions: [],
 			};
-			void captureRendererEvent(`ao.renderer.${source}_succeeded`, { project_id: workspace.id });
 			updateWorkspaces((current) => [workspace, ...current.filter((item) => item.id !== workspace.id)]);
 			setOrchestratorStartupError(workspace.id, null);
 			try {
@@ -437,12 +432,6 @@ function ShellLayout() {
 			asWorkspace?: boolean;
 			defaultBranch?: string;
 		}) => {
-			void addRendererExceptionStep("Project add requested", {
-				source: "project-add",
-				operation: "project_add",
-				surface: "project_board",
-			});
-			void captureRendererEvent("ao.renderer.project_add_requested");
 			const status = await refreshDaemonStatus();
 			if (!isDaemonReady(status)) {
 				throw new Error(status.message || "AO daemon is not ready.");
@@ -468,11 +457,6 @@ function ShellLayout() {
 						return;
 					}
 				}
-				void captureRendererException(failure, {
-					source: "project-add",
-					operation: "project_add",
-					surface: "project_board",
-					});
 					throw failure;
 			}
 			if (!data?.project) throw new Error("Project creation returned no project");
@@ -489,12 +473,6 @@ function ShellLayout() {
 			orchestratorAgent: string;
 			trackerIntake?: components["schemas"]["TrackerIntakeConfig"];
 		}) => {
-			void addRendererExceptionStep("Project clone requested", {
-				source: "project-clone",
-				operation: "project_clone",
-				surface: "project_board",
-			});
-			void captureRendererEvent("ao.renderer.project_clone_requested");
 			const status = await refreshDaemonStatus();
 			if (!isDaemonReady(status)) {
 				throw new Error(status.message || "AO daemon is not ready.");
@@ -509,11 +487,6 @@ function ShellLayout() {
 			if (error) {
 				const failure = new Error(apiErrorMessage(error)) as Error & { code?: string };
 				failure.code = apiErrorCode(error);
-				void captureRendererException(failure, {
-					source: "project-clone",
-					operation: "project_clone",
-					surface: "project_board",
-				});
 				throw failure;
 			}
 			if (!data?.project) throw new Error("Project clone returned no project");
@@ -530,12 +503,6 @@ function ShellLayout() {
 			orchestratorAgent: string;
 			trackerIntake?: components["schemas"]["TrackerIntakeConfig"];
 		}) => {
-			void addRendererExceptionStep("Repository create requested", {
-				source: "project-create-repository",
-				operation: "project_create_repository",
-				surface: "project_board",
-			});
-			void captureRendererEvent("ao.renderer.project_create_repository_requested");
 			const status = await refreshDaemonStatus();
 			if (!isDaemonReady(status)) {
 				throw new Error(status.message || "AO daemon is not ready.");
@@ -550,11 +517,6 @@ function ShellLayout() {
 			if (error) {
 				const failure = new Error(apiErrorMessage(error)) as Error & { code?: string };
 				failure.code = apiErrorCode(error);
-				void captureRendererException(failure, {
-					source: "project-create-repository",
-					operation: "project_create_repository",
-					surface: "project_board",
-				});
 				throw failure;
 			}
 			if (!data?.project) throw new Error("Repository create returned no project");
@@ -578,27 +540,14 @@ function ShellLayout() {
 		async (projectId: string) => {
 			const isLastWorkspace =
               workspaces.length === 1 && workspaces[0]?.id === projectId;
-			void addRendererExceptionStep("Project removal requested", {
-				source: "project-remove",
-				operation: "project_remove",
-				surface: "project_board",
-				project_id: projectId,
-			});
 			const { error } = await apiClient.DELETE("/api/v1/projects/{id}", {
 				params: { path: { id: projectId } },
 			});
 			if (error) {
 				const failure = new Error(apiErrorMessage(error)) as Error & { code?: string };
 				failure.code = apiErrorCode(error);
-				void captureRendererException(failure, {
-					source: "project-remove",
-					operation: "project_remove",
-					surface: "project_board",
-					project_id: projectId,
-				});
 				throw failure;
 			}
-			void captureRendererEvent("ao.renderer.project_removed", { project_id: projectId });
 			updateWorkspaces((current) => current.filter((item) => item.id !== projectId));
 			if (isLastWorkspace) {
               void navigate({ to: "/" });
@@ -616,9 +565,7 @@ function ShellLayout() {
 				setProjectRestarting,
 				setOrchestratorReplacementError,
 				mode,
-				onError: (error) => {
-					captureOrchestratorReplacementFailure(error, projectId);
-				},
+				onError: () => {},
 			});
 		},
 		[navigate, queryClient, setOrchestratorReplacementError, setProjectRestarting],

@@ -61,11 +61,9 @@ func newWireSink(t *testing.T) (ports.EventSink, *wireRecorder, func()) {
 	return rec, rec, func() {}
 }
 
-// End to end: the review service's real emit sites, through the real export
-// chain, onto the wire. Every assertion here is one a unit test cannot make,
-// because the payload allowlist that decides what actually reaches PostHog
-// lives in the adapter and is keyed by event name, with nothing tying it to the
-// emit site at compile time.
+// End to end: the review service's real emit sites into a recording sink.
+// Every assertion here is one a call-site review cannot make on its own,
+// because nothing ties an emit site's payload keys to what the test expects.
 func TestReviewFunnelReachesTheWireWithItsProperties(t *testing.T) {
 	sink, rec, closeSink := newWireSink(t)
 

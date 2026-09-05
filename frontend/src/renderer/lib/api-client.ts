@@ -2,7 +2,6 @@ import createClient from "openapi-fetch";
 import type { components, paths } from "../../api/schema";
 import type { DaemonStatus } from "../../shared/daemon-status";
 import { daemonFailureMessage } from "./daemon-failure";
-import { captureRendererEvent } from "./telemetry";
 import { captureApiErrorToSentry } from "./sentry";
 
 function devApiBaseUrl(): string {
@@ -239,11 +238,6 @@ function reportApiError(
 	const last = lastApiErrorAt.get(key);
 	if (last !== undefined && now - last < API_ERROR_DEDUPE_MS) return;
 	lastApiErrorAt.set(key, now);
-	void captureRendererEvent("ao.renderer.api_error", {
-		operation,
-		error_category: category,
-		status,
-	});
 	// Mirror into Sentry (no-op unless a DSN is configured). The daemon `code`
 	// is what drives the fine-grained severity/owner classification; `requestId`
 	// (when present) is tagged so a client event pivots to the daemon's own

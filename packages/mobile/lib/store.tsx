@@ -34,8 +34,6 @@ import { shouldShowLoading } from "./configLoading";
 import { shouldKeepPolling } from "./connectionError";
 import { primeInstallId } from "./installId";
 import { collectPRs } from "./prView";
-import { MOBILE_EVENTS } from "./telemetry/events";
-import { mobileTelemetry, trackFeature } from "./telemetry/runtime";
 import { useConversationEventTransport } from "./chat/conversationEvents";
 
 const ACTIVE_PROJECT_KEY = "ao.activeProject";
@@ -302,9 +300,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 			lastTickOkRef.current = true;
 			if (!openRef.current) {
 				openRef.current = true;
-				const trigger = everConnectedRef.current ? "reconnect" : "launch";
 				everConnectedRef.current = true;
-				mobileTelemetry()?.capture(MOBILE_EVENTS.connected, { trigger });
 			}
 			// Badge count for the board's bell. Deliberately after the session fetch
 			// and separately caught: an older daemon without /notifications must not
@@ -422,64 +418,59 @@ export function AppProvider({ children }: { children: ReactNode }) {
 	}, [activeProjectId, projects]);
 
 	const spawn = useCallback(
-		async ({ projectId, prompt, harness, model, mode }: SpawnOptions) =>
-			trackFeature("spawn", async () => {
-				const c = cfgRef.current;
-				const proj = projectId ?? targetProject();
-				if (!c || !proj) throw new Error("Pick a project first");
-				const session = await delegateTask(c, {
-					projectId: proj,
-					brief: prompt ?? "",
-					agent: harness,
-					model,
-					mode: mode ?? "chat",
-				});
-				await fetchAll();
-				return session;
-			}),
+		async ({ projectId, prompt, harness, model, mode }: SpawnOptions) => {
+		const c = cfgRef.current;
+		const proj = projectId ?? targetProject();
+		if (!c || !proj) throw new Error("Pick a project first");
+		const session = await delegateTask(c, {
+			projectId: proj,
+			brief: prompt ?? "",
+			agent: harness,
+			model,
+			mode: mode ?? "chat",
+		});
+		await fetchAll();
+		return session;
+		},
 		[targetProject, fetchAll],
 	);
 
 	const launchConductor = useCallback(
-		async (projectId: string, clean = false, mode: SessionMode = "chat") =>
-			trackFeature("conductor", async () => {
-				const c = cfgRef.current!;
-				const link = await apiLaunchOrchestrator(c, projectId, clean, mode);
-				await fetchAll();
-				return link;
-			}),
+		async (projectId: string, clean = false, mode: SessionMode = "chat") => {
+		const c = cfgRef.current!;
+		const link = await apiLaunchOrchestrator(c, projectId, clean, mode);
+		await fetchAll();
+		return link;
+		},
 		[fetchAll],
 	);
 
 	const merge = useCallback(
-		async (pr: DashboardPR) =>
-			trackFeature("merge", async () => {
-				await apiMergePR(cfgRef.current!, pr);
-				await fetchAll();
-			}),
+		async (pr: DashboardPR) => {
+		await apiMergePR(cfgRef.current!, pr);
+		await fetchAll();
+		},
 		[fetchAll],
 	);
 
 	const kill = useCallback(
-		async (id: string) =>
-			trackFeature("kill", async () => {
-				await killSession(cfgRef.current!, id);
-				await fetchAll();
-			}),
+		async (id: string) => {
+		await killSession(cfgRef.current!, id);
+		await fetchAll();
+		},
 		[fetchAll],
 	);
 
 	const restore = useCallback(
-		async (id: string) =>
-			trackFeature("restore", async () => {
-				await restoreSession(cfgRef.current!, id);
-				await fetchAll();
-			}),
+		async (id: string) => {
+		await restoreSession(cfgRef.current!, id);
+		await fetchAll();
+		},
 		[fetchAll],
 	);
 
 	const send = useCallback(async (id: string, message: string) => {
-		await trackFeature("send", () => sendMessage(cfgRef.current!, id, message));
+		await sendMessage(cfgRef.current!, id, message);
 	}, []);
 	const refresh = useCallback(async () => {
 		await fetchAll();

@@ -9,7 +9,6 @@ import { useCloudOrg } from "./useCloudOrg";
 import { mockWorkspaces } from "../lib/mock-data";
 import { usesPreviewWorkspaceData } from "../lib/preview-mode";
 import { toReviewerHarnessId } from "../lib/reviewer-harnesses";
-import { captureRendererEvent } from "../lib/telemetry";
 import { agentSwitchVisibility } from "../lib/agent-switch-visibility";
 import {
 	type AgentSwitchSummary,
@@ -156,7 +155,6 @@ function reportUnknownSessionField(field: "status" | "activity", value?: string)
 	const key = `${field}:${reason}`;
 	if (reportedUnknownSessionFields.has(key)) return;
 	reportedUnknownSessionFields.add(key);
-	void captureRendererEvent("ao.renderer.session_state_unknown", { field, reason });
 }
 
 // e2e seam (dev:web only): the Playwright fake-agent harness injects
