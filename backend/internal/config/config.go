@@ -200,8 +200,8 @@ func Load() (Config, error) {
 		ShutdownTimeout: DefaultShutdownTimeout,
 		Agent:           DefaultAgent,
 		AllowedOrigins:  DefaultAllowedOrigins,
-		Telemetry:        TelemetryConfig{},
-		LocalOffering: true,
+		Telemetry:       TelemetryConfig{},
+		LocalOffering:   true,
 	}
 
 	if raw := os.Getenv("AO_PORT"); raw != "" {
