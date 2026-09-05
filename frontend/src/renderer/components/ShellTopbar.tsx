@@ -39,7 +39,6 @@ import { useWindowFullScreen } from "../hooks/useWindowFullScreen";
 import { StatusPill } from "./StatusPill";
 import { TopbarActionError, TopbarButton, topbarHeaderClass, topbarProjectLabelClass } from "./TopbarButton";
 import { SessionTerminationPopover } from "./SessionTerminationPopover";
-import { TopbarOpenEditorButton } from "./TopbarOpenEditorButton";
 import {
 	agentSwitchStatusVisual,
 	deriveSessionAgentSwitchPresentation,
@@ -371,25 +370,6 @@ export function ShellTopbar({
 									<TooltipContent side="bottom">{t("shell.openKanban")}</TooltipContent>
 								</Tooltip>
 							</>
-						) : null}
-						{/* Open-in-editor leads the session actions: it is the only
-						    non-destructive one, and it must sit left of Kill. Kept outside
-						    the local-actions group because Electron main independently
-						    reports whether this session has a live workspace. Cloud sessions
-						    have no local workspace to hand off to an editor: the local daemon
-						    has never heard of them, so querying it just surfaces its 404 as a
-						    confusing "Unknown session" error (see workspace.ts's `kind` doc). */}
-						{session && project?.kind !== CLOUD_PROJECT_KIND ? (
-							// Keyed per session so a stale launch error does not carry over
-							// when switching sessions. The prefix keeps it distinct from the
-							// kill button's key: identical sibling keys make React duplicate
-							// the nodes.
-							<TopbarOpenEditorButton
-								key={`open-workspace-${session.id}`}
-								sessionId={session.id}
-								projectId={session.workspaceId}
-								style={noDragStyle}
-							/>
 						) : null}
 						{/* Local worker actions share one tight control group. Navigation
 						    remains a separate visual target in the outer top-bar row. */}

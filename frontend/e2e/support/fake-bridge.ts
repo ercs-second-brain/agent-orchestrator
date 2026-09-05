@@ -120,18 +120,6 @@ export async function installFakeBridge(page: Page, opts: FakeBridgeOptions = {}
 						return unsubscribe();
 					},
 				},
-				editorHandoff: {
-					getState: async () => ({
-						targets: [
-							{ id: "cursor" as const, name: "Cursor", kind: "editor" as const },
-							{ id: "file-manager" as const, name: "File Manager", kind: "file_manager" as const },
-							{ id: "terminal" as const, name: "Terminal", kind: "terminal" as const },
-						],
-						preferredEditorId: "cursor" as const,
-						workspaceAvailable: true,
-					}),
-					open: async () => ({ id: "cursor" as const, name: "Cursor", kind: "editor" as const }),
-				},
 				telemetry: {
 					getBootstrap: async () => null,
 					getPolicy: async () => ({ eventsEnabled: false, consentGeneration: "e2e", updatedAt: new Date(0).toISOString(), acknowledged: false, state: "applied", environmentVeto: true, durabilitySupported: false, reason: "environment_veto" }),
@@ -645,18 +633,6 @@ export async function installFakeAgent(page: Page, opts: FakeAgentOptions = {}):
 						listener(status);
 						return unsubscribe();
 					},
-				},
-				editorHandoff: {
-					getState: async () => ({
-						targets: [
-							{ id: "cursor" as const, name: "Cursor", kind: "editor" as const },
-							{ id: "file-manager" as const, name: "File Manager", kind: "file_manager" as const },
-							{ id: "terminal" as const, name: "Terminal", kind: "terminal" as const },
-						],
-						preferredEditorId: "cursor" as const,
-						workspaceAvailable: true,
-					}),
-					open: async () => ({ id: "cursor" as const, name: "Cursor", kind: "editor" as const }),
 				},
 				telemetry: {
 					getBootstrap: async () => null,
