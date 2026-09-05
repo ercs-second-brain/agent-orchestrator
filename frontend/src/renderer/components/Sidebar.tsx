@@ -27,6 +27,7 @@ import {
 	Download,
 	Folder,
 	FolderOpen,
+	LayoutDashboard,
 	LogIn,
 	LogOut,
 	MoreVertical,
@@ -363,6 +364,7 @@ function useSelection() {
 		select: (state) => state.location.pathname,
 	});
 	const goHome = useCallback(() => void navigate({ to: "/" }), [navigate]);
+	const goBoard = useCallback(() => void navigate({ to: "/board" }), [navigate]);
 	const goGlobalSettings = useCallback(() => openGlobalSettings(), [openGlobalSettings]);
 	const goConnectMobile = useCallback(() => openGlobalSettings("mobile"), [openGlobalSettings]);
 	const goSettings = useCallback((projectId: string) => openProjectSettings(projectId), [openProjectSettings]);
@@ -380,9 +382,11 @@ function useSelection() {
 	);
 	return useMemo(() => ({
 		isHome: pathname === "/",
+		isBoard: pathname === "/board",
 		activeProjectId: params.projectId,
 		activeSessionId: params.sessionId,
 		goHome,
+		goBoard,
 		// Settings is a modal — open it in place so the current page (session
 		// terminal, board, etc.) stays underneath.
 		goGlobalSettings,
@@ -708,7 +712,7 @@ export function Sidebar({
 			{/* Keep Search + section chrome fixed; only the project tree scrolls. */}
 			<div className="flex shrink-0 flex-col gap-0 px-2 group-data-[collapsible=icon]:items-center group-data-[collapsible=icon]:px-1.5">
 				{commandPaletteEnabled ? (
-					<SidebarGroup className="p-0 pb-4">
+					<SidebarGroup className="p-0 pb-2">
 						<SidebarGroupContent>
 							<SidebarMenu className="gap-0.5 group-data-[collapsible=icon]:gap-1">
 								<SidebarSearchButton onOpen={() => setCommandPaletteOpen(true)} />
@@ -716,6 +720,41 @@ export function Sidebar({
 						</SidebarGroupContent>
 					</SidebarGroup>
 				) : null}
+
+				{/* Kanban — the global board across every project. Expanded chrome gets
+				    a labeled nav row; the collapsed rail gets an icon button. */}
+				<div className="sidebar-expanded-chrome flex shrink-0 pb-2 group-data-[collapsible=icon]:hidden">
+					<button
+						aria-label={t("shell.kanban")}
+						className={cn(NAV_ROW_CLASS, "h-8 [&_svg]:size-icon-md [&_svg]:shrink-0")}
+						data-active={selection.isBoard || undefined}
+						data-testid="sidebar-kanban"
+						onClick={selection.goBoard}
+						tabIndex={isCollapsed ? -1 : 0}
+						type="button"
+					>
+						<LayoutDashboard aria-hidden="true" />
+						<span className="tracking-tight">{t("shell.kanban")}</span>
+					</button>
+				</div>
+				<div className="hidden shrink-0 pb-2 group-data-[collapsible=icon]:block">
+					<Tooltip>
+						<TooltipTrigger asChild>
+							<button
+								aria-label={t("shell.kanban")}
+								className="grid size-control-board place-items-center rounded-lg text-muted-foreground transition-colors hover:bg-interactive-hover hover:text-foreground data-[active=true]:bg-interactive-active data-[active=true]:text-foreground [&_svg]:size-icon-base"
+								data-active={selection.isBoard || undefined}
+								data-testid="sidebar-kanban-rail"
+								onClick={selection.goBoard}
+								tabIndex={isCollapsed ? 0 : -1}
+								type="button"
+							>
+								<LayoutDashboard aria-hidden="true" />
+							</button>
+						</TooltipTrigger>
+						<TooltipContent side="right">{t("shell.kanban")}</TooltipContent>
+					</Tooltip>
+				</div>
 
 				{/* Pinned — collapsible; hidden when empty. */}
 				{pinnedSessions.length > 0 && (
