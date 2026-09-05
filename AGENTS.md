@@ -43,6 +43,10 @@ npm run build
 
 When showing or demoing frontend changes, run `ao preview [url]` from inside the session so the change renders in the desktop browser panel (the inspector rail's Browser tab); do not just describe it.
 
+`npm run lint` runs the full backend `golangci-lint` pass, which takes 10-15 minutes cold-cache in a fresh worktree (see the "Lint" section of `docs/development.md`). For most work, do not run it: run the narrow checks instead (`cd backend && go build ./... && go test ./...`, or scoped `go test ./internal/...` for touched packages) and let CI's golangci-lint pass be the authority. Run the full local lint only when (a) CI reports lint findings, (b) you are iterating specifically on lint-sensitive code, or (c) you need fast local verification — and in that case scope it to changed packages, e.g. `golangci-lint run ./internal/cli/... ./internal/service/...`.
+
+Never use `git stash` in session worktrees: `refs/stash` is shared across concurrent AO sessions and stashes will collide or vanish (see issue #7).
+
 ## Where to look first
 
 - `README.md` — current run/config/test quickstart.
