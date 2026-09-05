@@ -52,7 +52,7 @@ SELECT COALESCE((
 
 			for table, columns := range map[string][]string{
 				"conversation_branches": {"strategy", "replay_cutoff_sequence", "replay_truncated", "provider_scope_id"},
-				"app_settings":          {"cloud_offering"},
+				"app_settings":          {},
 				"sessions":              {"latest_user_prompt_at"},
 				"usage_bindings":        {"provider_hint"},
 				"model_usage_events": {

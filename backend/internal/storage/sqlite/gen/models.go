@@ -66,11 +66,11 @@ type AgentSwitch struct {
 	TargetRuntimeHandleID   string
 	TargetAcknowledgedAt    sql.NullTime
 	ErrorCode               string
-	FailurePoint            string
 	RequestedAt             time.Time
 	UpdatedAt               time.Time
 	FinalHandoffPath        string
 	FinalHandoffHash        string
+	FailurePoint            string
 }
 
 type AgentSwitchFailureDeliveryState struct {
@@ -146,7 +146,6 @@ type AppSetting struct {
 	ID                 int64
 	DefaultSessionMode domain.SessionMode
 	UpdatedAt          time.Time
-	CloudOffering      bool
 }
 
 type ChangeLog struct {
