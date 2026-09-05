@@ -964,7 +964,7 @@ describe("Sidebar", () => {
 		expect(onCloneProject).not.toHaveBeenCalled();
 	});
 
-	it("clones a Git URL into ~/ on a remote daemon without a local folder picker", async () => {
+	it("clones a Git URL into ~/projects on a remote daemon without a local folder picker", async () => {
 		const user = userEvent.setup();
 		const onCloneProject = vi.fn().mockResolvedValue(undefined) as CloneProjectHandler;
 		window.localStorage.setItem("ao.clone.lastDestinationParent", "/Users/me/Code");
@@ -978,14 +978,14 @@ describe("Sidebar", () => {
 		await user.click(screen.getByRole("button", { name: "Clone from Git" }));
 		expect(await screen.findByRole("dialog", { name: "Clone a Git repository" })).toBeInTheDocument();
 		expect(screen.queryByRole("button", { name: "Choose" })).not.toBeInTheDocument();
-		expect(screen.getByText("~/")).toBeInTheDocument();
+		expect(screen.getByText("~/projects")).toBeInTheDocument();
 		expect(screen.queryByText("/Users/me/Code")).not.toBeInTheDocument();
 
 		await user.type(
 			await screen.findByRole("textbox", { name: "Repository URL" }),
 			"git@github.com:acme/web-app.git",
 		);
-		expect(screen.getByText("~/web-app")).toBeInTheDocument();
+		expect(screen.getByText("~/projects/web-app")).toBeInTheDocument();
 		await user.click(screen.getByRole("button", { name: "Continue" }));
 
 		expect(await screen.findByRole("dialog", { name: "Set up project" })).toBeInTheDocument();
@@ -993,7 +993,7 @@ describe("Sidebar", () => {
 		await waitFor(() =>
 			expect(onCloneProject).toHaveBeenCalledWith({
 				remoteUrl: "git@github.com:acme/web-app.git",
-				destinationParent: "~",
+				destinationParent: "~/projects",
 				workerAgent: "claude-code",
 				orchestratorAgent: "claude-code",
 				trackerIntake: undefined,
