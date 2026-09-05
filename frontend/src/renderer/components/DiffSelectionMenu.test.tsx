@@ -7,8 +7,7 @@ import type { DiffSelectionLine } from "../../shared/diff-selection";
 const postMock = vi.hoisted(() => vi.fn());
 
 vi.mock("../lib/api-client", () => ({
-				getApiBaseUrl: () => "",
-				hasTrustedApiBaseUrl: () => false,
+	getApiBaseUrl: () => "",
 	subscribeApiBaseUrl: () => () => undefined,
 	apiClient: { POST: postMock },
 	apiErrorMessage: (error: unknown, fallback = "Request failed") =>

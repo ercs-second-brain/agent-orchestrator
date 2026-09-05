@@ -5,8 +5,7 @@ import { apiClient } from "../../lib/api-client";
 import { InstallCloudflared } from "./InstallCloudflared";
 
 vi.mock("../../lib/api-client", () => ({
-				getApiBaseUrl: () => "",
-				hasTrustedApiBaseUrl: () => false,
+	getApiBaseUrl: () => "",
 	subscribeApiBaseUrl: () => () => undefined,
 	apiClient: {
 		POST: vi.fn(),

@@ -51,8 +51,7 @@ vi.mock("../hooks/useWorkspaceQuery", () => ({
 }));
 
 vi.mock("../lib/api-client", () => ({
-				getApiBaseUrl: () => "",
-				hasTrustedApiBaseUrl: () => false,
+	getApiBaseUrl: () => "",
 	subscribeApiBaseUrl: () => () => undefined,
 	apiClient: {
 		POST: postMock,

@@ -116,8 +116,7 @@ vi.mock("../lib/shell-context", () => ({
 vi.mock("../lib/spawn-orchestrator", () => ({ spawnOrchestrator: spawnMock }));
 
 vi.mock("../lib/api-client", () => ({
-				getApiBaseUrl: () => "",
-				hasTrustedApiBaseUrl: () => false,
+	getApiBaseUrl: () => "",
 	subscribeApiBaseUrl: () => () => undefined,
 	apiClient: {
 		GET: getMock,

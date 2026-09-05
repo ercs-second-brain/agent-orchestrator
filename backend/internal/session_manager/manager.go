@@ -3728,7 +3728,7 @@ func seedRecord(cfg ports.SpawnConfig, projectConfig domain.ProjectConfig, now t
 		// Resolved before this point and persisted here. There is no UPDATE
 		// statement that can change it afterwards.
 		Mode:               domain.NormalizeSessionMode(cfg.RequestedMode),
-		AutoReviewEnabled:  projectConfig.AutoReview,
+		AutoReviewEnabled:  projectConfig.EffectiveAutoReview(),
 		AutoInjectReview:   true,
 		AutoInjectCI:       true,
 		TerminateOnPRMerge: true,

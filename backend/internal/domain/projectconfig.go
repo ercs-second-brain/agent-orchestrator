@@ -65,11 +65,11 @@ type ProjectConfig struct {
 	ContainerReap ContainerReapConfig `json:"containerReap,omitempty"`
 
 	// AutoReview controls whether new worker sessions spawned for this project
-	// have automatic PR review enabled by default. The default (false) leaves
-	// sessions with auto-review off; enabling it copies the setting into each
-	// new session at spawn time. Users can still override the per-session toggle
-	// after spawn.
-	AutoReview bool `json:"autoReview,omitempty"`
+	// have automatic PR review enabled by default. Absent (nil) means enabled:
+	// automatic review is the default-on policy, applied at spawn time without
+	// changing any stored config. An explicit false is always respected, and
+	// users can still override the per-session toggle after spawn.
+	AutoReview *bool `json:"autoReview,omitempty"`
 }
 
 // ContainerReapConfig is the project-level opt-out for #2652's Docker
@@ -113,6 +113,13 @@ func (c ProjectConfig) ResolveReviewerHarness(worker AgentHarness) ReviewerHarne
 		return ReviewerKimchi
 	}
 	return FallbackReviewerHarness
+}
+
+// EffectiveAutoReview reports whether new worker sessions spawned under this
+// config start with automatic PR review enabled. Unset (nil) follows the
+// default-on policy; an explicit false is always respected.
+func (c ProjectConfig) EffectiveAutoReview() bool {
+	return c.AutoReview == nil || *c.AutoReview
 }
 
 // RoleOverride overrides the harness and/or agent config for a session role.

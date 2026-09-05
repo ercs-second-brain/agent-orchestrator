@@ -115,7 +115,7 @@ type projectConfig struct {
 	Worker            roleOverride        `json:"worker,omitempty"`
 	Orchestrator      roleOverride        `json:"orchestrator,omitempty"`
 	TrackerIntake     trackerIntakeConfig `json:"trackerIntake,omitempty"`
-	AutoReview        bool                `json:"autoReview,omitempty"`
+	AutoReview        *bool               `json:"autoReview,omitempty"`
 	Reviewers         []reviewerConfig    `json:"reviewers,omitempty"`
 }
 

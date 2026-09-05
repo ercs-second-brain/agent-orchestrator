@@ -48,8 +48,7 @@ const {
 let terminalLinkHandler: ((uri: string) => void) | undefined;
 
 vi.mock("../lib/api-client", () => ({
-				getApiBaseUrl: () => "",
-				hasTrustedApiBaseUrl: () => false,
+	getApiBaseUrl: () => "",
 	subscribeApiBaseUrl: () => () => undefined,
 	apiClient: {
 		GET: (
@@ -207,6 +206,7 @@ function renderCachedPane({
 }) {
 	const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
 	queryClient.setQueryData(resolveWorkspaceQueryKey(), workspaceWithSessions(sessions));
+	queryClient.setQueryData(shellTerminalsQueryKey, shellTerminals);
 	queryClient.setQueryData(shellTerminalsQueryKey, shellTerminals);
 	const previousAO = window.ao;
 	window.ao = {} as typeof window.ao;
