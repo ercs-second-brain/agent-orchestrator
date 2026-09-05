@@ -4,6 +4,7 @@ import { ReadOnlyFileView } from "./ReadOnlyFileView";
 import type { WorkspaceFileDetail } from "../hooks/useSessionWorkspaceFiles";
 
 vi.mock("../lib/api-client", () => ({ getApiBaseUrl: () => "" }));
+subscribeApiBaseUrl: () => () => undefined,
 vi.mock("./chat/HighlightedCode", () => ({
 	HighlightedCode: ({ code, language }: { code: string; language?: string }) => (
 		<span data-language={language}>{code}</span>

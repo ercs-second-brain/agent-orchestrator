@@ -9,6 +9,7 @@ import { SettingsDialog } from "./SettingsDialog";
 const { postMock } = vi.hoisted(() => ({ postMock: vi.fn() }));
 
 vi.mock("../lib/api-client", () => ({
+	subscribeApiBaseUrl: () => () => undefined,
 	apiClient: { POST: postMock },
 	apiErrorCode: (error: { code?: string }) => error?.code,
 	apiErrorMessage: () => "request failed",

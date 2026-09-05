@@ -11,6 +11,7 @@ const { deleteMock, getMock, postMock, putMock } = vi.hoisted(() => ({
 }));
 
 vi.mock("../lib/api-client", () => ({
+	subscribeApiBaseUrl: () => () => undefined,
 	apiClient: { GET: getMock, POST: postMock, PUT: putMock, DELETE: deleteMock },
 	apiErrorMessage: () => "request failed",
 	hasTrustedApiBaseUrl: () => true,

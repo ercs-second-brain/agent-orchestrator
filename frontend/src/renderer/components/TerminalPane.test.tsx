@@ -48,6 +48,7 @@ const {
 let terminalLinkHandler: ((uri: string) => void) | undefined;
 
 vi.mock("../lib/api-client", () => ({
+	subscribeApiBaseUrl: () => () => undefined,
 	apiClient: {
 		GET: (
 			path: string,

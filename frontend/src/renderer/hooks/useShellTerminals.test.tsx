@@ -16,6 +16,7 @@ const { deleteMock, postMock, isWindowsMock } = vi.hoisted(() => ({
 }));
 
 vi.mock("../lib/api-client", () => ({
+	subscribeApiBaseUrl: () => () => undefined,
 	apiClient: { DELETE: deleteMock, PATCH: patchMock, POST: postMock },
 	apiErrorCode: (error: unknown) =>
 		typeof error === "object" && error !== null && "code" in error ? (error as { code?: string }).code : undefined,

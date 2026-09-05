@@ -32,6 +32,7 @@ vi.mock("../lib/bridge", () => ({
 }));
 
 vi.mock("../lib/api-client", () => ({
+	subscribeApiBaseUrl: () => () => undefined,
 	apiClient: {
 		POST: apiMocks.POST,
 	},

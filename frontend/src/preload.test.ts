@@ -7,7 +7,8 @@ const electronMocks = vi.hoisted(() => {
 	return {
 		exposeInMainWorld: vi.fn(),
 		getPathForFile: vi.fn(),
-		invoke: vi.fn(),
+		// Default-resolve so preload's module-scope `invoke("desktop-remote:getCspOrigins").then(...)` works.
+		invoke: vi.fn(() => Promise.resolve(undefined)),
 		listeners,
 		off: vi.fn(),
 		on: vi.fn((channel: string, listener: (...args: unknown[]) => void) => {

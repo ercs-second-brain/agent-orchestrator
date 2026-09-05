@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { resolveRemotePairingInput } from "../../../shared/desktop-remote";
 import { aoBridge } from "../../lib/bridge";
 import { useRemoteConnection } from "../../hooks/useRemoteConnection";
@@ -29,6 +30,7 @@ function readRemotePairingInput(input: {
 }
 
 export function RemoteConnectionSection({ titleHidden }: { titleHidden?: boolean }) {
+	const { t } = useTranslation();
 	const queryClient = useQueryClient();
 	const isRemote = useRemoteConnection();
 	const [mode, setMode] = useState<ConnectionMode>(isRemote ? "remote" : "local");
@@ -102,17 +104,17 @@ export function RemoteConnectionSection({ titleHidden }: { titleHidden?: boolean
 	});
 
 	const modeOptions = [
-		{ value: "local", label: "This computer" },
-		{ value: "remote", label: "This network (LAN server)" },
+		{ value: "local", label: t("settings.remote.modeLocal") },
+		{ value: "remote", label: t("settings.remote.modeRemote") },
 	] satisfies SettingsOption<ConnectionMode>[];
 
 	const showingRemote = isRemote || mode === "remote";
 
 	return (
-		<SettingsSection title="AO server" titleHidden={titleHidden}>
-			<SettingsRow label="Connection">
+		<SettingsSection title={t("settings.remote.title")} titleHidden={titleHidden}>
+			<SettingsRow label={t("settings.remote.connection")}>
 				<SettingsOptionMenu
-					aria-label="AO server connection"
+					aria-label={t("settings.remote.connectionAria")}
 					value={showingRemote ? "remote" : "local"}
 					options={modeOptions}
 					disabled={connectMutation.isPending || disconnectMutation.isPending}
@@ -128,26 +130,28 @@ export function RemoteConnectionSection({ titleHidden }: { titleHidden?: boolean
 			</SettingsRow>
 			{isRemote && remoteConfig ? (
 				<p className="px-3 pb-4 text-xs leading-relaxed text-muted-foreground">
-					Connected to {remoteConfig.host}:{remoteConfig.port}
-					{remoteConfig.hostId ? ` (${remoteConfig.hostId})` : ""}. Browser automation, Codex accounts,
-					harness installs, and Connect Mobile controls are unavailable in remote mode.
+					{t("settings.remote.connectedTo", {
+						host: remoteConfig.host,
+						port: remoteConfig.port,
+						hostId: remoteConfig.hostId ? ` (${remoteConfig.hostId})` : "",
+					})}
 				</p>
 			) : null}
 			{showingRemote && !isRemote ? (
 				<div className="flex flex-col gap-3 px-3 pb-4">
 					<SettingsInputRow
 						id="remote-pairing-code"
-						label="Pairing code"
+						label={t("settings.remote.pairingLabel")}
 						value={pairingText}
 						onChange={setPairingText}
 						onCommit={setPairingText}
 						onCancel={() => setPairingText("")}
-						placeholder='Paste JSON from `ao mobile pairing-code`'
+						placeholder={t("settings.remote.pairingPlaceholder")}
 					/>
-					<p className="text-xs text-muted-foreground">Or enter host, port, and password manually.</p>
+					<p className="text-xs text-muted-foreground">{t("settings.remote.manualHint")}</p>
 					<SettingsInputRow
 						id="remote-host"
-						label="Host"
+						label={t("settings.remote.hostLabel")}
 						value={host}
 						onChange={setHost}
 						onCommit={setHost}
@@ -156,7 +160,7 @@ export function RemoteConnectionSection({ titleHidden }: { titleHidden?: boolean
 					/>
 					<SettingsInputRow
 						id="remote-port"
-						label="Port"
+						label={t("settings.remote.portLabel")}
 						value={port}
 						onChange={setPort}
 						onCommit={setPort}
@@ -165,23 +169,25 @@ export function RemoteConnectionSection({ titleHidden }: { titleHidden?: boolean
 					/>
 					<SettingsInputRow
 						id="remote-password"
-						label="Connection password"
+						label={t("settings.remote.passwordLabel")}
 						value={password}
 						onChange={setPassword}
 						onCommit={setPassword}
 						onCancel={() => setPassword("")}
-						placeholder="From ao mobile enable"
+						placeholder={t("settings.remote.passwordPlaceholder")}
 					/>
 					<div className="flex flex-wrap gap-2">
 						<Button type="button" variant="secondary" disabled={probeMutation.isPending} onClick={() => probeMutation.mutate()}>
-							Verify host identity
+							{t("settings.remote.verifyIdentity")}
 						</Button>
 						<Button type="button" disabled={connectMutation.isPending} onClick={() => connectMutation.mutate()}>
-							Connect
+							{t("settings.remote.connect")}
 						</Button>
 					</div>
 					{identityHostId ? (
-						<p className="text-xs text-muted-foreground">Verified host id: {identityHostId}</p>
+						<p className="text-xs text-muted-foreground">
+							{t("settings.remote.verifiedHostId", { hostId: identityHostId })}
+						</p>
 					) : null}
 					{error ? (
 						<p role="alert" className="text-xs text-destructive">

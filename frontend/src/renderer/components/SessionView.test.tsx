@@ -113,6 +113,7 @@ vi.mock("../hooks/useCodexAccountActions", () => ({
 }));
 
 vi.mock("../lib/api-client", () => ({
+	subscribeApiBaseUrl: () => () => undefined,
 	apiClient: {
 		GET: reviewGetMock,
 	},

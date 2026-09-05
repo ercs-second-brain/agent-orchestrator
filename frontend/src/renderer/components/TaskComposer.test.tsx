@@ -51,6 +51,7 @@ vi.mock("./CreateProjectAgentSheet", () => ({
 }));
 
 vi.mock("../lib/api-client", () => ({
+	subscribeApiBaseUrl: () => () => undefined,
 	apiClient: {
 		GET: h.get,
 		POST: h.post,

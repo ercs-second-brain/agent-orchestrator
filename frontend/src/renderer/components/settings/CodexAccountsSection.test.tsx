@@ -15,6 +15,7 @@ const { deleteMock, getMock, postMock, scrollIntoViewMock, terminalStateCallback
 }));
 
 vi.mock("../../lib/api-client", () => ({
+	subscribeApiBaseUrl: () => () => undefined,
 	apiClient: { DELETE: deleteMock, GET: getMock, POST: postMock },
 	apiErrorMessage: (error: unknown) => error instanceof Error ? error.message : "request failed",
 }));

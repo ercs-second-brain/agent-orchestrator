@@ -31,6 +31,7 @@ vi.mock("../../lib/spawn-orchestrator", () => ({
 }));
 
 vi.mock("../../lib/api-client", () => ({
+	subscribeApiBaseUrl: () => () => undefined,
 	apiClient: { GET: getMock, POST: vi.fn() },
 	apiErrorMessage: (e: unknown) => (e instanceof Error ? e.message : "error"),
 	hasTrustedApiBaseUrl: () => true,

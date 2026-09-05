@@ -7,6 +7,7 @@ import type { WorkspaceSession } from "../types/workspace";
 const { postMock } = vi.hoisted(() => ({ postMock: vi.fn() }));
 
 vi.mock("../lib/api-client", () => ({
+	subscribeApiBaseUrl: () => () => undefined,
 	apiClient: { POST: postMock },
 	apiErrorMessage: () => "request failed",
 }));

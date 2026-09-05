@@ -17,6 +17,7 @@ vi.mock("../hooks/useAgentReadinessQuery", async (importOriginal) => {
 });
 
 vi.mock("../lib/api-client", () => ({
+	subscribeApiBaseUrl: () => () => undefined,
 	apiClient: {
 		GET: (...args: unknown[]) => getMock(...args),
 		POST: (...args: unknown[]) => postMock(...args),

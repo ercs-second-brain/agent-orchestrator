@@ -12,6 +12,7 @@ const { getMock, postMock, apiErrorCodeMock, apiErrorMessageMock } = vi.hoisted(
 }));
 
 vi.mock("../lib/api-client", () => ({
+	subscribeApiBaseUrl: () => () => undefined,
 	apiClient: { GET: getMock, POST: postMock, PATCH: vi.fn() },
 	apiErrorCode: apiErrorCodeMock,
 	apiErrorMessage: apiErrorMessageMock,
