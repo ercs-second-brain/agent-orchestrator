@@ -42,15 +42,15 @@ type mobileSecurePairingStatusDTO struct {
 // client: it hand-mirrors the wire shape instead of importing the HTTP
 // controller package.
 type mobileStatusDTO struct {
-	Enabled       bool                        `json:"enabled"`
-	Endpoints     []mobileEndpointDTO         `json:"endpoints"`
-	HostID        string                      `json:"hostId"`
-	Tunnel        mobileTunnelStatusDTO       `json:"tunnel"`
-	Host          string                      `json:"host"`
-	TailscaleHost string                      `json:"tailscaleHost"`
-	Port          int                         `json:"port"`
-	Password      string                      `json:"password"`
-	Warning       string                      `json:"warning"`
+	Enabled       bool                         `json:"enabled"`
+	Endpoints     []mobileEndpointDTO          `json:"endpoints"`
+	HostID        string                       `json:"hostId"`
+	Tunnel        mobileTunnelStatusDTO        `json:"tunnel"`
+	Host          string                       `json:"host"`
+	TailscaleHost string                       `json:"tailscaleHost"`
+	Port          int                          `json:"port"`
+	Password      string                       `json:"password"`
+	Warning       string                       `json:"warning"`
 	SecurePairing mobileSecurePairingStatusDTO `json:"securePairing"`
 }
 
@@ -221,11 +221,11 @@ func newMobilePairingCodeCommand(ctx *commandContext) *cobra.Command {
 				return err
 			}
 			if !res.Enabled || res.Password == "" {
-				return fmt.Errorf("Connect Mobile is disabled; run `ao mobile enable` first")
+				return fmt.Errorf("connect mobile is disabled; run `ao mobile enable` first")
 			}
 			host, port, secure := firstPairingEndpoint(res)
 			if host == "" || port == 0 {
-				return fmt.Errorf("Connect Mobile has no advertised LAN endpoint yet")
+				return fmt.Errorf("connect mobile has no advertised LAN endpoint yet")
 			}
 			payload := pairingCodeV1{
 				V:        1,
@@ -244,7 +244,10 @@ func newMobilePairingCodeCommand(ctx *commandContext) *cobra.Command {
 				}
 				return writeJSON(cmd.OutOrStdout(), out)
 			}
-			data, err := json.Marshal(payload)
+			// The pairing payload exists to hand the connection password to the
+			// client being paired; emitting it here is the command's purpose,
+			// not an accidental leak.
+			data, err := json.Marshal(payload) //nolint:gosec // G117: the password is the point of `ao mobile pairing-code`
 			if err != nil {
 				return err
 			}

@@ -152,7 +152,7 @@ func initializeCreatedRepository(ctx context.Context, path, repo string) error {
 		return apierr.Invalid("GIT_INIT_FAILED", "Could not record the default branch for this repository.", map[string]any{"error": err.Error()})
 	}
 	readme := []byte("# " + repo + "\n")
-	if err := os.WriteFile(filepath.Join(path, "README.md"), readme, 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(path, "README.md"), readme, 0o600); err != nil {
 		return apierr.Invalid("GIT_INIT_FAILED", "Could not write the repository README.", map[string]any{"error": err.Error()})
 	}
 	if _, err := gitOutput(ctx, path, "add", "-A"); err != nil {
