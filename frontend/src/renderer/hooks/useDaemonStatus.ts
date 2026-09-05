@@ -15,6 +15,16 @@ import { workspaceQueryKey } from "./useWorkspaceQuery";
 const STATUS_REFRESH_MS = 2_000;
 const READY_STATUS_REFRESH_MS = 10_000;
 
+// The most recent status applied by any hook instance. Several components
+// subscribe independently (the shell, SessionInspector via useRemoteConnection,
+// settings surfaces), and each mounts with no status of its own. Change
+// detection must run against this shared value: a fresh instance's first
+// observation is not a daemon change, and treating it as one evicts the
+// workspace/readiness caches on every mount — which unmounts the very surface
+// that mounted the instance, remounting it in a render/wipe/refetch loop.
+// Tracked per query client (a WeakMap) so the value resets with the client.
+const lastStatusByClient = new WeakMap<QueryClient, DaemonStatus>();
+
 export function useDaemonStatus(queryClient: QueryClient = defaultQueryClient) {
 	const [status, setStatus] = useState<DaemonStatus>({ state: "stopped" });
 	const statusRef = useRef(status);
@@ -62,15 +72,17 @@ export function useDaemonStatus(queryClient: QueryClient = defaultQueryClient) {
 		const applyStatus = (nextStatus: DaemonStatus) => {
 			// Only point REST at the new port; the workspace refetch is the event
 			// transport's job (it invalidates, debounced, on every daemon status).
-			const previousStatus = statusRef.current;
 			statusRef.current = nextStatus;
+			const previousStatus = lastStatusByClient.get(queryClient);
+			lastStatusByClient.set(queryClient, nextStatus);
 			const daemonChanged =
-				!isDaemonReady(nextStatus) ||
-				!isDaemonReady(previousStatus) ||
-				previousStatus.port !== nextStatus.port ||
-				previousStatus.pid !== nextStatus.pid ||
-				previousStatus.connectionMode !== nextStatus.connectionMode ||
-				previousStatus.remoteApiBase !== nextStatus.remoteApiBase;
+				previousStatus !== undefined &&
+				(!isDaemonReady(nextStatus) ||
+					!isDaemonReady(previousStatus) ||
+					previousStatus.port !== nextStatus.port ||
+					previousStatus.pid !== nextStatus.pid ||
+					previousStatus.connectionMode !== nextStatus.connectionMode ||
+					previousStatus.remoteApiBase !== nextStatus.remoteApiBase);
 			if (daemonChanged) {
 				queryClient.removeQueries({ queryKey: agentReadinessQueryKey, exact: true });
 				queryClient.removeQueries({ queryKey: codexAccountsQueryKey, exact: true });
