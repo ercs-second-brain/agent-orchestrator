@@ -5,8 +5,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const { getMock, postMock } = vi.hoisted(() => ({ getMock: vi.fn(), postMock: vi.fn() }));
 vi.mock("../lib/api-client", () => ({
-				getApiBaseUrl: () => "",
-				hasTrustedApiBaseUrl: () => false,
+	getApiBaseUrl: () => "",
 	subscribeApiBaseUrl: () => () => undefined,
 	apiClient: { GET: getMock, POST: postMock },
 	apiErrorMessage: () => "request failed",

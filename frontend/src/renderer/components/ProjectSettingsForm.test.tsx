@@ -47,7 +47,6 @@ vi.mock("../lib/orchestrator-replacement-telemetry", () => ({
 }));
 
 vi.mock("../lib/api-client", () => ({
-	subscribeApiBaseUrl: () => () => undefined,
 	apiClient: {
 		GET: getMock,
 		PUT: putMock,

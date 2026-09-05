@@ -14,7 +14,7 @@ function render(ui: ReactNode) {
 const { getMock, navigateMock } = vi.hoisted(() => ({ getMock: vi.fn(), navigateMock: vi.fn() }));
 
 vi.mock("../../lib/api-client", () => ({
-				getApiBaseUrl: () => "http://127.0.0.1:8080",
+	getApiBaseUrl: () => "http://127.0.0.1:3001",
 	subscribeApiBaseUrl: () => () => undefined,
 	apiClient: { GET: getMock, POST: vi.fn() },
 	apiErrorMessage: (e: unknown) => (e instanceof Error ? e.message : "error"),
