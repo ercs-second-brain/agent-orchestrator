@@ -183,33 +183,84 @@ flowchart LR
 
 ### Package Layout
 
+Every package under `backend/internal/`, verified against the tree:
+
 ```
 backend/internal/
+├── adapters/            # Concrete adapter implementations
+│   ├── agent/           # Per-harness agent adapters (27 harnesses + the fake
+│   │                    # test adapter) plus shared plumbing: agentbase,
+│   │                    # binaryutil, hookutil, hooksjson, activitydispatch,
+│   │                    # activitystate, authprobe, modelcatalog, nativeconfig,
+│   │                    # terminalui, registry
+│   ├── reviewer/        # Interactive reviewer adapters (one per harness +
+│   │                    # agentrestore, registry)
+│   ├── codexappserver/  # Codex app-server client (accounts, capacity, rpc)
+│   ├── container/       # dockerreap (docker container reaping)
+│   ├── runtime/         # tmux, conpty, ptyexec, runtimeselect
+│   ├── scm/             # github, gitlab, multi
+│   ├── systemexec/      # process/remote-script execution helpers
+│   ├── telemetry/       # localsqlite, noop, policyauthority
+│   ├── tracker/         # github, gitlab, httpkit, multi
+│   └── workspace/       # gitworktree, scratch, router
+├── agentlaunch/         # Persists the exact argv a runtime should execute
+├── attachmentstore/     # Durable copy of files attached to sessions
+├── autoreview/          # Decides when the daemon may auto-review a PR
+├── cdc/                 # Change-log poller and broadcaster
+├── cli/                 # Cobra `ao` command implementations (thin daemon client)
+├── codexops/            # Admission gate for device-global Codex home operations
+├── config/              # Environment-based configuration
+├── daemon/              # Production composition root (wiring, startup, shutdown)
+├── daemonmeta/          # Daemon service identity + loopback probe metadata
 ├── domain/              # Shared vocabulary and durable fact records
-├── ports/               # Inbound/outbound interfaces
-├── service/             # Controller-facing services
-│   ├── project/         # Project CRUD
-│   ├── session/         # Session read-model assembly
-│   ├── pr/              # PR observation service
-│   └── review/          # Code review service
-├── session_manager/     # Internal session command engine
+├── gitdefault/          # Resolves a repository's advertised default branch
+├── httpd/               # HTTP API, controllers, OpenAPI, terminal mux mounting
+├── integration/         # Cross-package end-to-end regression tests
 ├── lifecycle/           # Durable session fact reducer
+├── mobilebridge/        # Connect Mobile state, tunnels, pairing helpers
+├── notify/              # Notification production + dashboard fan-out
 ├── observe/             # Observation loops
-│   ├── scm/             # SCM (GitHub) observer
-│   └── reaper/          # Runtime liveness observer
+│   ├── activity/        # Agent activity event handling
+│   ├── agentswitch/     # Agent-switch observability and failure policy
+│   ├── ownership/       # Session ownership observations
+│   ├── reaper/          # Runtime liveness observer
+│   ├── scm/             # SCM (GitHub/GitLab) observer
+│   ├── sentryobs/       # Sentry diagnostic wiring
+│   ├── trackerintake/   # Opt-in issue-intake observer (spawns workers from issues)
+│   └── usage/           # Local usage observation
+├── ports/               # Inbound/outbound interfaces
+├── presence/            # Mobile device presence tracking
+├── process/             # Non-interactive child process creation
+├── processalive/        # OS pid liveness probes
+├── push/                # Expo push delivery for dashboard notifications
+├── reqid/               # HTTP request-id context helpers
+├── review/              # Core code-review logic
+├── reviewgateway/       # AO-owned reviewer runtime dirs + capability gateway
+├── runfile/             # running.json PID/port handshake
+├── service/             # Controller-facing services
+│   ├── agent/           # Codex account management
+│   ├── agentauth/       # Agent install/auth readiness plans
+│   ├── importer/        # Project import onboarding
+│   ├── notification/    # Dashboard notification read models
+│   ├── pr/              # PR observation service
+│   ├── project/         # Project CRUD
+│   ├── review/          # Code review service
+│   ├── session/         # Session read-model assembly
+│   ├── shellterm/       # Session-scoped shell terminals
+│   ├── systemcheck/     # Local readiness checks
+│   ├── systeminstall/   # Per-agent install plans
+│   └── usage/           # Local usage summaries
+├── session_manager/     # Internal session command engine
+├── sessionguard/        # Write serialization for live sessions
+├── skillassets/         # Embeds the using-ao skill catalog served to agents
 ├── storage/             # SQLite persistence
 │   └── sqlite/          # DB, migrations, queries, stores
-├── cdc/                 # Change-log poller and broadcaster
-├── httpd/               # HTTP API, controllers, terminal mux
+├── telemetrymeta/       # Local telemetry event normalization/metadata
 ├── terminal/            # Terminal session protocol
-├── adapters/            # Concrete adapter implementations
-│   ├── agent/           # 23+ agent harnesses
-│   ├── runtime/         # tmux/conpty runtimes
-│   ├── workspace/       # git worktree
-│   ├── scm/             # GitHub
-│   └── tracker/         # GitHub tracker
-├── daemon/              # Production wiring
-└── config/              # Environment-based configuration
+├── termtheme/           # Terminal appearance hints injected into PTY env
+├── testenv/             # Hermetic test helpers
+├── tmuxbin/             # tmux executable resolution
+└── workspacewatch/      # Filesystem notifications → workspace change events
 ```
 
 ### Core Data Flow

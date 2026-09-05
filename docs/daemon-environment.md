@@ -1,6 +1,6 @@
 # Daemon environment: the GUI-launch PATH/credentials problem
 
-Status: proposed
+Status: implemented (login-shell environment resolution in the Electron supervisor)
 Scope: desktop (Electron) launch of the AO daemon on macOS (and any GUI-launched
 desktop platform)
 
@@ -52,53 +52,29 @@ The unifying cause: the running, GUI-launched daemon cannot execute
 (`ProbeFailed`, never `ProbeDead`, so the reaper never terminates the row) and
 its terminal attaches cannot spawn `tmux attach`.
 
-## Root cause: GUI apps do not inherit the shell environment
+## Why the problem exists
 
-On macOS, a process's environment is inherited solely from its parent. The
-parent differs by launch method:
+On macOS, a process's environment is inherited solely from its parent, and the
+parent differs by launch method. A terminal launch runs a login shell that
+sources rc/profile files, so the app inherits a rich environment (homebrew
+`PATH`, exported credentials). A Finder/Dock/Spotlight launch is started by
+**launchd**, which hands the process a fixed, minimal environment (`PATH=
+/usr/bin:/bin:/usr/sbin:/sbin`, `HOME`, `USER`, `TMPDIR`, little else) and
+sources no shell config. `daemonEnv()` faithfully forwards that minimal env down
+to the daemon, and everything downstream inherits it.
 
-- **Terminal launch.** The terminal starts a login/interactive shell
-  (`zsh -l`). That shell sources `/etc/zprofile`, `~/.zprofile`, `~/.zshrc`,
-  etc. Those files are the only thing that sets the rich environment:
-  `eval "$(/opt/homebrew/bin/brew shellenv)"` adds `/opt/homebrew/bin` to
-  `PATH`; `export ANTHROPIC_API_KEY=...` exports credentials. Every process
-  started from that terminal inherits the result. The app works.
+The daemon and agents genuinely need `PATH` (git, node, the pi CLI, and tmux in
+development and standalone daemon runs), `HOME` for config/credentials, and
+shell-exported credentials and locale/proxy variables. The bug was never
+forwarding the environment — it was the _source_ of what gets forwarded: under a
+GUI launch, `process.env` is launchd's minimal env, not the shell's.
 
-- **Finder/Dock/Spotlight launch.** The app is started by **launchd**, not by a
-  shell. launchd hands the process a fixed, minimal environment
-  (`PATH=/usr/bin:/bin:/usr/sbin:/sbin`, `HOME`, `USER`, `TMPDIR`, little else).
-  No shell runs anywhere in the chain, so no rc/profile file is ever sourced.
-  The homebrew `PATH` and the exported credentials simply do not exist for the
-  app, and `daemonEnv()` faithfully forwards that minimal env down to the daemon.
+## Fix: resolve the login-shell environment
 
-This is deliberate on Apple's part: GUI apps are decoupled from interactive shell
-configuration on purpose (it can be slow, interactive, or machine-specific). The
-old `~/.MacOSX/environment.plist` escape hatch was removed years ago. This is the
-single most common macOS-Electron footgun; it is why packages like `fix-path` and
-`shell-env` exist.
-
-### Why "just forward env" is correct in principle
-
-Forwarding the environment is not the bug. The daemon and agents genuinely need:
-
-- `PATH` to resolve `git`, `node`, and the agent CLIs (plus tmux in development
-  and standalone daemon runs);
-- `HOME` for config/credentials (`~/.gitconfig`, `~/.claude`, `~/.codex`, ssh
-  keys);
-- shell-exported credentials (`ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `GH_TOKEN`,
-  ...);
-- locale/proxy (`LANG`, `LC_*`, `HTTPS_PROXY`);
-- AO's own vars (telemetry, `AO_DATA_DIR`, `AO_RUN_FILE`, session ids).
-
-The bug is the _source_ of what we forward: under a GUI launch, `process.env` is
-launchd's minimal env, not the shell's. The fix is to forward a _good_ base env,
-not to stop forwarding.
-
-## Proposed solution: resolve the login-shell environment
-
-Do not reconstruct the shell environment by hand. Run the user's login shell
-once, ask it to print its environment, and adopt that as the base for
-`daemonEnv()`.
+AO does not reconstruct the shell environment by hand. It runs the user's login
+shell once, asks it to print its environment, and adopts that as the base for
+the daemon's environment (implemented in `frontend/src/shared/shell-env.ts`,
+consumed by `daemonEnv()` in `frontend/src/main.ts`).
 
 ### The mechanism
 
@@ -120,7 +96,6 @@ overrides still win:
 ```
 finalEnv = { ...shellEnv, ...process.env, AO_*: defaults }
 ```
-
 ### Worked example
 
 GUI-launched daemon env (before):
@@ -143,7 +118,7 @@ LANG=en_US.UTF-8
 The daemon can now resolve `/opt/homebrew/bin/tmux`, and agents inherit the
 credentials.
 
-### Implementation details
+### Implementation notes
 
 Place the resolution in Electron's `daemonEnv()` (`frontend/src/main.ts`), the
 parent that hands env to the daemon.
@@ -176,9 +151,6 @@ parent that hands env to the daemon.
   `Environment=PATH=…` on the unit to the SSH user's `echo $PATH`. See
   [headless-vm.md](headless-vm.md).
 - Windows: not applicable in the same form; a static `PATH` floor is sufficient.
-
-This matches what `shell-env`/`fix-path` do; the logic above is the entirety of
-it. We shell out once to the user's own shell and adopt its result.
 
 ## Testing
 

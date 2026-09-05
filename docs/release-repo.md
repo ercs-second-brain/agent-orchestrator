@@ -13,7 +13,6 @@ rename redirect — which is not a contract.
 | Feature-build picker fallback | `frontend/src/main/feature-builds.ts` (reads the baked `app-update.yml` when packaged) |
 | `ao start` download URL | `releaseRepo` in `backend/internal/cli/start.go` (overridable with `-ldflags`) |
 | In-app issue / star links | `frontend/src/shared/github-repo.ts` |
-| Pricing catalog refresh | `RemoteManifestURL` in `backend/internal/pricing/fetch.go` |
 
 CI sets `AO_RELEASE_REPO=${{ github.repository }}` so a build published from
 this repo never bakes a different feed. `.github/workflows/release.yml` is the

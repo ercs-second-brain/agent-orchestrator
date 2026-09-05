@@ -189,7 +189,7 @@ graph LR
 | ---------------- | ----------------------- | ----------------------- |
 | `Runtime`        | Process isolation       | `tmux`, `conpty`        |
 | `Workspace`      | Git worktree management | `gitworktree`           |
-| `Agent`          | Agent launching         | 23+ agent adapters      |
+| `Agent`          | Agent launching         | 27 agent adapters       |
 | `SCM`            | PR/CI observation       | `github`                |
 | `Tracker`        | Issue tracking          | `github` (adapter only) |
 | `AgentMessenger` | Agent communication     | Agent hooks             |
@@ -245,6 +245,13 @@ graph LR
     Services -->|query| Store[storage stores]
 
 ```
+
+The full set of service packages today is `agent` (Codex account management),
+`agentauth` (install/auth readiness plans), `importer` (project import
+onboarding), `notification` (dashboard notification read models), `pr`,
+`project`, `review`, `session`, `shellterm` (session-scoped shell terminals),
+`systemcheck` (local readiness checks), `systeminstall` (per-agent install
+plans), and `usage` (local usage summaries).
 
 **Belongs here:**
 
@@ -396,8 +403,15 @@ graph TD
 
 **Current observation packages:**
 
-- `internal/observe/scm` — SCM (GitHub) observer loop
+- `internal/observe/scm` — SCM (GitHub/GitLab) observer loop
 - `internal/observe/reaper` — Runtime liveness observation loop
+- `internal/observe/trackerintake` — Opt-in issue-intake observer (spawns one
+  worker per eligible tracker issue)
+- `internal/observe/agentswitch` — Agent-switch observability and failure policy
+- `internal/observe/ownership` — Session ownership observations
+- `internal/observe/activity` — Agent activity event handling
+- `internal/observe/usage` — Local usage observation
+- `internal/observe/sentryobs` — Sentry diagnostic wiring
 
 **Belongs here:**
 
@@ -600,7 +614,7 @@ graph LR
 graph TD
     Ports[Ports Interfaces] -->|implemented by| Adapters[Adapters]
 
-    Adapters --> Agent[agent/*<br/>23+ harnesses]
+    Adapters --> Agent[agent/*<br/>27 harnesses]
     Adapters --> Runtime[runtime/*<br/>tmux, conpty]
     Adapters --> Workspace[workspace/*<br/>gitworktree]
     Adapters --> SCM[scm/*<br/>github]
@@ -610,7 +624,7 @@ graph TD
     Agent --> Claude[claude-code]
     Agent --> Cursor[cursor]
     Agent --> Aider[aider]
-    Agent -->|... 20+| More[more agents]
+    Agent -->|... more| More[more agents]
 
 ```
 

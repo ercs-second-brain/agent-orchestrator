@@ -14,8 +14,7 @@ How to set up, build, run, and test Agent Orchestrator locally.
 Additional runtime dependencies for the daemon:
 
 - **git** (for worktree creation and agent integration)
-- **A running agent CLI** (Claude Code, Codex, Aider, etc.) - see
-  [docs/README.md](README.md)
+- **The `pi` agent CLI** — see [docs/harnesses/pi.md](harnesses/pi.md)
 
 ## Project Layout
 
