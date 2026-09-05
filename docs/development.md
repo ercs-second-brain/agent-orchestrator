@@ -127,6 +127,14 @@ go test -v ./internal/cli/ # a specific package
 npm run lint
 ```
 
+Note on cost: the backend lint pass runs ~27 linters (including staticcheck,
+gosec, and gocritic SSA passes) over ~400k lines of Go. That is 10-15 minutes
+cold-cache in a fresh worktree versus ~90 seconds on CI runners. During
+iteration, prefer scoped runs (`golangci-lint run ./internal/cli/...`) or just
+`go build ./... && go test ./...`, and let CI's golangci-lint pass be the
+authority. Run the full local lint only when CI flags findings or when you are
+specifically iterating on lint-sensitive code.
+
 ### Code generation
 
 ```bash
