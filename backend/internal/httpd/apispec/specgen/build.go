@@ -80,8 +80,6 @@ func Build() ([]byte, error) {
 			"Project import onboarding (folder validation and Git preparation)"),
 		*(&openapi31.Tag{Name: "mobile"}).WithDescription(
 			"Connect Mobile LAN bridge control (loopback/desktop only)"),
-		*(&openapi31.Tag{Name: "browser"}).WithDescription(
-			"Target-isolated desktop browser runtime (loopback only)"),
 		*(&openapi31.Tag{Name: "system"}).WithDescription(
 			"Local machine readiness checks the desktop app runs before showing the board"),
 	}
@@ -219,14 +217,6 @@ var schemaNames = map[string]string{ //nolint:gosec // Public OpenAPI type names
 	"ControllersSpawnSessionRequest":                      "SpawnSessionRequest",
 	"ControllersSpawnSessionResponse":                     "SpawnSessionResponse",
 	"ControllersSessionResponse":                          "SessionResponse",
-	"ControllersSessionPreviewResponse":                   "SessionPreviewResponse",
-	"ControllersSetSessionPreviewRequest":                 "SetSessionPreviewRequest",
-	"ControllersStartPreviewServerRequest":                "StartPreviewServerRequest",
-	"ControllersPreviewServerStatusResponse":              "PreviewServerStatusResponse",
-	"ControllersBrowserStatusQuery":                       "BrowserStatusQuery",
-	"ControllersBrowserStatusResponse":                    "BrowserStatusResponse",
-	"ControllersBrowserCommandRequest":                    "BrowserCommandRequest",
-	"ControllersBrowserCommandResponse":                   "BrowserCommandResponse",
 	"ControllersSetSessionMergePolicyRequest":             "SetSessionMergePolicyRequest",
 	"ControllersSetSessionMergePolicyResponse":            "SetSessionMergePolicyResponse",
 	"ControllersSetSessionAutoInjectReviewRequest":        "SetSessionAutoInjectReviewRequest",
@@ -532,7 +522,6 @@ func operations() []operation {
 	ops = append(ops, importOperations()...)
 	ops = append(ops, mobileOperations()...)
 	ops = append(ops, mobileDeviceOperations()...)
-	ops = append(ops, browserOperations()...)
 	ops = append(ops, shellTerminalOperations()...)
 	ops = append(ops, systemOperations()...)
 	ops = append(ops, identityOperations()...)
@@ -610,10 +599,6 @@ func systemOperations() []operation {
 			},
 		},
 	}
-}
-
-func browserOperations() []operation {
-	return []operation{}
 }
 
 func usageOperations() []operation {

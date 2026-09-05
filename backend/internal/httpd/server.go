@@ -103,12 +103,11 @@ func (s *Server) RunWithReady(ctx context.Context, onReady func()) error {
 
 func (s *Server) run(ctx context.Context, onReady func()) error {
 	info := runfile.Info{
-		PID:                   os.Getpid(),
-		Port:                  s.boundPort(),
-		StartedAt:             time.Now().UTC(),
-		Owner:                 os.Getenv("AO_OWNER"),
-		AppRunID:              s.cfg.AppRunID,
-		BrowserRuntimeAddress: os.Getenv("AO_BROWSER_RUNTIME_ADDRESS"),
+		PID:       os.Getpid(),
+		Port:      s.boundPort(),
+		StartedAt: time.Now().UTC(),
+		Owner:     os.Getenv("AO_OWNER"),
+		AppRunID:  s.cfg.AppRunID,
 	}
 	if err := runfile.Write(s.cfg.RunFilePath, info); err != nil {
 		_ = s.listen.Close()

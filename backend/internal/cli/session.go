@@ -628,7 +628,7 @@ func (c *commandContext) renameSession(ctx context.Context, cmd *cobra.Command, 
 }
 
 func (c *commandContext) cleanupSessions(ctx context.Context, cmd *cobra.Command, opts sessionCleanupOptions) error {
-	candidates, err := c.previewCleanupSessions(ctx, opts.project)
+	candidates, err := c.cleanupCandidates(ctx, opts.project)
 	if err != nil {
 		return err
 	}
@@ -699,7 +699,7 @@ func (c *commandContext) cleanupSessions(ctx context.Context, cmd *cobra.Command
 	return err
 }
 
-func (c *commandContext) previewCleanupSessions(ctx context.Context, project string) ([]sessionDTO, error) {
+func (c *commandContext) cleanupCandidates(ctx context.Context, project string) ([]sessionDTO, error) {
 	params := url.Values{}
 	params.Set("active", "false")
 	if project != "" {
