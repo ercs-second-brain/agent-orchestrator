@@ -51,6 +51,10 @@ func TestProbeFencedRuntimeRegistryMalformedIsUnknown(t *testing.T) {
 		t.Fatal(err)
 	}
 	rt := New(Options{RunFilePath: filepath.Join(dir, "running.json")})
+	// New pins the package-global ptyregistry override to this instance's dir;
+	// reset it so a shuffled-later test that relies on the HOME-redirected
+	// default registry doesn't read/write our (deleted) temp dir instead.
+	t.Cleanup(func() { ptyregistry.SetRunFilePath("") })
 
 	got := rt.ProbeFencedRuntime(context.Background(), ports.FencedRuntimeRef{
 		Handle: ports.RuntimeHandle{ID: "sess-malformed"}, SessionID: "sess-malformed", Generation: "launch-1",
@@ -422,6 +426,10 @@ func TestCreate_RunFilePathScopesRegistryToInstanceDir(t *testing.T) {
 		Spawner:     fakeSpawnerFor(t, hosts, livePID()),
 		RunFilePath: filepath.Join(instanceDir, "running.json"),
 	})
+	// New pins the package-global ptyregistry override to this instance's dir;
+	// reset it so a shuffled-later test that relies on the HOME-redirected
+	// default registry doesn't read/write our (deleted) temp dir instead.
+	t.Cleanup(func() { ptyregistry.SetRunFilePath("") })
 
 	handle, err := rt.Create(context.Background(), ports.RuntimeConfig{
 		SessionID:     domain.SessionID("sess-scoped"),

@@ -8,6 +8,7 @@ import (
 
 	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/domain"
 	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/ports"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/testenv"
 )
 
 func TestCodexCapacitySingleFlight(t *testing.T) {
@@ -22,7 +23,7 @@ func TestCodexCapacitySingleFlight(t *testing.T) {
 	manager := newTestCodexAccountManager(t, factory, nil)
 	manager.now = func() time.Time { return now }
 	manager.capacity.now = manager.now
-	record := codexCapacityTestRecord(t.TempDir(), testAccountID, domain.CodexAccountSourceManaged, now)
+	record := codexCapacityTestRecord(testenv.PrivateTempDir(t), testAccountID, domain.CodexAccountSourceManaged, now)
 	done := make(chan struct{}, 2)
 	for range 2 {
 		go func() {
@@ -60,7 +61,7 @@ func TestCodexCapacityRequestCancellationDoesNotCancelSharedRead(t *testing.T) {
 	manager := newTestCodexAccountManager(t, factory, nil)
 	manager.now = func() time.Time { return now }
 	manager.capacity.now = manager.now
-	record := codexCapacityTestRecord(t.TempDir(), "existing", domain.CodexAccountSourceManaged, now)
+	record := codexCapacityTestRecord(testenv.PrivateTempDir(t), "existing", domain.CodexAccountSourceManaged, now)
 	waitCtx, cancel := context.WithCancel(context.Background())
 	done := make(chan error, 1)
 	go func() {
@@ -95,7 +96,7 @@ func TestCodexCapacityReadsShareTwoProcessLimit(t *testing.T) {
 	manager.capacity.now = manager.now
 	done := make(chan struct{}, 3)
 	for _, id := range []string{"one", "two", "three"} {
-		record := codexCapacityTestRecord(t.TempDir(), id, domain.CodexAccountSourceManaged, now)
+		record := codexCapacityTestRecord(testenv.PrivateTempDir(t), id, domain.CodexAccountSourceManaged, now)
 		go func() {
 			_, _ = manager.capacity.ensureOne(context.Background(), record, factory.capabilities, false)
 			done <- struct{}{}
@@ -122,7 +123,7 @@ func TestCodexCapacityFailurePreservesLastKnownStateAsStale(t *testing.T) {
 	manager := newTestCodexAccountManager(t, factory, nil)
 	manager.now = func() time.Time { return now }
 	manager.capacity.now = manager.now
-	record := codexCapacityTestRecord(t.TempDir(), "existing", domain.CodexAccountSourceManaged, now)
+	record := codexCapacityTestRecord(testenv.PrivateTempDir(t), "existing", domain.CodexAccountSourceManaged, now)
 	manager.capacity.updateFromEvent(record.Snapshot.ID, ports.CodexCapacityObservation{
 		ObservedAt: now, Partial: true,
 		Overall: &domain.CodexCapacityBucket{LimitID: "codex", Reached: domain.CodexCapacityNotReached, Primary: &domain.CodexCapacityWindow{UsedPercent: 55}},

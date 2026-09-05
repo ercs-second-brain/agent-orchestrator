@@ -278,6 +278,16 @@ func TestFullLifecycleSpawnToTermination(t *testing.T) {
 	// near-instant, never the ~12s it takes unspeeded.
 	t.Setenv(SpeedupEnv, "2000")
 
+	// Hermetic HOME: the launch command runs `sh -lc` — a LOGIN shell — which
+	// sources $HOME/.profile. On machines where a real `ao` is installed under
+	// $HOME/.local/bin, that profile re-prepends ~/.local/bin ahead of the shim
+	// dir below, the bare `ao` in the timeline resolves to the ambient binary
+	// instead of the shim, no events are recorded, and the test fails with an
+	// environment-dependent flake (passes on CI, fails on AO dev boxes). Pointing
+	// HOME at the (empty) temp dir leaves the shim dir first on PATH no matter
+	// what the ambient profile scripts do.
+	t.Setenv("HOME", t.TempDir())
+
 	// Stub `ao` on PATH: the script calls `ao hooks fake <event>`; this shim
 	// records <event> ($3) to a log so the test can read the ordered events the
 	// hooks actually fired. Its own stdout/stderr are redirected to /dev/null by

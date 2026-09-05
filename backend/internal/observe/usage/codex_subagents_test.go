@@ -14,6 +14,7 @@ import (
 	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/domain"
 	usagesvc "github.com/ercs-second-brain/agent-orchestrator/backend/internal/service/usage"
 	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/storage/sqlite"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/testenv"
 )
 
 const (
@@ -131,7 +132,7 @@ func TestParseCodexRetainsPendingSpawnWhenChildCapacityIsExceeded(t *testing.T) 
 
 func TestIngestorSignalsReconcileOnlyForNewlyCommittedCodexChild(t *testing.T) {
 	ctx := context.Background()
-	dataDir := t.TempDir()
+	dataDir := testenv.PrivateTempDir(t)
 	store, source, path, now := seedCodexIngestionSource(t, dataDir)
 	call := codexResponseItem(t, map[string]any{
 		"type":      "function_call",
@@ -179,7 +180,7 @@ func TestIngestorSignalsReconcileOnlyForNewlyCommittedCodexChild(t *testing.T) {
 
 func TestIngestorMarksUnresolvedCodexSpawnPartialAtStableFinalEOF(t *testing.T) {
 	ctx := context.Background()
-	dataDir := t.TempDir()
+	dataDir := testenv.PrivateTempDir(t)
 	store, source, path, now := seedCodexIngestionSource(t, dataDir)
 	call := codexResponseItem(t, map[string]any{
 		"type":      "function_call",
@@ -604,9 +605,9 @@ func seedCodexRolloutSession(
 	t.Helper()
 	now := time.Now().UTC()
 	store, session := seedUsageTestSession(
-		t, t.TempDir(), "codex-subagents", domain.HarnessCodex, activity, testCodexParentID, now,
+		t, testenv.PrivateTempDir(t), "codex-subagents", domain.HarnessCodex, activity, testCodexParentID, now,
 	)
-	base := t.TempDir()
+	base := testenv.PrivateTempDir(t)
 	return store, session, usagesvc.SourceRoots{
 		CodexSessions: filepath.Join(base, "sessions"),
 		CodexArchived: filepath.Join(base, "archived_sessions"),

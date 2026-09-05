@@ -10,6 +10,7 @@ import (
 	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/domain"
 	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/storage/sqlite"
 	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/storage/sqlite/sqlitetest"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/testenv"
 )
 
 func parseRecords(source domain.UsageSourceContext, records []jsonlRecord, nextOffset int64, now time.Time) parseResult {
@@ -42,7 +43,7 @@ func seedUsageTestSession(
 	mustNoError(t, err)
 	t.Cleanup(func() { _ = store.Close() })
 	ctx := context.Background()
-	mustNoError(t, store.UpsertProject(ctx, domain.ProjectRecord{ID: string(projectID), Path: t.TempDir(), RegisteredAt: now}))
+	mustNoError(t, store.UpsertProject(ctx, domain.ProjectRecord{ID: string(projectID), Path: testenv.PrivateTempDir(t), RegisteredAt: now}))
 	session, err := store.CreateSession(ctx, domain.SessionRecord{
 		ProjectID: projectID,
 		Kind:      domain.KindWorker,

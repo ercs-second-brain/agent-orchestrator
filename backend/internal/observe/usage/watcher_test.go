@@ -9,13 +9,15 @@ import (
 	"testing"
 	"time"
 
+	"github.com/aoagents/agent-orchestrator/backend/internal/testenv"
+
 	"github.com/fsnotify/fsnotify"
 )
 
 const watcherTestTimeout = 5 * time.Second
 
 func TestTranscriptWatcherExistingRootWrite(t *testing.T) {
-	root := t.TempDir()
+	root := testenv.PrivateTempDir(t)
 	transcript := filepath.Join(root, "session.jsonl")
 	mustNoError(t, os.WriteFile(transcript, []byte("{\"type\":\"message\"}\n"), 0o600))
 	watcher, cancel := startTranscriptWatcher(t, root, transcript)
@@ -30,7 +32,7 @@ func TestTranscriptWatcherExistingRootWrite(t *testing.T) {
 }
 
 func TestTranscriptWatcherErrorsRedactRootPath(t *testing.T) {
-	root := filepath.Join(t.TempDir(), "private-transcript-root")
+	root := filepath.Join(testenv.PrivateTempDir(t), "private-transcript-root")
 	mustNoError(t, os.WriteFile(root, []byte("not a directory"), 0o600))
 	_, err := NewTranscriptWatcher(context.Background(), []string{root})
 	if err == nil {
@@ -42,7 +44,7 @@ func TestTranscriptWatcherErrorsRedactRootPath(t *testing.T) {
 }
 
 func TestTranscriptWatcherDoesNotWatchUnrelatedHistory(t *testing.T) {
-	root := t.TempDir()
+	root := testenv.PrivateTempDir(t)
 	watcher, err := NewTranscriptWatcher(context.Background(), []string{root})
 	mustNoError(t, err)
 	t.Cleanup(watcher.close)
@@ -58,7 +60,7 @@ func TestTranscriptWatcherDoesNotWatchUnrelatedHistory(t *testing.T) {
 }
 
 func TestTranscriptWatcherAddsOnlyRegisteredSources(t *testing.T) {
-	root := t.TempDir()
+	root := testenv.PrivateTempDir(t)
 	unrelated := filepath.Join(root, "history", "old.jsonl")
 	sourceDir := filepath.Join(root, "2026", "08", "06")
 	mustNoError(t, os.MkdirAll(filepath.Dir(unrelated), 0o700))
@@ -82,7 +84,7 @@ func TestTranscriptWatcherAddsOnlyRegisteredSources(t *testing.T) {
 }
 
 func TestTranscriptWatcherResolvesSymlinkedRoot(t *testing.T) {
-	base := t.TempDir()
+	base := testenv.PrivateTempDir(t)
 	root := filepath.Join(base, "transcripts")
 	mustNoError(t, os.Mkdir(root, 0o700))
 	link := filepath.Join(base, "linked-transcripts")
@@ -103,7 +105,7 @@ func TestTranscriptWatcherResolvesSymlinkedRoot(t *testing.T) {
 }
 
 func TestTranscriptWatcherAddsSourceWhenRetryFindsMissingFile(t *testing.T) {
-	root := t.TempDir()
+	root := testenv.PrivateTempDir(t)
 	transcript := filepath.Join(root, "rollout.jsonl")
 	watcher, err := NewTranscriptWatcher(context.Background(), []string{root})
 	mustNoError(t, err)
@@ -123,7 +125,7 @@ func TestTranscriptWatcherAddsSourceWhenRetryFindsMissingFile(t *testing.T) {
 }
 
 func TestTranscriptWatcherEmitsRenameAndRewatchesReplacement(t *testing.T) {
-	root := t.TempDir()
+	root := testenv.PrivateTempDir(t)
 	transcript := filepath.Join(root, "rollout.jsonl")
 	mustNoError(t, os.WriteFile(transcript, []byte("{\"generation\":1}\n"), 0o600))
 	watcher, cancel := startTranscriptWatcher(t, root, transcript)
@@ -140,7 +142,7 @@ func TestTranscriptWatcherEmitsRenameAndRewatchesReplacement(t *testing.T) {
 }
 
 func TestTranscriptWatcherCleanShutdown(t *testing.T) {
-	root := t.TempDir()
+	root := testenv.PrivateTempDir(t)
 	watcher, cancel := startTranscriptWatcher(t, root)
 	cancel()
 
@@ -158,7 +160,7 @@ func TestTranscriptWatcherCleanShutdown(t *testing.T) {
 }
 
 func TestTranscriptWatcherMarksOnlyCreationEventsForDiscovery(t *testing.T) {
-	root := t.TempDir()
+	root := testenv.PrivateTempDir(t)
 	path := filepath.Join(root, "session.jsonl")
 	mustNoError(t, os.WriteFile(path, []byte("{}\n"), 0o600))
 	watcher, err := NewTranscriptWatcher(context.Background(), []string{root})

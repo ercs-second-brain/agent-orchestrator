@@ -6,6 +6,8 @@ import (
 	"sync/atomic"
 	"testing"
 	"time"
+
+	"github.com/aoagents/agent-orchestrator/backend/internal/testenv"
 )
 
 func TestPipelineRetriesWatcherCreation(t *testing.T) {
@@ -14,7 +16,7 @@ func TestPipelineRetriesWatcherCreation(t *testing.T) {
 		coordinatorTestIngestor(func(context.Context, int64) (IngestResult, error) {
 			return IngestResult{}, nil
 		}),
-		[]string{t.TempDir()},
+		[]string{testenv.PrivateTempDir(t)},
 		CoordinatorConfig{Workers: 1},
 	)
 	pipeline.restartWait = time.Millisecond

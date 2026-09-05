@@ -16,6 +16,7 @@ import (
 	agentregistry "github.com/ercs-second-brain/agent-orchestrator/backend/internal/adapters/agent/registry"
 	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/domain"
 	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/ports"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/testenv"
 )
 
 type fakeAgent struct {
@@ -956,7 +957,7 @@ func TestModelsUsesCapabilityAwareFallbackWhenDiscoveryCannotRun(t *testing.T) {
 		{agent: "grok", wantEntryMode: ports.CustomModelEntryDirect, wantSelection: ports.ModelSelectionText, wantAllowInput: true},
 	} {
 		t.Run(tc.agent, func(t *testing.T) {
-			emptyHome := t.TempDir()
+			emptyHome := testenv.PrivateTempDir(t)
 			t.Setenv("HOME", emptyHome)
 			t.Setenv("XDG_CONFIG_HOME", emptyHome)
 			svc := NewWithAgents([]agentregistry.HarnessAgent{
