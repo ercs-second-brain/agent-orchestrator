@@ -2,7 +2,6 @@ import { lazy, Suspense } from "react";
 import type { GlobalSettingsSection as GlobalSettingsPage } from "../stores/ui-store";
 import { GeneralSettingsSection } from "./settings/GeneralSettingsSection";
 import { HarnessSettingsSection } from "./settings/HarnessSettingsSection";
-import { CodexAccountsSection } from "./settings/CodexAccountsSection";
 import { ConnectMobileContent } from "./settings/ConnectMobileContent";
 import { KeyboardShortcutsContent } from "./settings/KeyboardShortcutsContent";
 import { MobileDevicesSection } from "./settings/MobileDevicesSection";
@@ -45,7 +44,6 @@ export function GlobalSettingsForm({
 
 			{(all || section === "harness") && !isRemote ? <HarnessSettingsSection titleHidden={titleHidden} /> : null}
 
-			{(all || section === "agents") && !isRemote ? <CodexAccountsSection titleHidden={titleHidden} /> : null}
 
 			{(all || section === "browserProfiles") && !isRemote ? <BrowserProfilesSection titleHidden={titleHidden} /> : null}
 

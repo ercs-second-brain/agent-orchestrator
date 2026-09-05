@@ -7,7 +7,7 @@ import {
 } from "@ercs-second-brain/product-ui";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Loader2 } from "lucide-react";
-import { RequiredAgentField } from "./CreateProjectAgentSheet";
+import { RequiredAgentField } from "./settings/RequiredAgentField";
 import type { components } from "../../api/schema";
 import { apiClient, apiErrorCode, apiErrorMessage } from "../lib/api-client";
 import {

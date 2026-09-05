@@ -181,7 +181,7 @@ function commonGetsResponder(
   reviews: unknown[] = [],
 ) {
   return async (path: string) => {
-    if (path === "/api/v1/agents/readiness") {
+    if (path === "/api/v1/agents/readiness/ensure") {
       const agents = ["claude-code", "codex", "opencode"].map((id) => agentReadiness(id));
       return { data: { agents } };
     }
@@ -1690,10 +1690,10 @@ describe("SessionInspector summary reviews", () => {
 
   // The label is a display name, not the wire id: the trigger used to print the
   // raw harness id, which read as a second, selectable "claude-code" entry
-  // alongside the catalog's properly-cased "Claude Code".
+  // alongside the catalog's properly-cased "pi".
   it("labels the default reviewer with its display name, not the raw id", async () => {
     getMock.mockImplementation(async (path: string) => {
-      if (path === "/api/v1/agents/readiness") {
+      if (path === "/api/v1/agents/readiness/ensure") {
         const agents = ["claude-code", "codex", "opencode"].map((id) => agentReadiness(id));
         return { data: { agents } };
       }
@@ -1735,7 +1735,7 @@ describe("SessionInspector summary reviews", () => {
     const trigger = await screen.findByRole("button", {
       name: /Select reviewer agent/,
     });
-    expect(trigger).toHaveTextContent("Claude Code");
+    expect(trigger).toHaveTextContent("pi");
     expect(trigger).not.toHaveTextContent("claude-code");
   });
 
@@ -1745,12 +1745,12 @@ describe("SessionInspector summary reviews", () => {
   // must stay usable while auto review is enabled.
   it("runs a review from a daemon snapshot that only has pi installed", async () => {
     getMock.mockImplementation(async (path: string) => {
-      if (path === "/api/v1/agents/readiness") {
+      if (path === "/api/v1/agents/readiness/ensure") {
         return {
           data: {
             agents: [
               agentReadiness("pi"),
-              agentReadiness("claude-code", "Claude Code", { installation: "not_installed" }),
+              agentReadiness("pi", "pi", { installation: "not_installed" }),
             ],
           },
         };
@@ -1813,7 +1813,7 @@ describe("SessionInspector summary reviews", () => {
 
   it("configures session auto-review while keeping manual controls usable", async () => {
     getMock.mockImplementation(async (path: string) => {
-      if (path === "/api/v1/agents/readiness") {
+      if (path === "/api/v1/agents/readiness/ensure") {
         const agents = ["claude-code", "codex", "opencode"].map((id) => agentReadiness(id));
         return { data: { agents } };
       }
@@ -1901,7 +1901,7 @@ describe("SessionInspector summary reviews", () => {
       body: "",
     };
     getMock.mockImplementation(async (path: string) => {
-      if (path === "/api/v1/agents/readiness") {
+      if (path === "/api/v1/agents/readiness/ensure") {
         const agents = ["claude-code", "codex", "opencode"].map((id) => agentReadiness(id));
         return { data: { agents } };
       }
@@ -3245,7 +3245,7 @@ describe("SessionInspector summary reviews", () => {
       await screen.findByText("Review in progress · Codex"),
     ).toBeInTheDocument();
     expect(
-      screen.queryByText("Review in progress · Claude Code"),
+      screen.queryByText("Review in progress · pi"),
     ).not.toBeInTheDocument();
   });
 

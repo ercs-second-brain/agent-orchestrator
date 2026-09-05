@@ -145,12 +145,10 @@ describe("apiClient runtime base URL", () => {
 		expect(error).toEqual({ code: "exited", message: "AO daemon exited with code 1" });
 	});
 
-	it("leaves workspace and switch-history failures exclusively to visibility reporting", async () => {
+	it("leaves workspace failures exclusively to visibility reporting", async () => {
 		vi.spyOn(globalThis, "fetch").mockImplementation(async () => new Response(JSON.stringify({ code: "unavailable", message: "nope", reporting_owner: "http" }), { status: 503, headers: { "Content-Type": "application/json" } }));
 		setApiBaseUrl("http://127.0.0.1:3001");
 		await apiClient.GET("/api/v1/projects");
-		await apiClient.GET("/api/v1/sessions");
-		await apiClient.GET("/api/v1/sessions/{sessionId}/agent-switches", { params: { path: { sessionId: "local-secret" } } });
 		expect(sentryCaptureMock).not.toHaveBeenCalled();
 	});
 });
@@ -283,7 +281,7 @@ describe("api error telemetry", () => {
 		vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response("oops", { status: 500 }));
 		setApiBaseUrl("http://127.0.0.1:3037");
 
-		await apiClient.GET("/api/v1/agents");
+		await apiClient.GET("/api/v1/agents/installers");
 
 		expect(sentryCaptureMock).toHaveBeenCalledTimes(1);
 	});
@@ -302,7 +300,7 @@ describe("api error telemetry", () => {
 		);
 		setApiBaseUrl("http://127.0.0.1:3037");
 
-		const { error } = await apiClient.GET("/api/v1/agents");
+		const { error } = await apiClient.GET("/api/v1/agents/installers");
 
 		expect(sentryCaptureMock).not.toHaveBeenCalled();
 		expect(apiErrorMessage(error)).toBe("Agent switch failed (AGENT_SWITCH_FAILED)");
@@ -322,7 +320,7 @@ describe("api error telemetry", () => {
 		);
 		setApiBaseUrl("http://127.0.0.1:3037");
 
-		const { error } = await apiClient.GET("/api/v1/agents");
+		const { error } = await apiClient.GET("/api/v1/agents/installers");
 
 		expect(sentryCaptureMock).not.toHaveBeenCalled();
 		expect(apiErrorMessage(error)).toBe(
@@ -339,7 +337,7 @@ describe("api error telemetry", () => {
 		);
 		setApiBaseUrl("http://127.0.0.1:3037");
 
-		await apiClient.GET("/api/v1/agents");
+		await apiClient.GET("/api/v1/agents/installers");
 
 		expect(sentryCaptureMock).toHaveBeenCalledTimes(1);
 	});
@@ -360,8 +358,8 @@ describe("api error telemetry", () => {
 			);
 		setApiBaseUrl("http://127.0.0.1:3037");
 
-		await apiClient.GET("/api/v1/agents");
-		await apiClient.GET("/api/v1/agents");
+		await apiClient.GET("/api/v1/agents/installers");
+		await apiClient.GET("/api/v1/agents/installers");
 
 		expect(sentryCaptureMock).toHaveBeenCalledTimes(1);
 	});
@@ -381,16 +379,16 @@ describe("api error telemetry", () => {
 		vi.spyOn(globalThis, "fetch").mockRejectedValue(new TypeError("Failed to fetch"));
 		setApiBaseUrl("http://127.0.0.1:3037");
 
-		await expect(apiClient.GET("/api/v1/agents")).rejects.toThrow("Failed to fetch");
+		await expect(apiClient.GET("/api/v1/agents/installers")).rejects.toThrow("Failed to fetch");
 
-		expect(sentryCaptureMock).toHaveBeenCalledWith("GET /api/v1/agents", "network_error", undefined, undefined, undefined);
+		expect(sentryCaptureMock).toHaveBeenCalledWith("GET /api/v1/agents/installers", "network_error", undefined, undefined, undefined);
 	});
 
 	it("does not report caller-initiated aborts", async () => {
 		vi.spyOn(globalThis, "fetch").mockRejectedValue(new DOMException("Aborted", "AbortError"));
 		setApiBaseUrl("http://127.0.0.1:3037");
 
-		await expect(apiClient.GET("/api/v1/agents")).rejects.toThrow("Aborted");
+		await expect(apiClient.GET("/api/v1/agents/installers")).rejects.toThrow("Aborted");
 
 		expect(sentryCaptureMock).not.toHaveBeenCalled();
 	});
@@ -398,21 +396,21 @@ describe("api error telemetry", () => {
 	it("reports daemon_unavailable when the base URL is untrusted", async () => {
 		setApiBaseUrl(null);
 
-		await apiClient.GET("/api/v1/agents");
+		await apiClient.GET("/api/v1/agents/installers");
 
-		expect(sentryCaptureMock).toHaveBeenCalledWith("GET /api/v1/agents", "daemon_unavailable", 503, undefined, undefined);
+		expect(sentryCaptureMock).toHaveBeenCalledWith("GET /api/v1/agents/installers", "daemon_unavailable", 503, undefined, undefined);
 	});
 
 	it("dedupes repeated identical failures within the 30s window", async () => {
 		vi.spyOn(globalThis, "fetch").mockImplementation(async () => new Response("oops", { status: 502 }));
 		setApiBaseUrl("http://127.0.0.1:3037");
 
-		await apiClient.GET("/api/v1/agents");
-		await apiClient.GET("/api/v1/agents");
+		await apiClient.GET("/api/v1/agents/installers");
+		await apiClient.GET("/api/v1/agents/installers");
 		expect(sentryCaptureMock).toHaveBeenCalledTimes(1);
 
 		vi.setSystemTime(clock + 31_000);
-		await apiClient.GET("/api/v1/agents");
+		await apiClient.GET("/api/v1/agents/installers");
 		expect(sentryCaptureMock).toHaveBeenCalledTimes(2);
 	});
 });

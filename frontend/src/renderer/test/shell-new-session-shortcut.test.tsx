@@ -428,8 +428,8 @@ describe("shell workspace startup", () => {
 				asWorkspace: undefined,
 				config: {
 					defaultBranch: "main",
-					worker: { agent: "codex" },
-					orchestrator: { agent: "codex" },
+					worker: { agent: "pi" },
+					orchestrator: { agent: "pi" },
 				},
 			},
 		});

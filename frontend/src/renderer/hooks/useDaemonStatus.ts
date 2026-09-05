@@ -9,7 +9,6 @@ import {
 	cacheAgentReadiness,
 	ensureAgentReadiness,
 } from "./useAgentReadinessQuery";
-import { codexAccountsQueryKey } from "./codex-accounts-state";
 import { workspaceQueryKey } from "./useWorkspaceQuery";
 
 const STATUS_REFRESH_MS = 2_000;
@@ -85,7 +84,6 @@ export function useDaemonStatus(queryClient: QueryClient = defaultQueryClient) {
 					previousStatus.remoteApiBase !== nextStatus.remoteApiBase);
 			if (daemonChanged) {
 				queryClient.removeQueries({ queryKey: agentReadinessQueryKey, exact: true });
-				queryClient.removeQueries({ queryKey: codexAccountsQueryKey, exact: true });
 				queryClient.removeQueries({ queryKey: workspaceQueryKey });
 			}
 			applyDaemonStatus(nextStatus);

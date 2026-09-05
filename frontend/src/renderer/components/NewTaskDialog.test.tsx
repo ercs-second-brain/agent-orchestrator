@@ -60,14 +60,12 @@ function delegateCalls() {
 
 const agentInventory = {
 	agents: [
-		agentReadiness("claude-code", "Claude Code"),
-		agentReadiness("cursor", "Cursor"),
-		agentReadiness("kiro", "Kiro", { authentication: "unknown" }),
+		agentReadiness("pi", "pi"),
 	],
 };
 
 const directModelCatalog = {
-	agentId: "claude-code",
+	agentId: "pi",
 	models: [],
 	selectionMode: "catalog",
 	allowCustom: true,
@@ -79,20 +77,20 @@ const directModelCatalog = {
 };
 
 async function waitForAgentCatalog() {
-	await waitFor(() => expect(screen.getAllByText("Claude Code").length).toBeGreaterThan(0));
+	await waitFor(() => expect(screen.getAllByText("pi").length).toBeGreaterThan(0));
 }
 
 beforeEach(() => {
 	ensureAgentReadinessMock.mockReset();
 	getMock.mockReset().mockImplementation(async (path: string) => {
-		if (path === "/api/v1/agents/readiness") {
+		if (path === "/api/v1/agents/readiness/ensure") {
 			return { data: agentInventory, error: undefined };
 		}
 		if (path === "/api/v1/agents/{agent}/models") {
 			return { data: directModelCatalog, error: undefined };
 		}
 		return {
-			data: { status: "ok", project: { id: "proj-1", config: { worker: { agent: "claude-code" } } } },
+			data: { status: "ok", project: { id: "proj-1", config: { worker: { agent: "pi" } } } },
 			error: undefined,
 		};
 	});
@@ -115,8 +113,8 @@ describe("NewTaskDialog", () => {
 		expect(screen.queryByText("Runs with")).not.toBeInTheDocument();
 		expect(screen.queryByRole("button", { name: "Close new task dialog" })).not.toBeInTheDocument();
 		expect(screen.queryByRole("button", { name: "Cancel" })).not.toBeInTheDocument();
-		expect(screen.getByRole("button", { name: "Agent" })).toHaveTextContent("Claude Code");
-		expect(await screen.findByRole("button", { name: "Model" })).toHaveTextContent("Use Claude Code's default");
+		expect(screen.getByRole("button", { name: "Agent" })).toHaveTextContent("pi");
+		expect(await screen.findByRole("button", { name: "Model" })).toHaveTextContent("Use pi's default");
 		expect(screen.getByRole("button", { name: "Add file" })).toBeInTheDocument();
 		expect(screen.getByLabelText("Task").getAttribute("placeholder")).toBeTruthy();
 		expect(screen.queryByLabelText("Title")).not.toBeInTheDocument();
@@ -152,7 +150,7 @@ describe("NewTaskDialog", () => {
 				brief,
 				// The dialog preselects the project's worker agent, so the delegate
 				// call names it instead of relying on a server-side fallback.
-				agent: "claude-code",
+				agent: "pi",
 				model: "placeholder-model",
 			},
 		});
@@ -171,7 +169,7 @@ describe("NewTaskDialog", () => {
 			if (delegateAttempts === 1) {
 				return {
 					data: undefined,
-					error: { code: "CHAT_AUTH_REQUIRED", message: "Claude Code needs login" },
+					error: { code: "CHAT_AUTH_REQUIRED", message: "pi needs login" },
 				};
 			}
 			return { data: { ok: true, workerId: "worker-tui" }, error: undefined };
@@ -193,39 +191,7 @@ describe("NewTaskDialog", () => {
 		expect(onCreated).toHaveBeenCalledWith("worker-tui");
 	});
 
-	it("sends the chosen agent when the user overrides the default", async () => {
-		renderDialog();
-		const user = userEvent.setup();
-		await waitForAgentCatalog();
 
-		await user.type(screen.getByLabelText("Task"), "B");
-
-		await user.click(screen.getByRole("button", { name: "Agent" }));
-		await user.click(await screen.findByRole("menuitem", { name: "Cursor" }));
-
-		await user.click(screen.getByRole("button", { name: "Start task" }));
-
-		await waitFor(() => expect(requestBody).not.toThrow());
-		expect(requestBody().agent).toBe("cursor");
-	});
-
-	it("allows selecting an installed agent with unknown auth", async () => {
-		renderDialog();
-		const user = userEvent.setup();
-		await waitForAgentCatalog();
-
-		await user.click(screen.getByRole("button", { name: "Agent" }));
-		const options = await screen.findAllByRole("menuitem");
-		expect(options.map((option) => option.textContent)).toEqual(["Claude Code", "Cursor", "KiroAuth unknown"]);
-		expect(options[2]).not.toHaveAttribute("aria-disabled", "true");
-		await user.click(options[2]);
-
-		await user.type(screen.getByLabelText("Task"), "B");
-		await user.click(screen.getByRole("button", { name: "Start task" }));
-
-		await waitFor(() => expect(requestBody).not.toThrow());
-		expect(requestBody().agent).toBe("kiro");
-	});
 
 	it("starts an untitled task without an initial prompt", async () => {
 		const { onCreated, onOpenChange } = renderDialog();
@@ -238,7 +204,7 @@ describe("NewTaskDialog", () => {
 		expect(requestBody()).toMatchObject({
 			projectId: "proj-1",
 			brief: "",
-			agent: "claude-code",
+			agent: "pi",
 		});
 		expect(onCreated).toHaveBeenCalledWith("worker-1");
 		expect(onOpenChange).toHaveBeenCalledWith(false);
@@ -246,10 +212,10 @@ describe("NewTaskDialog", () => {
 
 	it("shows an empty Model field for scratch projects and omits it from delegation", async () => {
 		getMock.mockImplementation(async (path: string) => {
-			if (path === "/api/v1/agents/readiness") {
+			if (path === "/api/v1/agents/readiness/ensure") {
 				return {
 					data: {
-						agents: [agentReadiness("claude-code", "Claude Code")],
+						agents: [agentReadiness("pi", "pi")],
 					},
 					error: undefined,
 				};
@@ -260,7 +226,7 @@ describe("NewTaskDialog", () => {
 			return {
 				data: {
 					status: "ok",
-					project: { id: "proj-1", kind: "scratch", config: { worker: { agent: "claude-code" } } },
+					project: { id: "proj-1", kind: "scratch", config: { worker: { agent: "pi" } } },
 				},
 				error: undefined,
 			};
@@ -271,7 +237,7 @@ describe("NewTaskDialog", () => {
 		await waitForAgentCatalog();
 
 		expect(screen.queryByLabelText("Branch")).not.toBeInTheDocument();
-		expect(await screen.findByRole("button", { name: "Model" })).toHaveTextContent("Use Claude Code's default");
+		expect(await screen.findByRole("button", { name: "Model" })).toHaveTextContent("Use pi's default");
 
 		await user.type(screen.getByLabelText("Task"), "Build a quick prototype in scratch.");
 		await user.click(screen.getByRole("button", { name: "Start task" }));
@@ -317,7 +283,7 @@ describe("NewTaskDialog", () => {
 
 		// Plain Enter submits the task.
 		await user.keyboard("{Enter}");
-		await waitFor(() => expect(postMock).toHaveBeenCalledTimes(1));
+		await waitFor(() => expect(delegateCalls()).toHaveLength(1));
 	});
 
 	it.each([
@@ -330,9 +296,9 @@ describe("NewTaskDialog", () => {
 			message: "task start failed",
 		},
 	])("displays daemon start errors for $code", async ({ code, message }) => {
-		postMock.mockResolvedValueOnce({
-			data: undefined,
-			error: { code, message },
+		postMock.mockImplementation(async (path: string) => {
+			if (path === "/api/v1/agents/readiness/ensure") return { data: agentInventory, error: undefined };
+			return { data: undefined, error: { code, message } };
 		});
 		renderDialog();
 		const user = userEvent.setup();

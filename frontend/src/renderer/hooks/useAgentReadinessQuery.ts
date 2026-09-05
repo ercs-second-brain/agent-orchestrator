@@ -10,7 +10,9 @@ export type AgentReadinessPurpose = components["schemas"]["EnsureAgentReadinessR
 export const agentReadinessQueryKey = ["agent-readiness"] as const;
 
 async function fetchAgentReadiness(): Promise<AgentReadiness> {
-	const { data, error } = await apiClient.GET("/api/v1/agents/readiness");
+	const { data, error } = await apiClient.POST("/api/v1/agents/readiness/ensure", {
+		body: { purpose: "display" },
+	});
 	if (error) throw new Error(apiErrorMessage(error));
 	return data as AgentReadiness;
 }

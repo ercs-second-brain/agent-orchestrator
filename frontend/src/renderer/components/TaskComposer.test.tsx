@@ -79,7 +79,7 @@ beforeEach(() => {
 		if (path.includes("/models")) {
 			return {
 				data: {
-					agent: "codex",
+					agent: "pi",
 					selectionMode: "text",
 					models: [],
 					allowCustom: true,
@@ -131,9 +131,9 @@ describe("TaskComposer", () => {
 	it("waits for and caches targeted readiness after a binary launch failure", async () => {
 		h.get.mockImplementation(async (path: string) => {
 			if (path.includes("/models")) {
-				return { data: { agent: "codex", selectionMode: "text", models: [], allowCustom: true } };
+				return { data: { agent: "pi", selectionMode: "text", models: [], allowCustom: true } };
 			}
-			return { data: { status: "ok", project: { agent: "codex", config: {} } } };
+			return { data: { status: "ok", project: { agent: "pi", config: {} } } };
 		});
 		h.post.mockResolvedValueOnce({
 			error: { code: "AGENT_BINARY_NOT_FOUND", message: "Codex is not installed" },
@@ -145,8 +145,8 @@ describe("TaskComposer", () => {
 			}),
 		);
 		const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-		const stale = agentReadiness("codex", "Codex", { freshness: "stale" });
-		const completed = agentReadiness("codex", "Codex", { installation: "not_installed" });
+		const stale = agentReadiness("pi", "Codex", { freshness: "stale" });
+		const completed = agentReadiness("pi", "Codex", { installation: "not_installed" });
 		queryClient.setQueryData(agentReadinessQueryKey, { agents: [stale] });
 
 		render(
@@ -287,7 +287,7 @@ describe("TaskComposer", () => {
 			if (path.includes("/models")) {
 				return {
 					data: {
-						agent: "codex",
+						agent: "pi",
 						selectionMode: "text",
 						models: [],
 						allowCustom: true,
@@ -295,7 +295,7 @@ describe("TaskComposer", () => {
 					},
 				};
 			}
-			return { data: { status: "ok", project: { agent: "codex", config: {} } } };
+			return { data: { status: "ok", project: { agent: "pi", config: {} } } };
 		});
 		let rejectCreate!: (error: Error) => void;
 		h.post.mockReturnValueOnce(new Promise((_resolve, reject) => (rejectCreate = reject)));
@@ -332,7 +332,7 @@ describe("TaskComposer", () => {
 		{
 			name: "mode",
 			catalog: {
-				agent: "codex",
+				agent: "pi",
 				selectionMode: "mode",
 				models: [{ id: "plan", label: "Plan", isDefault: true }],
 				customModelEntry: "none",
@@ -343,7 +343,7 @@ describe("TaskComposer", () => {
 		{
 			name: "catalog",
 			catalog: {
-				agent: "codex",
+				agent: "pi",
 				selectionMode: "catalog",
 				models: [{ id: "gpt-5", label: "GPT-5", isDefault: true }],
 				customModelEntry: "none",
@@ -354,7 +354,7 @@ describe("TaskComposer", () => {
 		{
 			name: "search and direct model ID",
 			catalog: {
-				agent: "codex",
+				agent: "pi",
 				selectionMode: "catalog",
 				models: [{ id: "gpt-5", label: "GPT-5", isDefault: true }],
 				customModelEntry: "direct",
@@ -375,7 +375,7 @@ describe("TaskComposer", () => {
 	])("locks the $name selector while creating and restores it after failure", async ({ catalog, controls }) => {
 		h.get.mockImplementation(async (path: string) => {
 			if (path.includes("/models")) return { data: catalog };
-			return { data: { status: "ok", project: { agent: "codex", config: {} } } };
+			return { data: { status: "ok", project: { agent: "pi", config: {} } } };
 		});
 		let rejectCreate!: (error: Error) => void;
 		h.post.mockReturnValueOnce(new Promise((_resolve, reject) => (rejectCreate = reject)));
@@ -588,10 +588,10 @@ describe("TaskComposer", () => {
 	it("preselects the project worker agent and spawns with it", async () => {
 		h.get.mockImplementation(async (path: string) => {
 			if (path.includes("/models")) {
-				return { data: { agent: "codex", selectionMode: "text", models: [], allowCustom: true } };
+				return { data: { agent: "pi", selectionMode: "text", models: [], allowCustom: true } };
 			}
 			return {
-				data: { status: "ok", project: { agent: "claude-code", config: { worker: { agent: "codex" } } } },
+				data: { status: "ok", project: { agent: "pi", config: { worker: { agent: "pi" } } } },
 			};
 		});
 		h.post.mockResolvedValueOnce({ data: { workerId: "sess-3" } });
@@ -610,7 +610,7 @@ describe("TaskComposer", () => {
 		await waitFor(() =>
 			expect(h.post).toHaveBeenCalledWith(
 				"/api/v1/orchestrators/delegate",
-				expect.objectContaining({ body: expect.objectContaining({ agent: "codex" }) }),
+				expect.objectContaining({ body: expect.objectContaining({ agent: "pi" }) }),
 			),
 		);
 	});
@@ -620,17 +620,17 @@ describe("TaskComposer", () => {
 			if (path.includes("/models")) {
 				return {
 					data: {
-						agent: "codex",
+						agent: "pi",
 						selectionMode: "text",
 						models: [{ id: "gpt-5.6-sol", label: "GPT-5.6 Sol", isDefault: true }],
 						allowCustom: true,
 					},
 				};
 			}
-			return { data: { status: "ok", project: { agent: "codex", config: {} } } };
+			return { data: { status: "ok", project: { agent: "pi", config: {} } } };
 		});
 		const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-		queryClient.setQueryData(["project", "proj-1"], { agent: "codex", config: {} });
+		queryClient.setQueryData(["project", "proj-1"], { agent: "pi", config: {} });
 
 		render(
 			<QueryClientProvider client={queryClient}>
@@ -645,9 +645,9 @@ describe("TaskComposer", () => {
 	it("falls back to the global default agent when the project sets no worker agent", async () => {
 		h.get.mockImplementation(async (path: string) => {
 			if (path.includes("/models")) {
-				return { data: { agent: "claude-code", selectionMode: "text", models: [], allowCustom: true } };
+				return { data: { agent: "pi", selectionMode: "text", models: [], allowCustom: true } };
 			}
-			return { data: { status: "ok", project: { agent: "claude-code", config: {} } } };
+			return { data: { status: "ok", project: { agent: "pi", config: {} } } };
 		});
 
 		render(
@@ -664,7 +664,7 @@ describe("TaskComposer", () => {
 			if (path.includes("/models")) {
 				return {
 					data: {
-						agent: "codex",
+						agent: "pi",
 						selectionMode: "text",
 						models: [
 							{ id: "gpt-5", label: "GPT-5" },
@@ -674,7 +674,7 @@ describe("TaskComposer", () => {
 					},
 				};
 			}
-			return { data: { status: "ok", project: { agent: "codex", config: {} } } };
+			return { data: { status: "ok", project: { agent: "pi", config: {} } } };
 		});
 
 		render(
@@ -704,14 +704,14 @@ describe("TaskComposer", () => {
 				}
 				return {
 					data: {
-						agent: "codex",
+						agent: "pi",
 						selectionMode: "text",
 						models: [{ id: "gpt-5.6-sol", label: "GPT-5.6 Sol", isDefault: true }],
 						allowCustom: true,
 					},
 				};
 			}
-			return { data: { status: "ok", project: { agent: "codex", config: {} } } };
+			return { data: { status: "ok", project: { agent: "pi", config: {} } } };
 		});
 
 		render(
@@ -729,7 +729,7 @@ describe("TaskComposer", () => {
 		await act(async () => {
 			resolveClaudeCatalog({
 				data: {
-					agent: "claude-code",
+					agent: "pi",
 					selectionMode: "text",
 					models: [{ id: "opus[1m]", label: "opus[1m]", isDefault: true }],
 					allowCustom: true,
@@ -744,14 +744,14 @@ describe("TaskComposer", () => {
 			if (path.includes("/models")) {
 				return {
 					data: {
-						agent: "codex",
+						agent: "pi",
 						selectionMode: "catalog",
 						models: [{ id: "gpt-5", label: "GPT-5" }],
 						allowCustom: true,
 					},
 				};
 			}
-			return { data: { status: "ok", project: { agent: "codex", config: {} } } };
+			return { data: { status: "ok", project: { agent: "pi", config: {} } } };
 		});
 
 		render(
@@ -800,7 +800,7 @@ describe("TaskComposer", () => {
 			if (path.includes("/models")) {
 				return {
 					data: {
-						agent: "codex",
+						agent: "pi",
 						selectionMode: "text",
 						models: [],
 						allowCustom: true,
@@ -812,7 +812,7 @@ describe("TaskComposer", () => {
 				data: {
 					status: "ok",
 					project: {
-						config: { worker: { agent: "codex", agentConfig: { model: "gpt-5" } } },
+						config: { worker: { agent: "pi", agentConfig: { model: "gpt-5" } } },
 					},
 				},
 			};
