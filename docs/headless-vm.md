@@ -26,7 +26,7 @@ on-box CLI only. Do not expose it beyond the VM.
 | `git` | Projects and worktrees |
 | `tmux` | TUI agent sessions |
 | `gh` or `AO_GITHUB_TOKEN` | PR observation, merge actions, and **Create a new Git repository**. Token needs `repo` and `read:org`. The daemon process must see the same auth as an SSH shell — `gh auth login` as the service user, or `Environment=AO_GITHUB_TOKEN=…` on the systemd unit. Interactive `GH_TOKEN` in `.bashrc` is not inherited. |
-| `pi` and `pi-acp` (≥ 0.17.1) | Pi TUI and Chat harnesses — see [harnesses/pi.md](harnesses/pi.md) |
+| `pi` | Pi TUI harness — see [harnesses/pi.md](harnesses/pi.md) |
 
 Install Pi credentials in the VM user's normal Pi config directory
 (`~/.pi/agent` or `PI_CODING_AGENT_DIR`). AO does not bundle or download Pi.
@@ -156,22 +156,20 @@ Switch back to **This computer** to run agents locally again.
 ## Pi on the VM
 
 AO **spawns and supervises** Pi sessions; it does not attach to a Pi process you
-started separately. Install `pi` (TUI) and `pi-acp` (Chat) on the VM, then spawn
-a worker with harness **Pi**.
-
-Pi Chat requires an explicit per-session **bypass-permissions** choice because
-pi-acp has no approval boundary — see [harnesses/pi.md](harnesses/pi.md).
+started separately. Install `pi` on the VM, then spawn a worker with harness
+**Pi**. Pi runs in its own terminal TUI; chat-mode (pi-acp) integration was
+removed by #39 — see [harnesses/pi.md](harnesses/pi.md).
 
 ## Limitations on LAN clients
 
 The LAN listener intentionally blocks loopback-only routes. Remote desktops
 **cannot**:
 
-- Drive the in-app **Browser** panel or `ao browser` automation (Electron-only)
+- Drive the in-app **Browser** panel (removed by #39)
 - Manage **Codex accounts** or install harnesses onto the VM from Settings
 - Enable or disable **Connect Mobile** (run `ao mobile` on the VM instead)
 
-Install agents and enable the LAN bridge over SSH on the VM. Use Chat/TUI,
+Install agents and enable the LAN bridge over SSH on the VM. Use terminal
 sessions, PRs, notifications, and terminals normally.
 
 ## Security notes

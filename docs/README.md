@@ -28,8 +28,8 @@ Start with [architecture.md](architecture.md) for the current backend model and
 
 | Doc                                                          | What it covers                                                                                             |
 | ------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------- |
-| [harnesses/pi.md](harnesses/pi.md)                           | Pi support: TUI mode via the `pi` executable and Chat mode via `pi-acp`.                                    |
-| [harnesses/omp.md](harnesses/omp.md)                         | OMP support as an interactive Terminal UI harness and a structured Chat harness.                            |
+| [harnesses/pi.md](harnesses/pi.md)                           | Pi support: TUI spawning via the `pi` executable. Chat-mode (pi-acp) integration was removed by #39.          |
+| [harnesses/omp.md](harnesses/omp.md)                         | OMP support as an interactive Terminal UI harness. (Its former Chat-mode section is removed by #39.)          |
 | [runbooks/agent-switch-failure-points.md](runbooks/agent-switch-failure-points.md) | Failure-point runbook for the staged agent-switch production stream, with release gates.             |
 
 ## Decision records

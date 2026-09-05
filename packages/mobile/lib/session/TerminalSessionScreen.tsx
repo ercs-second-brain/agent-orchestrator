@@ -4,12 +4,10 @@ import { useLocalSearchParams, useNavigation, useRouter } from "expo-router";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Alert, Keyboard, LayoutAnimation, Platform, Pressable, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { WebView } from "react-native-webview";
-import { ApiError, getPreview, isTerminalStatus, killSession, sendMessage } from "../api";
-import { authHeaders, isConfigured, loadConfig, type ServerConfig } from "../config";
+import { ApiError, isTerminalStatus, killSession, sendMessage } from "../api";
+import { isConfigured, loadConfig, type ServerConfig } from "../config";
 import { terminalTheme, type Theme } from "../theme";
 import { haptics } from "../haptics";
-import { resetHeaderRightForSwap } from "../headerRightSwap";
 import { MinimalBackButton } from "../MinimalBackButton";
 import { MuxClient, type MuxStatus } from "../mux";
 import { Composer } from "./Composer";
@@ -26,13 +24,7 @@ import {
 import { useApp } from "../store";
 import { useVoiceInput } from "../voice/useVoiceInput";
 import { useTheme, useThemedStyles, useThemeState } from "../ThemeProvider";
-import { closeShellTerminal } from "../chat/api";
-import {
-	mobileInterfaceTransitionIsActive,
-	mobileInterfaceTransitionIsCancellable,
-	useInterfaceTransition,
-} from "./useInterfaceTransition";
-import { terminalInterfaceFailureRecovery } from "./terminalInterfaceRecovery";
+import { closeShellTerminal } from "../shellTerminal";
 import { adjustTerminalViewport } from "./terminalViewport";
 
 const FONT_SIZE = 12;
@@ -531,23 +523,6 @@ const statusColorFor = (t: Theme): Record<MuxStatus, string> => ({
 	error: t.red,
 });
 
-function terminalInterfacePhaseLabel(phase?: string): string {
-	switch (phase) {
-		case "draining":
-			return "Waiting for the current terminal turn to finish. New AO messages are queued safely.";
-		case "source_stopping":
-			return "Stopping the terminal controller before Chat starts.";
-		case "source_stopped":
-			return "Terminal controller stopped. The worktree and native conversation are unchanged.";
-		case "target_starting":
-			return "Resuming the same native conversation in Chat.";
-		case "activating":
-			return "Opening the Chat interface.";
-		default:
-			return "Checking that Chat can resume this agent's native conversation.";
-	}
-}
-
 export default function TerminalScreen() {
 	const t = useTheme();
 	const { scheme } = useThemeState();
@@ -559,14 +534,6 @@ export default function TerminalScreen() {
 	const projectId = params.projectId ? String(params.projectId) : undefined;
 	const router = useRouter();
 	const navigation = useNavigation();
-	const [headerRightReady, setHeaderRightReady] = useState(false);
-	useLayoutEffect(
-		() => resetHeaderRightForSwap(
-			() => navigation.setOptions({ headerRight: undefined }),
-			() => setHeaderRightReady(true),
-		),
-		[navigation],
-	);
 	const insets = useSafeAreaInsets();
 
 	// Leaving the screen: pop when there's history, otherwise go to the board.
@@ -606,64 +573,15 @@ export default function TerminalScreen() {
 	// Track that + the known status so we can offer Restore instead of a dead term.
 	const [notFound, setNotFound] = useState(false);
 	const [restoring, setRestoring] = useState(false);
-	// In-app browser: shows the static preview file the agent generated (an
-	// index.html). We poll the daemon's on-demand detector while the terminal is
-	// open, but we deliberately DO NOT auto-open the overlay: the detector falls back
-	// to any previewable file (e.g. a repo's README.md), so auto-popping would steal
-	// the screen with an unbuilt/blank page. Instead the globe button lights up with a
-	// green dot when the agent has produced something to view (any previewable file
-	// except the repo README); the user taps it to open.
-	const [browserOpen, setBrowserOpen] = useState(false);
-	const [preview, setPreview] = useState<{ entry: string; url: string } | null>(null);
-	const previewWebRef = useRef<WebView>(null);
 
-	const { sessions, orchestrators, restore, refresh, config: activeConfig } = useApp();
+	const { sessions, orchestrators, restore, config: activeConfig } = useApp();
 	const known = sessions.find((s) => s.id === sessionId) ?? orchestrators.find((o) => o.id === sessionId) ?? null;
 	// Runtime handles are opaque. Native macOS PTYs are versioned (ptyhost-v1:),
 	// so using the session id here would incorrectly route the attach to legacy
 	// tmux. Older daemons omit terminalHandleId and retain the historical
 	// session-id handle, which keeps the fallback backward-compatible.
 	const terminalHandleId = shellOnly ? id : known?.terminalHandleId || id;
-	const interfaceSwitch = useInterfaceTransition(cfg, shellOnly ? "" : sessionId, refresh);
-	const interfaceTransitionActive = mobileInterfaceTransitionIsActive(interfaceSwitch.transition);
-	const interfaceTransitionNotice =
-		!interfaceTransitionActive &&
-		!interfaceSwitch.transition?.noticeAcknowledgedAt &&
-		(interfaceSwitch.transition?.phase === "failed" ||
-			interfaceSwitch.transition?.phase === "recovery_required")
-			? interfaceSwitch.transition
-			: undefined;
-	const interfaceTransitionRecovered =
-		interfaceTransitionNotice?.phase === "recovery_required" &&
-		interfaceTransitionNotice.errorCode === "DAEMON_RESTARTED";
-	const interfaceTransitionNoticeText =
-		interfaceTransitionNotice?.errorDetail ||
-		(interfaceTransitionRecovered
-			? "AO restored the session in its last committed interface."
-			: interfaceTransitionNotice?.phase === "recovery_required"
-				? "The interface switch needs recovery before more work is sent."
-				: "The interface switch failed; Terminal UI remains available.");
-	const interfaceFailureRecovery = useMemo(
-		() => terminalInterfaceFailureRecovery(interfaceSwitch.transition),
-		[interfaceSwitch.transition?.errorCode],
-	);
-	const interfaceBusy = Boolean(
-		known &&
-		(known.status === "working" ||
-			known.status === "needs_input" ||
-			known.activity === "active" ||
-			known.activity === "waiting_input" ||
-			known.activity === "blocked"),
-	);
 	const dead = notFound || (!shellOnly && known ? isTerminalStatus(known.status) : false);
-	// What counts as a live preview: any file the daemon surfaces (an .html build, or
-	// a generated doc like plan.md / a report) EXCEPT a repo's README, which the
-	// detector's markdown fallback always matches on a fresh checkout. Filtering the
-	// README out keeps the globe's green dot meaningful — it means "there's something
-	// the agent produced to view", not just "this repo has a README".
-	const previewBase = (preview?.entry ?? "").split("/").pop() ?? "";
-	const isReadme = /^readme\.(md|markdown)$/i.test(previewBase);
-	const hasPreview = !!preview && !isReadme;
 
 	// Neither platform shrinks the layout for the keyboard: iOS never has, and on
 	// Android edge-to-edge (edgeToEdgeEnabled) defeats windowSoftInputMode=adjustResize
@@ -811,32 +729,6 @@ export default function TerminalScreen() {
 		xtermReadyRef.current = false;
 	}, [scheme]);
 
-	// Poll the daemon's on-demand preview detector while the terminal is open, just
-	// to keep `preview` current for the globe button. We never auto-open the overlay
-	// (see the note by the state above): the detector's markdown fallback matches a
-	// repo README, so auto-popping would surface a blank/unbuilt page.
-	useEffect(() => {
-		if (shellOnly) return;
-		if (!cfg || !isConfigured(cfg)) return;
-		let cancelled = false;
-		let timer: ReturnType<typeof setTimeout> | null = null;
-		const tick = async () => {
-			try {
-				const p = await getPreview(cfg, id);
-				if (cancelled) return;
-				setPreview(p);
-			} catch {
-				/* transient - keep polling */
-			}
-			if (!cancelled) timer = setTimeout(tick, 5000);
-		};
-		tick();
-		return () => {
-			cancelled = true;
-			if (timer) clearTimeout(timer);
-		};
-	}, [cfg, id, shellOnly]);
-
 	// The WebView reports the phone's NATURAL fit (proposeDimensions, measure-only).
 	// We forward it to the daemon as this client's requested size — used only when
 	// the phone is the sole viewer (a co-viewing desktop, being primary, wins). The
@@ -907,7 +799,6 @@ export default function TerminalScreen() {
 
 	// Send the composed text to the selected route. The agent route can still
 	// auto-engage the terminal route when the daemon reports a blocked prompt.
-	//
 	// AO's /send is the right route for a message: the daemon hands it to the
 	// harness and submits it. But it sanitises control characters and refuses
 	// outright while a session is paused on a permission prompt — answering 409
@@ -990,110 +881,6 @@ export default function TerminalScreen() {
 	useEffect(() => {
 		if (voice.error) setBanner(voice.error);
 	}, [voice.error]);
-
-	// Toggle the in-app browser. The poll above keeps `preview` current, so a tap
-	// just shows/hides the overlay. A bare README (the detector's markdown fallback)
-	// reports "no preview yet" instead of surfacing an unbuilt repo doc.
-	const toggleBrowser = useCallback(() => {
-		haptics.tap();
-		if (browserOpen) {
-			setBrowserOpen(false);
-			return;
-		}
-		if (!hasPreview) {
-			setBanner("No preview yet - waiting for the agent to generate a page or document...");
-			return;
-		}
-		setBrowserOpen(true);
-	}, [browserOpen, hasPreview]);
-
-	const startInterfaceSwitch = useCallback(
-		async (policy: "drain" | "interrupt") => {
-			try {
-				await interfaceSwitch.start("chat", policy);
-				setBanner(null);
-			} catch (cause) {
-				setBanner(`Switch failed: ${cause instanceof Error ? cause.message : String(cause)}`);
-			}
-		},
-		[interfaceSwitch],
-	);
-
-	const requestInterfaceSwitch = useCallback(() => {
-		haptics.tap();
-		if (!interfaceSwitch.status?.supported) {
-			Alert.alert(
-				"Chat unavailable",
-				interfaceSwitch.status?.reason ||
-					interfaceSwitch.error ||
-					"This agent has not declared a compatible native conversation handoff.",
-			);
-			return;
-		}
-		if (!interfaceBusy) {
-			void startInterfaceSwitch("drain");
-			return;
-		}
-		Alert.alert(
-			"Switch to Chat?",
-			known?.activity === "waiting_input" || known?.activity === "blocked"
-				? "This turn is waiting for your input. Finish waits for your answer; stop cancels it and switches now."
-				: "Keep the same AO session, worktree, and native agent conversation.",
-			[
-				{ text: "Keep Terminal UI", style: "cancel" },
-				{ text: "Finish, then switch", onPress: () => void startInterfaceSwitch("drain") },
-				{ text: "Stop and switch", style: "destructive", onPress: () => void startInterfaceSwitch("interrupt") },
-			],
-		);
-	}, [interfaceBusy, interfaceSwitch, known?.activity, startInterfaceSwitch]);
-
-	const requestInterfaceFailureRecovery = useCallback(() => {
-		if (!interfaceFailureRecovery) return;
-		interfaceFailureRecovery.confirm((policy) => void startInterfaceSwitch(policy));
-	}, [interfaceFailureRecovery, startInterfaceSwitch]);
-
-	// The browser toggle lives in the nav bar, beside the session name, to keep the
-	// status row uncluttered. Separate from the headerLeft effect above because
-	// `toggleBrowser` is declared here — referencing it in that effect's dep array
-	// would read it before initialisation.
-	useLayoutEffect(() => {
-		if (shellOnly || !headerRightReady) {
-			navigation.setOptions({ headerRight: undefined });
-			return;
-		}
-		navigation.setOptions({
-			headerRight: () => (
-				<View style={styles.headerActions}>
-					<Pressable
-						hitSlop={10}
-						accessibilityLabel="Open Chat interface"
-						accessibilityState={{ busy: interfaceTransitionActive || interfaceSwitch.starting }}
-						onPress={requestInterfaceSwitch}
-						style={({ pressed }) => [styles.headerBrowserBtn, pressed && { opacity: 0.6 }]}
-					>
-						<Feather
-							name={interfaceTransitionActive ? "repeat" : "message-square"}
-							size={18}
-							color={interfaceSwitch.status?.supported ? t.blue : t.textFaint}
-						/>
-					</Pressable>
-					<Pressable
-						hitSlop={12}
-						accessibilityLabel={browserOpen ? "Close preview" : "Open preview"}
-						onPress={toggleBrowser}
-						style={({ pressed }) => [styles.headerBrowserBtn, pressed && { opacity: 0.6 }]}
-					>
-						<Feather
-							name="globe"
-							size={19}
-							color={browserOpen ? t.blue : hasPreview ? t.green : t.textSecondary}
-						/>
-						{hasPreview && !browserOpen && <View style={styles.browserReadyDot} />}
-					</Pressable>
-				</View>
-			),
-		});
-	}, [headerRightReady, navigation, browserOpen, hasPreview, toggleBrowser, styles, t, shellOnly, interfaceTransitionActive, interfaceSwitch.starting, interfaceSwitch.status?.supported, requestInterfaceSwitch]);
 
 	const confirmKill = useCallback(() => {
 		const doKill = async () => {
@@ -1265,44 +1052,6 @@ export default function TerminalScreen() {
 					<Text style={styles.bannerText}>{banner} (tap to dismiss)</Text>
 				</Pressable>
 			)}
-			{interfaceTransitionNotice ? (
-				<View style={styles.banner}>
-					<Text style={styles.bannerText}>
-						{interfaceTransitionNoticeText}
-						{interfaceSwitch.acknowledgeNoticeError
-							? ` Could not dismiss: ${interfaceSwitch.acknowledgeNoticeError}`
-							: ""}
-					</Text>
-					<View style={styles.interfaceFailureActions}>
-						{interfaceFailureRecovery ? (
-							<Pressable
-								accessibilityRole="button"
-								onPress={() => {
-									haptics.tap();
-									requestInterfaceFailureRecovery();
-								}}
-							>
-								<Text style={styles.interfaceFailureActionText}>{interfaceFailureRecovery.actionLabel}</Text>
-							</Pressable>
-						) : null}
-						<Pressable
-							accessibilityRole="button"
-							accessibilityLabel="Dismiss interface switch error"
-							disabled={interfaceSwitch.acknowledgingNotice}
-							onPress={() => {
-								haptics.tap();
-								void interfaceSwitch
-									.acknowledgeNotice(interfaceTransitionNotice.id)
-									.catch(() => {});
-							}}
-						>
-							<Text style={styles.interfaceFailureDismissText}>
-								{interfaceSwitch.acknowledgingNotice ? "Dismissing…" : "Dismiss"}
-							</Text>
-						</Pressable>
-					</View>
-				</View>
-			) : null}
 
 			<View style={styles.termWrap}>
 				<XtermJsWebView
@@ -1318,25 +1067,6 @@ export default function TerminalScreen() {
 					onData={onData}
 					style={{ flex: 1, backgroundColor: t.bgBase }}
 				/>
-				{interfaceTransitionActive ? (
-					<View style={styles.interfaceOverlay}>
-						<View style={styles.interfaceCard}>
-							<Feather name="repeat" size={22} color={t.blue} />
-							<Text style={styles.interfaceTitle}>Switching to Chat</Text>
-							<Text style={styles.interfaceCopy}>{terminalInterfacePhaseLabel(interfaceSwitch.transition?.phase)}</Text>
-							{mobileInterfaceTransitionIsCancellable(interfaceSwitch.transition) ? (
-								<Pressable
-									disabled={interfaceSwitch.cancelling}
-									onPress={() => { haptics.tap(); void interfaceSwitch.cancel().catch(() => {}); }}
-									style={styles.interfaceCancel}
-								>
-									<Text style={styles.interfaceCancelText}>{interfaceSwitch.cancelling ? "Cancelling…" : "Cancel switch"}</Text>
-								</Pressable>
-							) : null}
-							{interfaceSwitch.error ? <Text style={styles.interfaceError}>{interfaceSwitch.error}</Text> : null}
-						</View>
-					</View>
-				) : null}
 				{dead && (
 					<View style={styles.deadOverlay}>
 						<View style={styles.deadIcon}>
@@ -1352,36 +1082,6 @@ export default function TerminalScreen() {
 							<Feather name="rotate-ccw" size={16} color={t.onAccent} />
 							<Text style={styles.restoreCtaText}>{restoring ? "Restoring..." : "Restore session"}</Text>
 						</Pressable> : null}
-					</View>
-				)}
-
-				{/* In-app browser overlay: the agent's generated preview file. Sits over
-				    the terminal (which keeps running underneath) with its own bar. */}
-				{browserOpen && preview && (
-					<View style={styles.browserOverlay}>
-						<View style={styles.browserBar}>
-							<Feather name="globe" size={13} color={t.textTertiary} />
-							<Text style={styles.browserPath} numberOfLines={1}>
-								{preview.entry}
-							</Text>
-							<Pressable hitSlop={8} onPress={() => { haptics.tap(); previewWebRef.current?.reload(); }} style={styles.browserAction}>
-								<Feather name="rotate-cw" size={15} color={t.blue} />
-							</Pressable>
-							<Pressable hitSlop={8} onPress={() => { haptics.tap(); setBrowserOpen(false); }} style={styles.browserAction}>
-								<Feather name="x" size={17} color={t.textSecondary} />
-							</Pressable>
-						</View>
-						<WebView
-							ref={previewWebRef}
-							// The preview route lives behind the daemon's connection-password
-							// auth (Bearer). Without this header the WebView's request 401s and
-							// renders the JSON error body instead of the page. cfg carries the
-							// password we paired with; authHeaders() turns it into the Bearer.
-							source={{ uri: preview.url, headers: cfg ? authHeaders(cfg) : undefined }}
-							originWhitelist={["*"]}
-							style={styles.browserWeb}
-							onError={() => setBanner("Preview failed to load.")}
-						/>
 					</View>
 				)}
 			</View>
@@ -1416,7 +1116,7 @@ export default function TerminalScreen() {
 					value={msg}
 					onChangeText={setMsg}
 					onSend={sendPrompt}
-					sending={sending || interfaceTransitionActive}
+					sending={sending}
 					target={sendTarget}
 					onTargetChange={setSendTarget}
 					voice={voice}
@@ -1469,15 +1169,6 @@ const makeStyles = (t: Theme) =>
 		borderBottomColor: t.borderDefault,
 	},
 	bannerText: { color: t.attention, fontSize: 12 },
-	interfaceFailureActions: {
-		marginTop: 8,
-		flexDirection: "row",
-		alignItems: "center",
-		justifyContent: "flex-end",
-		gap: 16,
-	},
-	interfaceFailureActionText: { color: t.red, fontSize: 12, fontWeight: "700" },
-	interfaceFailureDismissText: { color: t.textSecondary, fontSize: 12, fontWeight: "600" },
 	termWrap: { flex: 1, backgroundColor: t.bgBase },
 	dock: {
 		borderTopWidth: 1,
@@ -1498,71 +1189,6 @@ const makeStyles = (t: Theme) =>
 	// so a tinted pill here would fight it. Colour carries the state instead.
 	// A fixed square with centred content, not padding — asymmetric padding leaves
 	// the glyph visibly off-centre inside the circle iOS draws around it.
-	headerBrowserBtn: {
-		width: 35,
-		height: 30,
-		alignItems: "center",
-		justifyContent: "center",
-	},
-	headerActions: { flexDirection: "row", alignItems: "center" },
-	interfaceOverlay: {
-		...StyleSheet.absoluteFill,
-		alignItems: "center",
-		justifyContent: "center",
-		paddingHorizontal: 24,
-		backgroundColor: t.scrim,
-	},
-	interfaceCard: {
-		width: "100%",
-		maxWidth: 340,
-		alignItems: "center",
-		gap: 10,
-		paddingHorizontal: 22,
-		paddingVertical: 24,
-		borderRadius: 16,
-		borderWidth: 1,
-		borderColor: t.borderDefault,
-		backgroundColor: t.bgSurface,
-	},
-	interfaceTitle: { color: t.textPrimary, fontSize: 16, fontWeight: "700" },
-	interfaceCopy: { color: t.textSecondary, fontSize: 12, lineHeight: 18, textAlign: "center" },
-	interfaceCancel: {
-		marginTop: 4,
-		borderRadius: 9,
-		borderWidth: 1,
-		borderColor: t.borderDefault,
-		paddingHorizontal: 13,
-		paddingVertical: 8,
-	},
-	interfaceCancelText: { color: t.textPrimary, fontSize: 12, fontWeight: "600" },
-	interfaceError: { color: t.red, fontSize: 11, lineHeight: 16, textAlign: "center" },
-	// Small green badge on the globe when a real preview is available. Offsets are
-	// from the square's centre, so it rides the glyph rather than the button frame.
-	browserReadyDot: {
-		position: "absolute",
-		top: 4,
-		right: 3,
-		width: 8,
-		height: 8,
-		borderRadius: 4,
-		backgroundColor: t.green,
-		borderWidth: 1,
-		borderColor: t.bgSurface,
-	},
-	browserOverlay: { ...StyleSheet.absoluteFill, backgroundColor: t.bgBase },
-	browserBar: {
-		flexDirection: "row",
-		alignItems: "center",
-		gap: 10,
-		paddingHorizontal: 12,
-		paddingVertical: 8,
-		backgroundColor: t.bgSurface,
-		borderBottomWidth: 1,
-		borderBottomColor: t.borderSubtle,
-	},
-	browserPath: { flex: 1, color: t.textSecondary, fontFamily: t.fontMono, fontSize: 12 },
-	browserAction: { paddingHorizontal: 4, paddingVertical: 2 },
-	browserWeb: { flex: 1, backgroundColor: "#ffffff" },
 	restoreBtn: {
 		flexDirection: "row",
 		alignItems: "center",

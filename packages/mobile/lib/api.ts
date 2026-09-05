@@ -58,9 +58,6 @@ export type DashboardSession = {
 	pr?: DashboardPR | null;
 	prs?: DashboardPR[];
 	metadata?: Record<string, string>;
-	// Browser-preview target the daemon detected/served for this session (e.g. a
-	// dist/index.html entrypoint). Consumed by the in-app browser.
-	previewUrl?: string | null;
 	// Whether the runtime is dead. The board archives on this rather than on a
 	// finished status: a merged session whose agent is still running belongs on
 	// the board, only a terminated one belongs in the archive.
@@ -152,7 +149,6 @@ type WireSession = {
 	branch?: string;
 	createdAt?: string;
 	updatedAt?: string;
-	previewUrl?: string;
 	isPinned?: boolean;
 	pinnedAt?: string | null;
 	prs?: WirePR[];
@@ -233,7 +229,6 @@ function mapSession(s: WireSession): DashboardSession {
 		lastActivityAt: activityLastAt(s.activity) ?? s.updatedAt ?? s.createdAt ?? "",
 		pr: prs[0] ?? null,
 		prs,
-		previewUrl: s.previewUrl ?? null,
 		isTerminated: !!s.isTerminated,
 		isPinned: !!s.isPinned,
 		pinnedAt: s.pinnedAt ?? null,
@@ -409,45 +404,6 @@ export async function getSessions(cfg: ServerConfig, _projectId?: string): Promi
 	return { sessions, orchestrators, orchestratorId: null, stats: {}, projects };
 }
 
-// ---- Preview (in-app browser) ----------------------------------------------
-
-// Ask the daemon whether this session has a detectable static preview entry
-// (index.html, or dist/build/public/index.html). Returns a URL the in-app
-// WebView can load, or null when no entry exists yet - the button then reports
-// "no preview". We build the URL from our own base (httpBase honors the TLS
-// toggle) rather than the daemon's `previewUrl`, which hardcodes http:// + its
-// request host and would break over a TLS tunnel (e.g. tailscale serve).
-export async function getPreview(cfg: ServerConfig, id: string, preferredURL?: string): Promise<{ entry: string; url: string; authenticated: boolean } | null> {
-	const res = await req(cfg, `${API}/sessions/${encodeURIComponent(id)}/preview`);
-	const data = await res.json();
-	const entry = typeof data?.entry === "string" ? data.entry.trim() : "";
-	if (entry) {
-		// Mirror the daemon's files route: /preview/files/<entry>, each segment escaped.
-		const escaped = entry.split("/").map(encodeURIComponent).join("/");
-		const url = `${httpBase(cfg)}${API}/sessions/${encodeURIComponent(id)}/preview/files/${escaped}`;
-		return { entry, url, authenticated: true };
-	}
-	const external = mobileReachablePreviewURL(preferredURL, cfg.host);
-	return external ? { entry: external.hostname, url: external.href, authenticated: false } : null;
-}
-
-/** Rewrite host-loopback previews for the phone without ever forwarding AO auth. */
-export function mobileReachablePreviewURL(raw: string | undefined, aoHost: string): URL | undefined {
-	if (!raw) return undefined;
-	try {
-		const url = new URL(raw);
-		if (url.protocol !== "http:" && url.protocol !== "https:") return undefined;
-		if (["localhost", "127.0.0.1", "::1", "[::1]"].includes(url.hostname)) {
-			const host = normalizeServerHost(aoHost);
-			if (!host) return undefined;
-			url.hostname = host.includes(":") && !host.startsWith("[") ? `[${host}]` : host;
-		}
-		return url;
-	} catch {
-		return undefined;
-	}
-}
-
 // ---- Agent catalog ----------------------------------------------------------
 
 export type AgentInfo = {
@@ -475,20 +431,6 @@ export type AgentModelCatalog = {
 	refreshRecommended?: boolean;
 	warning?: string;
 };
-
-export type AOSettings = {
-	defaultSessionMode: SessionMode;
-	chatHarnesses: string[];
-};
-
-export async function getSettings(cfg: ServerConfig): Promise<AOSettings> {
-	const res = await req(cfg, `${API}/settings`);
-	const data = await res.json();
-	return {
-		defaultSessionMode: data?.defaultSessionMode === "tui" ? "tui" : "chat",
-		chatHarnesses: Array.isArray(data?.chatHarnesses) ? data.chatHarnesses.filter((value: unknown): value is string => typeof value === "string") : [],
-	};
-}
 
 export async function getAgents(cfg: ServerConfig): Promise<AgentCatalog> {
 	const res = await req(cfg, `${API}/agents`);
@@ -710,10 +652,10 @@ export async function spawnSession(
 			// The daemon needs an agent harness unless the project configures a
 			// default worker.agent; the spawn screen lets the user pick one.
 			harness: opts.harness || undefined,
-			// Mobile is Chat-first. Callers may deliberately request TUI for a harness
-			// that cannot expose a structured controller, but omission must never make
-			// the phone depend on a desktop preference it cannot see.
-			mode: opts.mode ?? "chat",
+			// Sessions are terminal-first: the agent runs in its own tmux TUI and
+			// mobile mirrors the terminal. Omission must never make the phone depend
+			// on a desktop preference it cannot see.
+			mode: opts.mode ?? "tui",
 			kind: "worker",
 		}),
 	});
@@ -750,7 +692,7 @@ export async function launchOrchestrator(
 	cfg: ServerConfig,
 	projectId: string,
 	clean = false,
-	mode: SessionMode = "chat",
+	mode: SessionMode = "tui",
 ): Promise<OrchestratorLink> {
 	const res = await req(cfg, `${API}/orchestrators`, {
 		method: "POST",

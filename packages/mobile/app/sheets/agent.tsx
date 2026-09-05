@@ -17,7 +17,7 @@ import { useApp } from "../../lib/store";
 export default function AgentSheetRoute() {
 	const router = useRouter();
 	const { config } = useApp();
-	const { resultKey, selected, allowed, mode } = useLocalSearchParams<{ resultKey?: string; selected?: string; allowed?: string; mode?: string }>();
+	const { resultKey, selected, allowed } = useLocalSearchParams<{ resultKey?: string; selected?: string; allowed?: string }>();
 
 	const [catalog, setCatalog] = useState<Awaited<ReturnType<typeof getAgents>> | null>(null);
 	const [error, setError] = useState<string | null>(null);
@@ -69,8 +69,8 @@ export default function AgentSheetRoute() {
 			onRefresh={onRefresh}
 			onClose={() => router.back()}
 			onSelect={(id) => takeSheetResult<string>(resultKey)?.(id)}
-			title={mode === "chat" ? "Chat agent" : "Agent"}
-			subtitle={mode === "chat" ? "Installed agents with a structured Chat controller." : "The CLI that runs this terminal session."}
+			title="Agent"
+			subtitle="The CLI that runs this terminal session."
 		/>
 	);
 }

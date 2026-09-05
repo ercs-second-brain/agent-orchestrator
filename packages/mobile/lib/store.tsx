@@ -20,7 +20,6 @@ import {
 	type DashboardStats,
 	type OrchestratorLink,
 	type ProjectInfo,
-	type SessionMode,
 } from "./api";
 import { isConfigured, loadConfig, type ServerConfig } from "./config";
 import { resolveActiveConfig, runtimeResolveDeps } from "./resolveConfig";
@@ -34,7 +33,6 @@ import { shouldShowLoading } from "./configLoading";
 import { shouldKeepPolling } from "./connectionError";
 import { primeInstallId } from "./installId";
 import { collectPRs } from "./prView";
-import { useConversationEventTransport } from "./chat/conversationEvents";
 
 const ACTIVE_PROJECT_KEY = "ao.activeProject";
 
@@ -50,8 +48,6 @@ export type SpawnOptions = {
 	prompt?: string;
 	harness?: string;
 	model?: string;
-	/** Mobile defaults to Chat; TUI remains an explicit compatibility choice. */
-	mode?: SessionMode;
 };
 
 type AppState = {
@@ -78,7 +74,7 @@ type AppState = {
 	refresh: () => Promise<void>;
 	setActiveProject: (id: string) => void;
 	spawn: (opts: SpawnOptions) => Promise<DashboardSession>;
-	launchConductor: (projectId: string, clean?: boolean, mode?: SessionMode) => Promise<OrchestratorLink>;
+	launchConductor: (projectId: string, clean?: boolean) => Promise<OrchestratorLink>;
 	merge: (pr: DashboardPR) => Promise<void>;
 	kill: (id: string) => Promise<void>;
 	restore: (id: string) => Promise<void>;
@@ -120,16 +116,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
 	const [sessions, setSessions] = useState<DashboardSession[]>([]);
 	const [orchestrators, setOrchestrators] = useState<OrchestratorLink[]>([]);
 	const [orchestratorId, setOrchestratorId] = useState<string | null>(null);
-	const [stats, setStats] = useState<DashboardStats>({});
-	const [activeProjectId, setActiveProjectId] = useState<string>("all");
+	const [stats, setStats] = useState<DashboardStats>({});	const [activeProjectId, setActiveProjectId] = useState<string>("all");
 	const [connection, setConnection] = useState<ConnStatus>("closed");
 	const [notificationsUnread, setNotificationsUnread] = useState(0);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
 	const [errorStatus, setErrorStatus] = useState<number | null>(null);
-	// Start authenticated streaming only after the REST probe succeeds. A stale
-	// password must cost one failed request, not a poll plus a parallel SSE attempt.
-	useConversationEventTransport(connection === "open" ? config : null);
 
 	const cfgRef = useRef<ServerConfig | null>(null);
 	// Gate for the connected event: emit only on the not-open -> open transition,
@@ -203,11 +195,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
 		try {
 			const c = (await resolveActiveConfig(runtimeResolveDeps())) ?? (await loadConfig());
 		// Keep the previous object when the endpoint has not actually changed.
-		// Resolution builds a fresh one every time, and the live conversation
-		// stream, the poll loop and the terminal mux all key on this value's
-		// identity — handing them a new object for the same endpoint tears them
-		// down and rebuilds them, which showed up as chat replies arriving only
-		// on the next poll instead of streaming in.
+		// Resolution builds a fresh one every time, and the REST poll loop and the
+		// terminal mux both key on this value's identity — handing them a new
+		// object for the same endpoint tears them down and rebuilds them for no
+		// gain, kicking the poll interval and the terminal connection.
 		// Stamped here so every race counts towards the cooldown, however it was
 		// triggered — otherwise a failure race and an upgrade race can fire back
 		// to back and thrash the connection.
@@ -418,7 +409,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 	}, [activeProjectId, projects]);
 
 	const spawn = useCallback(
-		async ({ projectId, prompt, harness, model, mode }: SpawnOptions) => {
+		async ({ projectId, prompt, harness, model }: SpawnOptions) => {
 		const c = cfgRef.current;
 		const proj = projectId ?? targetProject();
 		if (!c || !proj) throw new Error("Pick a project first");
@@ -427,7 +418,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 			brief: prompt ?? "",
 			agent: harness,
 			model,
-			mode: mode ?? "chat",
+			mode: "tui",
 		});
 		await fetchAll();
 		return session;
@@ -436,9 +427,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
 	);
 
 	const launchConductor = useCallback(
-		async (projectId: string, clean = false, mode: SessionMode = "chat") => {
+		async (projectId: string, clean = false) => {
 		const c = cfgRef.current!;
-		const link = await apiLaunchOrchestrator(c, projectId, clean, mode);
+		const link = await apiLaunchOrchestrator(c, projectId, clean, "tui");
 		await fetchAll();
 		return link;
 		},

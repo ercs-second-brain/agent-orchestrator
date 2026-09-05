@@ -11,7 +11,13 @@ import (
 
 // MobileAPIVersion is the contract version the phone negotiates against. Bump
 // it when a change to the mobile-facing surface is not backward compatible.
-const MobileAPIVersion = 1
+//
+// 2: #39 removed the chat, browser-preview, and interface-transition surfaces
+// the mobile client consumed (`/sessions/{id}/conversation*`,
+// `/sessions/{id}/interface-transition*`, `/sessions/{id}/preview*`,
+// `/api/v1/settings`); sessions are terminal-first (`mode: "tui"`) and spawn
+// defaults changed accordingly.
+const MobileAPIVersion = 2
 
 // IdentityController serves the unauthenticated host-identity probe.
 //
