@@ -30,8 +30,6 @@ type process struct {
 	// reconnected means the provider process and initialized protocol connection
 	// survived a prior daemon. The replacement must not initialize/resume it a
 	// second time.
-	reconnected   bool
-	nextRequestID int64
 	// stop releases the process. It must be safe to call more than once.
 	stop func() error
 }

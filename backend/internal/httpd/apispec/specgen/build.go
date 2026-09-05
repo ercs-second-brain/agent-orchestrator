@@ -613,13 +613,7 @@ func systemOperations() []operation {
 }
 
 func browserOperations() []operation {
-	return []operation{
-	}
-}
-
-type conversationSnapshotQuery struct {
-	BeforeSequence *int64 `query:"beforeSequence,omitempty" minimum:"1" description:"Read items older than this conversation sequence. Omit for the newest page."`
-	Limit          *int64 `query:"limit,omitempty" minimum:"1" maximum:"500" description:"Maximum combined messages and activities to return. Defaults to 200."`
+	return []operation{}
 }
 
 func usageOperations() []operation {

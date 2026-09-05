@@ -347,16 +347,6 @@ func (r *fakeRuntime) Interrupt(_ context.Context, handle ports.RuntimeHandle) e
 	return r.interruptErr
 }
 
-type fakePreviewLifecycle struct {
-	stopped []domain.SessionID
-	err     error
-}
-
-type fakeBrowserLifecycle struct {
-	destroyed []domain.SessionID
-	err       error
-}
-
 type fakeRestartRuntime struct {
 	*fakeRuntime
 	restarted     int

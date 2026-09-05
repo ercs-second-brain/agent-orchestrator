@@ -176,16 +176,6 @@ func (c *conn) notifs() <-chan notification { return c.notifications }
 // wait returns a channel closed when the connection ends.
 func (c *conn) wait() <-chan struct{} { return c.done }
 
-// err reports why the read loop stopped, or nil for a clean end.
-func (c *conn) err() error {
-	select {
-	case <-c.done:
-		return c.readErr
-	default:
-		return nil
-	}
-}
-
 func (c *conn) readLoop(r io.Reader) {
 	defer func() {
 		c.mu.Lock()

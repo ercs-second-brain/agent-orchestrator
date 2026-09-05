@@ -40,7 +40,7 @@ func (r *transitionRuntime) GetStyledOutput(ctx context.Context, handle ports.Ru
 		return "", r.styledOutputErr
 	}
 	if r.outputForCall == nil {
-		return r.fakeRuntime.GetOutput(ctx, handle, lines)
+		return r.GetOutput(ctx, handle, lines)
 	}
 	r.outputCalls++
 	return r.outputForCall(r.outputCalls), nil

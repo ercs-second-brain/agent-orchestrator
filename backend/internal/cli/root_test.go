@@ -70,7 +70,6 @@ func TestCommandsRejectUnexpectedArgs(t *testing.T) {
 	}
 }
 
-
 func TestVersionEmitsCLIInvocationBestEffort(t *testing.T) {
 	t.Setenv("AO_SESSION_ID", "")
 	cfg := setConfigEnv(t)

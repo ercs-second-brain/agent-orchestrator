@@ -37,11 +37,11 @@ type APIDeps struct {
 	Push               controllers.PushRegistry
 	Import             controllers.ImportService
 	ShellTerminals     controllers.ShellTerminalService
-	CDC                 cdc.Source
-	Events              cdcSubscriber
-	Telemetry           ports.EventSink
-	Mobile              *controllers.MobileController
-	SystemChecks        controllers.SystemChecker
+	CDC                cdc.Source
+	Events             cdcSubscriber
+	Telemetry          ports.EventSink
+	Mobile             *controllers.MobileController
+	SystemChecks       controllers.SystemChecker
 	// HostID is this machine's stable, machine-bound identity, served by the
 	// unauthenticated GET /api/v1/identity probe so a phone can confirm which
 	// machine answered before presenting a credential.

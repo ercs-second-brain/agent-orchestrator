@@ -489,4 +489,3 @@ func (r projectRepoResolver) RepoPath(projectID domain.ProjectID) (string, error
 	}
 	return rec.Path, nil
 }
-

@@ -135,18 +135,6 @@ func safeCapacityText(value string, maxRunes int) *string {
 	return &value
 }
 
-
-func resetsAtIn(resetsAt *time.Time, now time.Time) int64 {
-	if resetsAt == nil {
-		return 0
-	}
-	remaining := int64(resetsAt.Sub(now).Seconds())
-	if remaining < 0 {
-		return 0
-	}
-	return remaining
-}
-
 func (c *accountClient) ReadCapacity(ctx context.Context) (ports.CodexCapacityObservation, error) {
 	var response capacityReadEnvelope
 	if err := c.conn.request(ctx, codexproto.MethodAccountRateLimitsRead, map[string]any{}, &response); err != nil {

@@ -77,12 +77,6 @@ type commander interface {
 	StageAttachments(ctx context.Context, id domain.SessionID, attachments []ports.SpawnAttachment) ([]string, error)
 }
 
-// interfaceTransitionCommander is an optional command capability. Keeping it
-// separate avoids widening every focused session-service fake while production
-// can expose the feature through the concrete Session Manager.
-type interfaceTransitionCommander interface {
-}
-
 // exitAgentCommander keeps the process-only lifecycle optional for focused
 // service fakes while production delegates to Session Manager.
 type exitAgentCommander interface {
@@ -596,7 +590,6 @@ func (s *Service) ResumeAgent(ctx context.Context, id domain.SessionID) (ResumeA
 	}
 	return ResumeAgentOutcome{Session: session, Mode: restoreModeView(res.Mode)}, nil
 }
-
 
 func restoreModeView(mode sessionmanager.RestoreMode) RestoreModeView {
 	switch mode {

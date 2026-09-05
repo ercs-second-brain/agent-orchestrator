@@ -2433,9 +2433,6 @@ func TestSpawnOrchestratorCleanContinuesWhenRetireNoticeFails(t *testing.T) {
 	}
 }
 
-
-
-
 func TestSpawnOrchestratorCleanRetireNoticeIsBranchNeutral(t *testing.T) {
 	st := newFakeStore()
 	st.projects["scratch"] = domain.ProjectRecord{ID: "scratch", Kind: domain.ProjectKindScratch}
@@ -2513,7 +2510,6 @@ func TestSpawnTreatsUnauthorizedReadinessAsAdvisory(t *testing.T) {
 		t.Fatalf("manager.Spawn calls = %d, want unauthorized readiness to remain advisory", fc.spawnCalls)
 	}
 }
-
 
 func TestSpawnEmitsFirstSessionOnboardingAndDuration(t *testing.T) {
 	st := newFakeStore()
@@ -2954,8 +2950,6 @@ func TestSpawnOrchestratorUnknownProjectReturns404(t *testing.T) {
 	}
 }
 
-
-
 func TestSpawnEmitsTypedErrorCodeForRuntimeFailure(t *testing.T) {
 	st := newFakeStore()
 	st.projects["mer"] = domain.ProjectRecord{ID: "mer"}
@@ -3070,7 +3064,6 @@ func TestToAPIErrorDefaultsUnownedErrorsToHTTP(t *testing.T) {
 		t.Fatalf("OwnerOf(mapped) = %q, want %q", got, ownership.OwnerHTTP)
 	}
 }
-
 
 // TestToAPIError_NotResumable asserts that ErrNotResumable (promptless worker
 // with no adapter resume handle) maps to a Conflict with code SESSION_NOT_RESUMABLE.

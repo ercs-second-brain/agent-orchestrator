@@ -10,7 +10,6 @@ import (
 	"log/slog"
 	"mime"
 	"net/http"
-	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -1228,38 +1227,6 @@ func writeSessionPRError(w http.ResponseWriter, r *http.Request, err error) {
 	default:
 		envelope.WriteError(w, r, err)
 	}
-}
-
-func containsParentPathSegment(raw string) bool {
-	raw = strings.ReplaceAll(raw, `\`, "/")
-	for _, segment := range strings.Split(raw, "/") {
-		if segment == ".." {
-			return true
-		}
-	}
-	return false
-}
-
-func isAbsolutePreviewPath(raw string) bool {
-	return filepath.IsAbs(raw) || isWindowsAbsolutePath(raw)
-}
-
-func isWindowsAbsolutePath(raw string) bool {
-	return len(raw) >= 3 && ((raw[0] >= 'a' && raw[0] <= 'z') || (raw[0] >= 'A' && raw[0] <= 'Z')) && raw[1] == ':' && (raw[2] == '\\' || raw[2] == '/')
-}
-
-func hasURLScheme(raw string) bool {
-	for i := 0; i < len(raw); i++ {
-		c := raw[i]
-		if c == ':' {
-			return i > 0
-		}
-		isSchemeChar := c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z' || c >= '0' && c <= '9' || c == '+' || c == '.' || c == '-'
-		if !isSchemeChar {
-			return false
-		}
-	}
-	return false
 }
 
 func sessionView(s domain.Session) SessionView {

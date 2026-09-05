@@ -764,7 +764,7 @@ func (m *Manager) Spawn(ctx context.Context, cfg ports.SpawnConfig) (domain.Sess
 	// Resolve the controller mode here, before anything durable is created, for
 	// the same reason an unknown harness is rejected above: a mode AO cannot
 	// honor should cost nothing, not leave a terminated row and a worktree behind.
-	mode := m.resolveSessionMode(ctx, cfg.RequestedMode)
+	mode := m.resolveSessionMode(cfg.RequestedMode)
 	if mode == domain.SessionModeChat {
 		return domain.SessionRecord{}, 0, 0, fmt.Errorf("spawn: %w: chat mode was removed; sessions run in the terminal only", ports.ErrChatUnsupported)
 	}
@@ -838,11 +838,7 @@ func (m *Manager) Spawn(ctx context.Context, cfg ports.SpawnConfig) (domain.Sess
 		return domain.SessionRecord{}, 0, 0, fmt.Errorf("spawn %s: %w: no agent adapter for harness %q", id, ErrUnknownHarness, cfg.Harness)
 	}
 	var env map[string]string
-	rec, env, err = m.prepareWorkerLaunchEnv(ctx, rec, project.Config.Env)
-	if err != nil {
-		m.rollbackSeedSpawnWorkspace(ctx, rec, ws, workspaceProject, true)
-		return domain.SessionRecord{}, 0, 0, wrapSpawnStage(id, ErrSpawnBrowser, err)
-	}
+	rec, env = m.prepareWorkerLaunchEnv(rec, project.Config.Env)
 	m.augmentAgentRuntimeEnv(agent, env)
 	pinRuntimePermissionEnv(env, adapterConfig.Permissions)
 	if err := m.prepareWorkspace(ctx, agent, id, ws.Path, systemPrompt, systemPromptFile, adapterConfig, env); err != nil {
@@ -2007,10 +2003,7 @@ func (m *Manager) relaunchSessionWithPolicyAndGeneration(ctx context.Context, op
 	// model/permissions carry across a restore, matching fresh spawn.
 	agentConfig := effectiveAgentConfig(rec.Kind, project.Config)
 	var env map[string]string
-	rec, env, err = m.prepareWorkerLaunchEnv(ctx, rec, project.Config.Env)
-	if err != nil {
-		return RestoreResult{}, fmt.Errorf("%s %s: browser capability: %w", operation, rec.ID, err)
-	}
+	rec, env = m.prepareWorkerLaunchEnv(rec, project.Config.Env)
 	m.augmentAgentRuntimeEnv(agent, env)
 	pinRuntimePermissionEnv(env, agentConfig.Permissions)
 	if err := m.prepareWorkspace(ctx, agent, rec.ID, ws.Path, systemPrompt, systemPromptFile, agentConfig, env); err != nil {
@@ -3047,13 +3040,13 @@ func (m *Manager) Send(ctx context.Context, id domain.SessionID, message string,
 		}
 		message = appendAttachmentReferences(message, refs)
 	}
-	return m.send(ctx, id, message, "")
+	return m.send(ctx, id, message)
 }
 
 // send carries an optional idempotency key used by durable transition-message
 // retries. Ordinary callers leave it empty; the outbox preserves the key across
 // restart, rollback, and even a second overlapping handoff.
-func (m *Manager) send(ctx context.Context, id domain.SessionID, message, clientMessageID string) error {
+func (m *Manager) send(ctx context.Context, id domain.SessionID, message string) error {
 	message, err := m.prepareOutboundMessage(ctx, id, message)
 	if err != nil {
 		return err
@@ -3904,12 +3897,11 @@ func (m *Manager) launchRuntimeEnv(id domain.SessionID, project domain.ProjectID
 
 // prepareWorkerLaunchEnv builds the launch environment for a terminal worker.
 func (m *Manager) prepareWorkerLaunchEnv(
-	ctx context.Context,
 	rec domain.SessionRecord,
 	projectEnv map[string]string,
-) (domain.SessionRecord, map[string]string, error) {
+) (domain.SessionRecord, map[string]string) {
 	env := m.launchRuntimeEnv(rec.ID, rec.ProjectID, rec.IssueID, projectEnv)
-	return rec, env, nil
+	return rec, env
 }
 
 // HookPATH builds the PATH value pinned into a spawned session: the daemon
@@ -4508,13 +4500,15 @@ func randomSuffix() (string, error) {
 // explicitly requested, else the compatibility default, TUI. Chat mode is
 // validated separately (it is refused); a caller that parses "chat" through
 // ParseSessionMode reaches the spawn refusal in Spawn.
-func (m *Manager) resolveSessionMode(ctx context.Context, requested domain.SessionMode) domain.SessionMode {
+func (m *Manager) resolveSessionMode(requested domain.SessionMode) domain.SessionMode {
 	if requested.Valid() {
 		return requested
 	}
 	return domain.DefaultSessionMode
 }
 
+// StageAttachments writes attachments into the session workspace and returns
+// their prompt references. Shared by the HTTP attachments endpoint and Send.
 func (m *Manager) StageAttachments(
 	ctx context.Context,
 	id domain.SessionID,
