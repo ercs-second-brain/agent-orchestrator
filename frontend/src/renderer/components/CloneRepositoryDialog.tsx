@@ -32,7 +32,7 @@ export default function CloneRepositoryDialog({
 	disabled: boolean;
 	error: string | null;
 	// Remote daemons cannot see the client filesystem. When set, skip the native
-	// folder picker and clone under this daemon-host path (typically "~").
+	// folder picker and clone under this daemon-host path (typically "~/projects").
 	lockDestinationParent?: string;
 	onBack: () => void;
 	onChange: (value: CloneRepositoryDetails) => void;

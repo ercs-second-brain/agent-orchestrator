@@ -43,6 +43,9 @@ export type CloneProjectInput = Pick<CloneRepositorySelection, "remoteUrl" | "de
 export type CreateRepositoryInput = CreateRepositoryDetails & CreateProjectAgentSelection;
 
 const LAST_CLONE_DESTINATION_KEY = "ao.clone.lastDestinationParent";
+// Remote daemons cannot see the client filesystem, so clones are locked to this
+// daemon-host folder instead of offering the local folder picker.
+const REMOTE_CLONE_DESTINATION_PARENT = "~/projects";
 const LAST_IMPORT_REMOTE_URL_KEY = "ao.import.lastRemoteUrl";
 type ImportValidationResult = components["schemas"]["ImportValidationResult"];
 type GitPreparationEvent = components["schemas"]["GitPreparationEvent"];
@@ -102,7 +105,7 @@ export function CreateProjectFlow({
 	const [cloneDetails, setCloneDetails] = useState<CloneRepositoryDetails>(() => ({
 		remoteUrl: "",
 		destinationParent: isRemote
-			? "~"
+			? REMOTE_CLONE_DESTINATION_PARENT
 			: typeof window === "undefined"
 				? ""
 				: (window.localStorage.getItem(LAST_CLONE_DESTINATION_KEY) ?? ""),
@@ -169,7 +172,7 @@ export function CreateProjectFlow({
 		setProjectSuggestWorkspace(false);
 		if (source === "clone") {
 			if (isRemote) {
-				setCloneDetails((prev) => ({ ...prev, destinationParent: "~" }));
+				setCloneDetails((prev) => ({ ...prev, destinationParent: REMOTE_CLONE_DESTINATION_PARENT }));
 			}
 			transitionToChild(() => setCloneDialogOpen(true));
 			return;
@@ -530,7 +533,7 @@ export function CreateProjectFlow({
 						<CloneRepositoryDialog
 							disabled={isBusy}
 							error={error}
-							lockDestinationParent={isRemote ? "~" : undefined}
+							lockDestinationParent={isRemote ? REMOTE_CLONE_DESTINATION_PARENT : undefined}
 							onBack={() => {
 								setError(null);
 								setCloneDialogOpen(false);

@@ -803,7 +803,7 @@ describe("CreateProjectFlow remote daemon", () => {
 		expect(screen.queryByRole("button", { name: "Import a workspace folder" })).not.toBeInTheDocument();
 	});
 
-	it("locks clone destination to ~/ instead of the local folder picker", async () => {
+	it("locks clone destination to ~/projects instead of the local folder picker", async () => {
 		window.localStorage.setItem("ao.clone.lastDestinationParent", "/Users/me/Code");
 		const user = userEvent.setup();
 		render(
@@ -814,7 +814,7 @@ describe("CreateProjectFlow remote daemon", () => {
 
 		await user.click(screen.getByRole("button", { name: "Clone from Git" }));
 
-		expect(await screen.findByTestId("clone-dialog")).toHaveTextContent("~");
+		expect(await screen.findByTestId("clone-dialog")).toHaveTextContent("~/projects");
 		expect(bridgeMocks.chooseDirectory).not.toHaveBeenCalled();
 	});
 
