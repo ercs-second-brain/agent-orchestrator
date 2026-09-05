@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/domain"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/testenv"
 )
 
 func TestParseClaudeFinalUsageAndSkipMainSidechain(t *testing.T) {
@@ -865,7 +866,7 @@ func TestParsersTrackProviderModelChanges(t *testing.T) {
 }
 
 func TestReadJSONLChunkRetainsPartialTailAndSkipsOversizedRecord(t *testing.T) {
-	path := t.TempDir() + "/rollout.jsonl"
+	path := testenv.PrivateTempDir(t) + "/rollout.jsonl"
 	mustNoError(t, osWrite(path, `{"a":1}`+"\n"+`{"b":`))
 	first, err := readJSONLChunkAtPath(path, 0, 1024, 32, false)
 	mustNoError(t, err)
@@ -890,7 +891,7 @@ func TestReadJSONLChunkRetainsPartialTailAndSkipsOversizedRecord(t *testing.T) {
 }
 
 func TestReadJSONLChunkDoesNotSkipRecordAfterCompleteOversizedLine(t *testing.T) {
-	path := t.TempDir() + "/rollout.jsonl"
+	path := testenv.PrivateTempDir(t) + "/rollout.jsonl"
 	oversized := strings.Repeat("x", 40) + "\n"
 	valid := `{"valid":true}` + "\n"
 	mustNoError(t, osWrite(path, oversized+valid))

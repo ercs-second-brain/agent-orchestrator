@@ -14,23 +14,34 @@ import (
 	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/domain"
 	usagesvc "github.com/ercs-second-brain/agent-orchestrator/backend/internal/service/usage"
 	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/storage/sqlite"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/testenv"
 )
 
 // Break caught: shutdown cancellation mid-read must leave both the source
 // cursor and events untouched.
 func TestIngestorCancelsWhileIngestionIsInProgress(t *testing.T) {
-	dataDir := t.TempDir()
+	dataDir := testenv.PrivateTempDir(t)
 	store, source, path, now := seedCodexIngestionSource(t, dataDir)
 	content := `{"type":"session_meta","payload":{"model_provider":"openai"}}` + "\n" +
 		`{"type":"turn_context","payload":{"model":"gpt-test"}}` + "\n" +
 		string(codexTokenLine("2026-07-28T10:00:00Z", 100, 60, 0, 20, 5)) + "\n"
 	mustNoError(t, os.WriteFile(path, []byte(content), 0o600))
 
+	// afterRead is a gate, not just a signal: it parks the ingestor mid-flight
+	// until cancel has been issued, so the cancellation deterministically lands
+	// while ingestion is in progress. A bare close() here raced the ingest
+	// goroutine — under some schedules it finished parsing and persisting
+	// before the cancel was observed, returning nil and failing the test
+	// (order/load-dependent flake under -shuffle and parallel runs).
 	readComplete := make(chan struct{})
+	releaseRead := make(chan struct{})
 	ingestor := NewIngestor(store, IngestorConfig{
 		Clock: func() time.Time { return now },
 	})
-	ingestor.afterRead = func() { close(readComplete) }
+	ingestor.afterRead = func() {
+		close(readComplete)
+		<-releaseRead
+	}
 	ctx, cancel := context.WithCancel(context.Background())
 	result := make(chan error, 1)
 	go func() {
@@ -39,6 +50,7 @@ func TestIngestorCancelsWhileIngestionIsInProgress(t *testing.T) {
 	}()
 	<-readComplete
 	cancel()
+	close(releaseRead)
 	if err := <-result; !errors.Is(err, context.Canceled) {
 		t.Fatalf("Ingest error = %v, want context canceled", err)
 	}
@@ -56,7 +68,7 @@ func TestIngestorCancelsWhileIngestionIsInProgress(t *testing.T) {
 
 func TestIngestorPersistsVersionedCodexParserStateAcrossChunks(t *testing.T) {
 	ctx := context.Background()
-	dataDir := t.TempDir()
+	dataDir := testenv.PrivateTempDir(t)
 	store, source, path, now := seedCodexIngestionSource(t, dataDir)
 
 	first := `{"type":"session_meta","payload":{"model_provider":"openai"}}` + "\n" +
@@ -102,7 +114,7 @@ func TestIngestorRejectsInvalidPersistedParserStateWithoutAdvancing(t *testing.T
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			ctx := context.Background()
-			dataDir := t.TempDir()
+			dataDir := testenv.PrivateTempDir(t)
 			store, source, path, now := seedCodexIngestionSource(t, dataDir)
 			line := string(codexTokenLine("2026-07-28T10:00:00Z", 100, 60, 0, 20, 5)) + "\n"
 			mustNoError(t, os.WriteFile(path, []byte(line), 0o600))
@@ -160,7 +172,7 @@ func TestIngestorReplaysReplacementWithoutStableTimestampAcrossClocks(t *testing
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			ctx := context.Background()
-			store, source, path, now := seedCodexIngestionSource(t, t.TempDir())
+			store, source, path, now := seedCodexIngestionSource(t, testenv.PrivateTempDir(t))
 			content := string(codexSessionMetaLine(t, "codex-root", "")) + "\n" + test.line + "\n"
 			mustNoError(t, os.WriteFile(path, []byte(content), 0o600))
 			ingestor := NewIngestor(store, IngestorConfig{Clock: func() time.Time { return now }})
@@ -195,7 +207,7 @@ func TestIngestorReplaysReplacementWithoutStableTimestampAcrossClocks(t *testing
 
 func TestIngestorReadsIdentityAndContentFromSingleDescriptorAcrossAtomicReplacement(t *testing.T) {
 	ctx := context.Background()
-	store, source, path, now := seedCodexIngestionSource(t, t.TempDir())
+	store, source, path, now := seedCodexIngestionSource(t, testenv.PrivateTempDir(t))
 	openedContent := string(codexSessionMetaLine(t, "codex-root", "")) + "\n" +
 		`{"type":"turn_context","payload":{"model":"gpt-opened"}}` + "\n" +
 		string(codexTokenLine("2026-07-28T10:00:00Z", 100, 60, 0, 20, 5)) + "\n"
@@ -236,7 +248,7 @@ func TestIngestorReadsIdentityAndContentFromSingleDescriptorAcrossAtomicReplacem
 
 func TestIngestorDoesNotApplyChunkWhenDescriptorMutatesAfterRead(t *testing.T) {
 	ctx := context.Background()
-	store, source, path, now := seedCodexIngestionSource(t, t.TempDir())
+	store, source, path, now := seedCodexIngestionSource(t, testenv.PrivateTempDir(t))
 	beforeContent := string(codexTokenLine("2026-07-28T10:00:00Z", 100, 60, 0, 20, 5)) + "\n"
 	afterContent := string(codexTokenLine("2026-07-28T11:00:00Z", 200, 70, 0, 30, 5)) + "\n"
 	if len(beforeContent) != len(afterContent) {
@@ -277,7 +289,7 @@ func TestIngestorDoesNotApplyChunkWhenDescriptorMutatesAfterRead(t *testing.T) {
 
 func TestIngestorPersistsParsedCheckpointWhenRewriteFollowsFinalVerification(t *testing.T) {
 	ctx := context.Background()
-	store, source, path, now := seedCodexIngestionSource(t, t.TempDir())
+	store, source, path, now := seedCodexIngestionSource(t, testenv.PrivateTempDir(t))
 	meta := string(codexSessionMetaLine(t, "codex-root", "")) + "\n"
 	beforeContent := meta + string(codexTokenLine("2026-07-28T10:00:00Z", 100, 60, 0, 20, 5)) + "\n"
 	afterContent := meta + string(codexTokenLine("2026-07-28T11:00:00Z", 200, 70, 0, 30, 5)) + "\n"
@@ -304,7 +316,7 @@ func TestIngestorPersistsParsedCheckpointWhenRewriteFollowsFinalVerification(t *
 
 func TestIngestorRejectsChunkAfterSourceRetirement(t *testing.T) {
 	ctx := context.Background()
-	store, source, path, now := seedCodexIngestionSource(t, t.TempDir())
+	store, source, path, now := seedCodexIngestionSource(t, testenv.PrivateTempDir(t))
 	content := string(codexSessionMetaLine(t, "codex-root", "")) + "\n" +
 		string(codexTokenLine("2026-07-28T10:00:00Z", 100, 60, 0, 20, 5)) + "\n"
 	mustNoError(t, os.WriteFile(path, []byte(content), 0o600))
@@ -349,7 +361,7 @@ func TestIngestorReplacesSameInodeWhenPreCursorCheckpointChanges(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			ctx := context.Background()
-			store, source, path, now := seedCodexIngestionSource(t, t.TempDir())
+			store, source, path, now := seedCodexIngestionSource(t, testenv.PrivateTempDir(t))
 			meta := string(codexSessionMetaLine(t, "codex-root", "")) + "\n"
 			beforeContent := meta + string(codexTokenLine("2026-07-28T10:00:00Z", 100, 60, 0, 20, 5)) + "\n"
 			afterContent := meta + string(codexTokenLine("2026-07-28T11:00:00Z", 200, 70, 0, 30, 5)) + "\n" + test.suffix
@@ -400,7 +412,7 @@ func seedCodexIngestionSource(t *testing.T, dataDir string) (*sqlite.Store, doma
 		UpdatedAt:      now,
 	})
 	mustNoError(t, err)
-	path := filepath.Join(t.TempDir(), "rollout.jsonl")
+	path := filepath.Join(testenv.PrivateTempDir(t), "rollout.jsonl")
 	mustNoError(t, os.WriteFile(path, nil, 0o600))
 	path = canonicalTranscriptPath(path)
 	identity, err := usagesvc.SourceIdentity(context.Background(), path)
@@ -512,9 +524,9 @@ func TestIngestorCollectsCodexSourceDiscoveredAfterStartup(t *testing.T) {
 	ctx := context.Background()
 	now := time.Unix(1700000000, 0).UTC()
 	store, session := seedUsageTestSession(
-		t, t.TempDir(), "usage", domain.HarnessCodex, domain.ActivityIdle, "native-late", now,
+		t, testenv.PrivateTempDir(t), "usage", domain.HarnessCodex, domain.ActivityIdle, "native-late", now,
 	)
-	root := filepath.Join(t.TempDir(), "sessions")
+	root := filepath.Join(testenv.PrivateTempDir(t), "sessions")
 	collector := usagesvc.NewCollector(store, usagesvc.SourceRoots{CodexSessions: root}, nil)
 	mustNoError(t, collector.BackfillActive(ctx), "backfill")
 
@@ -535,9 +547,9 @@ func TestIngestorCompletesCodexExitWhoseSourceAppearsLate(t *testing.T) {
 	ctx := context.Background()
 	now := time.Unix(1700000000, 0).UTC()
 	store, session := seedUsageTestSession(
-		t, t.TempDir(), "usage", domain.HarnessCodex, domain.ActivityExited, "native-final", now,
+		t, testenv.PrivateTempDir(t), "usage", domain.HarnessCodex, domain.ActivityExited, "native-final", now,
 	)
-	root := filepath.Join(t.TempDir(), "sessions")
+	root := filepath.Join(testenv.PrivateTempDir(t), "sessions")
 	collector := usagesvc.NewCollector(store, usagesvc.SourceRoots{CodexSessions: root}, nil)
 	mustNoError(t, collector.BackfillActive(ctx), "backfill")
 	session.IsTerminated = true
@@ -566,10 +578,10 @@ func TestIngestorPreservesCursorWhenCodexRolloutMovesToArchive(t *testing.T) {
 	ctx := context.Background()
 	now := time.Unix(1700000000, 0).UTC()
 	store, session := seedUsageTestSession(
-		t, t.TempDir(), "usage", domain.HarnessCodex, domain.ActivityIdle, "native-move", now,
+		t, testenv.PrivateTempDir(t), "usage", domain.HarnessCodex, domain.ActivityIdle, "native-move", now,
 	)
-	sessionsRoot := filepath.Join(t.TempDir(), "sessions")
-	archiveRoot := filepath.Join(t.TempDir(), "archived_sessions")
+	sessionsRoot := filepath.Join(testenv.PrivateTempDir(t), "sessions")
+	archiveRoot := filepath.Join(testenv.PrivateTempDir(t), "archived_sessions")
 	activePath := filepath.Join(sessionsRoot, "2026", "07", "28", "rollout-native-move.jsonl")
 	mustNoError(t, os.MkdirAll(filepath.Dir(activePath), 0o700))
 	initial := string(codexSessionMetaLine(t, "native-move", "")) + "\n" +
@@ -618,10 +630,10 @@ func TestCoordinatorCollectsCodexUsageFromFilesystemEvents(t *testing.T) {
 	defer cancel()
 	now := time.Now().UTC()
 	store, session := seedUsageTestSession(
-		t, t.TempDir(), "usage", domain.HarnessCodex, domain.ActivityIdle, "native-watch", now,
+		t, testenv.PrivateTempDir(t), "usage", domain.HarnessCodex, domain.ActivityIdle, "native-watch", now,
 	)
 
-	base := t.TempDir()
+	base := testenv.PrivateTempDir(t)
 	sessionsRoot := filepath.Join(base, "sessions")
 	archiveRoot := filepath.Join(base, "archived_sessions")
 	transcript := filepath.Join(sessionsRoot, "2026", "07", "28", "rollout-native-watch.jsonl")
@@ -666,10 +678,10 @@ func TestIngestorPersistsAppendOnlyUsageAcrossRestartAndFinalization(t *testing.
 	ctx := context.Background()
 	now := time.Unix(1700000000, 0).UTC()
 	store, session := seedUsageTestSession(
-		t, t.TempDir(), "usage", domain.HarnessCodex, domain.ActivityActive, "", now,
+		t, testenv.PrivateTempDir(t), "usage", domain.HarnessCodex, domain.ActivityActive, "", now,
 	)
 	binding := seedUsageTestBinding(t, store, session, "native-1", domain.UsageBindingActive, now)
-	path := t.TempDir() + "/rollout.jsonl"
+	path := testenv.PrivateTempDir(t) + "/rollout.jsonl"
 	initial := `{"type":"session_meta","payload":{"id":"native-1","model_provider":"openai","source":"cli"}}` + "\n" +
 		`{"type":"turn_context","payload":{"model":"gpt-5.6"}}` + "\n" +
 		string(codexTokenLine("2026-07-01T10:00:00Z", 100, 60, 0, 20, 5)) + "\n"
@@ -746,7 +758,7 @@ func TestIngestorPersistsAppendOnlyUsageAcrossRestartAndFinalization(t *testing.
 
 func TestIngestorRestartsFinalTailQuiescenceWhenTailChanges(t *testing.T) {
 	ctx := context.Background()
-	store, source, path, now := seedCodexIngestionSource(t, t.TempDir())
+	store, source, path, now := seedCodexIngestionSource(t, testenv.PrivateTempDir(t))
 	completePrefix := `{"type":"turn_context","payload":{"model":"gpt-tail"}}` + "\n"
 	finalRecord := string(codexTokenLine("2026-07-28T10:00:00Z", 100, 60, 0, 20, 5))
 	split := len(finalRecord) / 2
@@ -801,7 +813,7 @@ func TestIngestorRestartsFinalTailQuiescenceWhenTailChanges(t *testing.T) {
 
 func TestIngestorDropsMalformedFinalTailOnlyAfterTwoQuietObservations(t *testing.T) {
 	ctx := context.Background()
-	dataDir := t.TempDir()
+	dataDir := testenv.PrivateTempDir(t)
 	store, source, path, now := seedCodexIngestionSource(t, dataDir)
 	completePrefix := `{"type":"turn_context","payload":{"model":"gpt-tail"}}` + "\n"
 	malformedTail := `{"type":"event_msg","payload":`
@@ -862,10 +874,10 @@ func TestIngestorLateAppendReturnsCompletedBindingToFinalizing(t *testing.T) {
 	ctx := context.Background()
 	now := time.Unix(1700000000, 0).UTC()
 	store, session := seedUsageTestSession(
-		t, t.TempDir(), "usage", domain.HarnessCodex, domain.ActivityIdle, "", now,
+		t, testenv.PrivateTempDir(t), "usage", domain.HarnessCodex, domain.ActivityIdle, "", now,
 	)
 	binding := seedUsageTestBinding(t, store, session, "native-late-append", domain.UsageBindingActive, now)
-	path := filepath.Join(t.TempDir(), "rollout.jsonl")
+	path := filepath.Join(testenv.PrivateTempDir(t), "rollout.jsonl")
 	content := `{"type":"turn_context","payload":{"model":"gpt-5.6"}}` + "\n" +
 		string(codexTokenLine("2026-07-01T10:00:00Z", 100, 60, 0, 20, 5)) + "\n"
 	mustNoError(t, os.WriteFile(path, []byte(content), 0o600))
@@ -918,10 +930,10 @@ func TestIngestorStopsRetryingConflictingNativeEvent(t *testing.T) {
 	ctx := context.Background()
 	now := time.Unix(1700000000, 0).UTC()
 	store, session := seedUsageTestSession(
-		t, t.TempDir(), "usage", domain.HarnessClaudeCode, domain.ActivityIdle, "", now,
+		t, testenv.PrivateTempDir(t), "usage", domain.HarnessClaudeCode, domain.ActivityIdle, "", now,
 	)
 	binding := seedUsageTestBinding(t, store, session, "claude-root", domain.UsageBindingActive, now)
-	path := filepath.Join(t.TempDir(), "claude-root.jsonl")
+	path := filepath.Join(testenv.PrivateTempDir(t), "claude-root.jsonl")
 	line := `{"type":"assistant","uuid":"native-message","message":{"id":"msg-1","model":"claude-x","stop_reason":"end_turn","usage":{"input_tokens":8,"cache_creation_input_tokens":0,"cache_read_input_tokens":0,"output_tokens":2}}}` + "\n"
 	mustNoError(t, os.WriteFile(path, []byte(line), 0o600))
 	identity, err := usagesvc.SourceIdentity(context.Background(), path)

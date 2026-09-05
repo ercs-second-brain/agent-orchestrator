@@ -27,12 +27,20 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/testenv"
 )
 
 // aoBin is the path to the binary built once for the whole suite.
 var aoBin string
 
 func TestMain(m *testing.M) {
+	// Same hermeticity contract as the untagged lane's testmain_test.go: strip
+	// ambient AO_* variables so worker-session environments can't leak into
+	// assertions. This lane needs its own call because a test binary allows
+	// only one TestMain (this one, package cli_test).
+	testenv.ScrubAmbientDaemonEnv()
+
 	dir, err := os.MkdirTemp("", "ao-e2e-bin")
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "e2e: mktemp:", err)

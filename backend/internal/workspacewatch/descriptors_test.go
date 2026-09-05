@@ -25,6 +25,34 @@ func openDescriptors(t *testing.T) (int, bool) {
 	return len(names), true
 }
 
+// quiescedDescriptorCount waits for the open-descriptor count to settle
+// before sampling it. Earlier tests' fsnotify teardowns release their
+// descriptors asynchronously, and under -shuffle (or any reordering) this
+// test can start while such a teardown is still in flight; a baseline sampled
+// mid-churn then makes the "watching > baseline" sanity check flaky (fds can
+// vanish between the baseline and the post-Watch count). Two consecutive
+// equal samples 50ms apart are treated as quiescent.
+func quiescedDescriptorCount(t *testing.T) int {
+	t.Helper()
+	deadline := time.Now().Add(5 * time.Second)
+	prev, ok := openDescriptors(t)
+	if !ok {
+		t.Skip("descriptor counting is unavailable on this platform")
+	}
+	for time.Now().Before(deadline) {
+		time.Sleep(50 * time.Millisecond)
+		cur, ok := openDescriptors(t)
+		if !ok {
+			t.Skip("descriptor counting is unavailable on this platform")
+		}
+		if cur == prev {
+			return cur
+		}
+		prev = cur
+	}
+	return prev
+}
+
 // TestWatchReleasesDescriptorsOnCancel pins the descriptor accounting of a
 // cancelled watch. The kqueue backend keeps one descriptor per watched file, so
 // a workspace watcher that does not release them on teardown costs roughly two
@@ -35,11 +63,6 @@ func openDescriptors(t *testing.T) (int, bool) {
 // kqueue.Close marked the watcher closed before its removal loop ran, which
 // made every removal a no-op.
 func TestWatchReleasesDescriptorsOnCancel(t *testing.T) {
-	baseline, ok := openDescriptors(t)
-	if !ok {
-		t.Skip("descriptor counting is unavailable on this platform")
-	}
-
 	root := t.TempDir()
 	for d := range 20 {
 		dir := filepath.Join(root, fmt.Sprintf("dir-%02d", d))
@@ -53,6 +76,11 @@ func TestWatchReleasesDescriptorsOnCancel(t *testing.T) {
 			}
 		}
 	}
+
+	// Sample the baseline only after the count has quiesced and as late as
+	// possible (after fixture creation), so async teardown churn from earlier
+	// tests cannot drain fds between baseline and the post-Watch count.
+	baseline := quiescedDescriptorCount(t)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	changes, err := Watch(ctx, root)

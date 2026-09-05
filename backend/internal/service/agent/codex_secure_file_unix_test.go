@@ -8,6 +8,8 @@ import (
 	"path/filepath"
 	"syscall"
 	"testing"
+
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/testenv"
 )
 
 type codexFileInfoWithSystem struct {
@@ -25,8 +27,8 @@ func (i codexFileInfoWithSystem) Mode() os.FileMode {
 }
 
 func TestPrivateFileWriteRejectsSymlinkedAncestor(t *testing.T) {
-	root := t.TempDir()
-	outside := t.TempDir()
+	root := testenv.PrivateTempDir(t)
+	outside := testenv.PrivateTempDir(t)
 	link := filepath.Join(root, "vault")
 	if err := os.Symlink(outside, link); err != nil {
 		t.Skipf("symlinks unavailable: %v", err)
@@ -41,8 +43,8 @@ func TestPrivateFileWriteRejectsSymlinkedAncestor(t *testing.T) {
 }
 
 func TestPrivateFileReadRejectsSymlinkedAncestor(t *testing.T) {
-	root := t.TempDir()
-	outside := t.TempDir()
+	root := testenv.PrivateTempDir(t)
+	outside := testenv.PrivateTempDir(t)
 	if err := os.WriteFile(filepath.Join(outside, codexCredentialFilename), []byte("opaque"), 0o600); err != nil {
 		t.Fatal(err)
 	}
@@ -56,7 +58,7 @@ func TestPrivateFileReadRejectsSymlinkedAncestor(t *testing.T) {
 }
 
 func TestPrivateDirectoryValidationChecksBeyondFirstRootOwnedAncestor(t *testing.T) {
-	base, err := os.Lstat(t.TempDir())
+	base, err := os.Lstat(testenv.PrivateTempDir(t))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -88,7 +90,7 @@ func TestPrivateDirectoryValidationChecksBeyondFirstRootOwnedAncestor(t *testing
 }
 
 func TestPrivateCredentialRemovalDoesNotDeleteSubstitutedObject(t *testing.T) {
-	dir := t.TempDir()
+	dir := testenv.PrivateTempDir(t)
 	path := filepath.Join(dir, codexCredentialFilename)
 	parked := filepath.Join(dir, "parked-original")
 	substitute := filepath.Join(dir, "external-substitute")
@@ -122,8 +124,8 @@ func TestPrivateCredentialRemovalDoesNotDeleteSubstitutedObject(t *testing.T) {
 }
 
 func TestPrivateCredentialRemovalRejectsSymlinkedParentBeforeCleanup(t *testing.T) {
-	root := t.TempDir()
-	outside := t.TempDir()
+	root := testenv.PrivateTempDir(t)
+	outside := testenv.PrivateTempDir(t)
 	victim := filepath.Join(outside, codexFileStagingPrefix+"outside-victim")
 	credential := filepath.Join(outside, codexCredentialFilename)
 	if err := os.WriteFile(victim, []byte("keep"), 0o600); err != nil {
@@ -170,7 +172,7 @@ func TestPreparedPrivateFileReplacementRejectsIdentityOrHashChange(t *testing.T)
 		}},
 	} {
 		t.Run(mutate.name, func(t *testing.T) {
-			dir := t.TempDir()
+			dir := testenv.PrivateTempDir(t)
 			path := filepath.Join(dir, codexCredentialFilename)
 			if err := os.WriteFile(path, []byte("admitted"), 0o600); err != nil {
 				t.Fatal(err)
@@ -196,7 +198,7 @@ func TestPreparedPrivateFileReplacementRejectsIdentityOrHashChange(t *testing.T)
 }
 
 func TestPrivateFileWriteCleansOnlyVaultStagingLeftovers(t *testing.T) {
-	dir := t.TempDir()
+	dir := testenv.PrivateTempDir(t)
 	orphan := filepath.Join(dir, codexFileStagingPrefix+"crash-leftover")
 	unrelated := filepath.Join(dir, ".provider-state")
 	if err := os.WriteFile(orphan, []byte("staged"), 0o600); err != nil {
@@ -217,7 +219,7 @@ func TestPrivateFileWriteCleansOnlyVaultStagingLeftovers(t *testing.T) {
 }
 
 func TestPrivateFileWriteCleansRemovalTombstoneAndPreservesUnrelatedFile(t *testing.T) {
-	dir := t.TempDir()
+	dir := testenv.PrivateTempDir(t)
 	tombstone := filepath.Join(dir, codexFileRemovalPrefix+"crash-leftover")
 	unrelated := filepath.Join(dir, ".provider-state")
 	if err := os.WriteFile(tombstone, []byte("removed-credential"), 0o600); err != nil {
@@ -238,7 +240,7 @@ func TestPrivateFileWriteCleansRemovalTombstoneAndPreservesUnrelatedFile(t *test
 }
 
 func TestPrivateFileWriteCleansEmptyRemovalMarker(t *testing.T) {
-	dir := t.TempDir()
+	dir := testenv.PrivateTempDir(t)
 	marker := filepath.Join(dir, codexFileRemovalPrefix+"empty-crash-marker")
 	if err := os.WriteFile(marker, nil, 0o600); err != nil {
 		t.Fatal(err)
@@ -252,7 +254,7 @@ func TestPrivateFileWriteCleansEmptyRemovalMarker(t *testing.T) {
 }
 
 func TestPrivateFileReplacementReportsCommittedAfterDirectorySyncFailure(t *testing.T) {
-	dir := t.TempDir()
+	dir := testenv.PrivateTempDir(t)
 	path := filepath.Join(dir, codexCredentialFilename)
 	replacement, err := prepareCodexFileReplacement(path, []byte("replacement"))
 	if err != nil {
@@ -272,7 +274,7 @@ func TestPrivateFileReplacementReportsCommittedAfterDirectorySyncFailure(t *test
 }
 
 func TestPrivateFileRemovalReportsCommittedAfterDirectorySyncFailure(t *testing.T) {
-	dir := t.TempDir()
+	dir := testenv.PrivateTempDir(t)
 	path := filepath.Join(dir, codexCredentialFilename)
 	if err := os.WriteFile(path, []byte("credential"), 0o600); err != nil {
 		t.Fatal(err)
@@ -291,7 +293,7 @@ func TestPrivateFileRemovalReportsCommittedAfterDirectorySyncFailure(t *testing.
 }
 
 func TestPrivateFileWriteRejectsUnsafeRemovalTombstone(t *testing.T) {
-	dir := t.TempDir()
+	dir := testenv.PrivateTempDir(t)
 	external := filepath.Join(dir, "external")
 	tombstone := filepath.Join(dir, codexFileRemovalPrefix+"unsafe")
 	if err := os.WriteFile(external, []byte("external"), 0o600); err != nil {
@@ -312,7 +314,7 @@ func TestPrivateFileWriteRejectsUnsafeRemovalTombstone(t *testing.T) {
 }
 
 func TestPrivateFileReadRejectsUnsafeModeHardLinkAndOwner(t *testing.T) {
-	dir := t.TempDir()
+	dir := testenv.PrivateTempDir(t)
 	path := filepath.Join(dir, codexCredentialFilename)
 	if err := os.WriteFile(path, []byte("opaque"), 0o644); err != nil {
 		t.Fatal(err)

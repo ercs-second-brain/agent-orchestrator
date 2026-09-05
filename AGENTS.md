@@ -10,6 +10,20 @@ Operational guidance for coding agents working in this repository. Keep changes 
 - `test/` — external smoke/e2e assets, including the CLI fresh-install container check.
 - `.github/workflows/` — CI definitions. Mirror these commands locally when possible.
 
+## Worker onboarding: environment doctor
+
+Run the environment doctor once before starting work, from the repo root:
+
+```bash
+node scripts/doctor.mjs
+```
+
+It verifies git, node/npm, the Go toolchain (version vs `backend/go.mod`), workspace `node_modules`, the Playwright browser cache, Chromium system libraries, gcc (for `go test -race`), and gh auth — one PASS/FAIL line per check with the exact fix command for every FAIL.
+
+- Treat FAILs as **environment setup problems, not code problems**: fix the environment before diagnosing test failures.
+- The only check whose fix needs **one-time sudo** on a fresh server is `sudo npx playwright install-deps chromium` (Chromium system libraries). A human runs it once; the doctor then stays green.
+- Backend tests are written to be hermetic (they scrub ambient `AO_*` variables, harden temp-dir permissions, and gate on optional binaries with skips). If a test fails on a doctor-green machine, suspect the test or the code — not the machine.
+
 ## Commands
 
 From the repo root unless noted:

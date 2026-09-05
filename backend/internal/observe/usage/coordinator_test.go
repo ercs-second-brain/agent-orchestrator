@@ -10,10 +10,11 @@ import (
 	"time"
 
 	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/domain"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/testenv"
 )
 
 func TestCoordinatorDrainsAdditionalChunksImmediately(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "rollout.jsonl")
+	path := filepath.Join(testenv.PrivateTempDir(t), "rollout.jsonl")
 	store := &coordinatorTestStore{
 		sources: []domain.UsageSourceRecord{watchableTestSource(1, path)},
 	}
@@ -36,7 +37,7 @@ func TestCoordinatorDrainsAdditionalChunksImmediately(t *testing.T) {
 }
 
 func TestCoordinatorRequeuesEventArrivingDuringIngestion(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "session.jsonl")
+	path := filepath.Join(testenv.PrivateTempDir(t), "session.jsonl")
 	store := &coordinatorTestStore{
 		sources: []domain.UsageSourceRecord{watchableTestSource(2, path)},
 	}
@@ -72,7 +73,7 @@ func TestCoordinatorRequeuesEventArrivingDuringIngestion(t *testing.T) {
 }
 
 func TestCoordinatorFilesystemEventPreemptsPersistedRetry(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "session.jsonl")
+	path := filepath.Join(testenv.PrivateTempDir(t), "session.jsonl")
 	retryAt := time.Now().UTC().Add(time.Hour)
 	source := watchableTestSource(3, path)
 	source.State = domain.UsageSourceError
@@ -97,7 +98,7 @@ func TestCoordinatorFilesystemEventPreemptsPersistedRetry(t *testing.T) {
 }
 
 func TestCoordinatorReconcilesAfterMissingSource(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "active.jsonl")
+	path := filepath.Join(testenv.PrivateTempDir(t), "active.jsonl")
 	store := &coordinatorTestStore{
 		sources: []domain.UsageSourceRecord{watchableTestSource(4, path)},
 	}
@@ -198,7 +199,7 @@ func TestCoordinatorRunsDiscoveryOnlyForDiscoveryEvents(t *testing.T) {
 	done := coordinator.Start(ctx)
 	waitForCoordinatorCalls(t, reconciled, 1)
 
-	unknownPath := filepath.Join(t.TempDir(), "unknown.jsonl")
+	unknownPath := filepath.Join(testenv.PrivateTempDir(t), "unknown.jsonl")
 	watcher.events <- TranscriptEvent{Path: unknownPath}
 	select {
 	case got := <-pathReconciled:
@@ -215,7 +216,7 @@ func TestCoordinatorRunsDiscoveryOnlyForDiscoveryEvents(t *testing.T) {
 	}
 
 	watcher.events <- TranscriptEvent{
-		Path:      filepath.Join(t.TempDir(), "created-directory"),
+		Path:      filepath.Join(testenv.PrivateTempDir(t), "created-directory"),
 		Discovery: true,
 	}
 	waitForCoordinatorCalls(t, reconciled, 1)
@@ -237,7 +238,7 @@ func TestCoordinatorRunsDiscoveryOnlyForDiscoveryEvents(t *testing.T) {
 func TestCoordinatorStopsWorkersWhenWatcherCloses(t *testing.T) {
 	store := &coordinatorTestStore{}
 	for id := int64(1); id <= 32; id++ {
-		store.sources = append(store.sources, watchableTestSource(id, filepath.Join(t.TempDir(), "source.jsonl")))
+		store.sources = append(store.sources, watchableTestSource(id, filepath.Join(testenv.PrivateTempDir(t), "source.jsonl")))
 	}
 	watcher := newClosedCoordinatorTestWatcher()
 	ingestor := coordinatorTestIngestor(func(ctx context.Context, _ int64) (IngestResult, error) {
