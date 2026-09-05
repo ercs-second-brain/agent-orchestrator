@@ -85,9 +85,9 @@ func TestSummaryReaderGetPreservesStrongestPartialLowerBoundWithoutDoubleCountin
 		got.Totals.ProcessedTokens == nil || *got.Totals.ProcessedTokens != 1325 {
 		t.Fatalf("totals = %+v", got.Totals)
 	}
-	if len(got.Harnesses) != 2 || len(got.Harnesses[0].Models) != 1 || len(got.Harnesses[1].Models) != 1 ||
+	if len(got.Harnesses) != 1 || len(got.Harnesses[0].Models) != 2 ||
 		got.Harnesses[0].Models[0].ModelID != "gpt-5.6" ||
-		got.Harnesses[1].Models[0].ModelID != "claude-sonnet" {
+		got.Harnesses[0].Models[1].ModelID != "claude-sonnet" {
 		t.Fatalf("model grouping = %+v", got.Harnesses)
 	}
 	for _, harness := range got.Harnesses {
@@ -97,9 +97,11 @@ func TestSummaryReaderGetPreservesStrongestPartialLowerBoundWithoutDoubleCountin
 			}
 		}
 	}
-	if got.Harnesses[0].Totals.ProcessedTokens == nil || *got.Harnesses[0].Totals.ProcessedTokens != 1200 ||
+	// With a single supported harness, both models now aggregate into one
+	// harness scope: the scope total is the sum of the per-model totals.
+	if got.Harnesses[0].Totals.ProcessedTokens == nil || *got.Harnesses[0].Totals.ProcessedTokens != 1325 ||
 		got.Harnesses[0].Models[0].Totals.ProcessedTokens == nil || *got.Harnesses[0].Models[0].Totals.ProcessedTokens != 1200 ||
-		got.Harnesses[1].Totals.ProcessedTokens == nil || *got.Harnesses[1].Totals.ProcessedTokens != 125 {
+		got.Harnesses[0].Models[1].Totals.ProcessedTokens == nil || *got.Harnesses[0].Models[1].Totals.ProcessedTokens != 125 {
 		t.Fatalf("processed totals by scope = %+v", got.Harnesses)
 	}
 	if store.calls != [4]int{0, 1, 1, 1} {

@@ -1,5 +1,4 @@
 import type { RendererTelemetryCapture, TelemetryPolicySnapshot, TelemetryPolicyView } from "../shared/telemetry-policy";
-import type { DaemonTelemetryPolicyAcknowledgement } from "./daemon-telemetry-policy-client";
 
 const agentSwitchFailureProductionEnabled = false;
 
@@ -17,10 +16,32 @@ type Authority = {
 	retryPendingReplacement(): Promise<TelemetryPolicySnapshot>;
 };
 
+export type DaemonTelemetryPolicyAcknowledgement = {
+	consentGeneration: string;
+	eventsEnabled: boolean;
+	gateDrained: boolean;
+	purgeConfirmed: boolean;
+};
+
+// DaemonPolicyClient used to mirror desktop telemetry consent into the daemon's
+// agent-switch reporting policy over HTTP (/internal/agent-switch-observability/*).
+// With the switching subsystem removed (ADR 0005 / #42) there is no daemon-side
+// policy left to sync: the desktop authority file is the single source of truth,
+// so the local policy is acknowledged immediately.
 type DaemonPolicyClient = {
 	prepareDisable(): Promise<DaemonTelemetryPolicyAcknowledgement>;
 	applyPolicy(generation: string, enabled: boolean): Promise<DaemonTelemetryPolicyAcknowledgement>;
 };
+
+export class LocalTelemetryDaemonPolicy {
+	prepareDisable(): Promise<DaemonTelemetryPolicyAcknowledgement> {
+		return Promise.resolve({ consentGeneration: "", eventsEnabled: false, gateDrained: true, purgeConfirmed: true });
+	}
+
+	applyPolicy(generation: string, enabled: boolean): Promise<DaemonTelemetryPolicyAcknowledgement> {
+		return Promise.resolve({ consentGeneration: generation, eventsEnabled: enabled, gateDrained: true, purgeConfirmed: true });
+	}
+}
 
 export class DesktopTelemetryController {
 	private view: TelemetryPolicyView;
