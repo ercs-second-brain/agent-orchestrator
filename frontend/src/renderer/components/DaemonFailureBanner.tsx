@@ -1,6 +1,5 @@
 import { AlertTriangle, Clock3 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { useTranslation } from "react-i18next";
 import type { DaemonStatus } from "../../shared/daemon-status";
 import { isSlowDaemonStartupStatus } from "../../shared/daemon-startup-status";
 import { daemonFailureHint, daemonFailureMessage, daemonFailureTitle } from "../lib/daemon-failure";
@@ -12,7 +11,6 @@ export function DaemonFailureBanner({ status }: { status: DaemonStatus }) {
 }
 
 function DaemonFailureContent({ status }: { status: DaemonStatus }) {
-	const { t } = useTranslation();
 	const [detailsOpen, setDetailsOpen] = useState(false);
 	const [copied, setCopied] = useState(false);
 	const [restarting, setRestarting] = useState(false);
@@ -20,8 +18,8 @@ function DaemonFailureContent({ status }: { status: DaemonStatus }) {
 	const copiedTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 	const slowStartup = isSlowDaemonStartupStatus(status);
 	const details = status.details?.trim();
-	const hint = slowStartup ? "" : daemonFailureHint(status, t);
-	const title = slowStartup ? t("daemon.title.notReady") : daemonFailureTitle(status, t);
+	const hint = slowStartup ? "" : daemonFailureHint(status);
+	const title = slowStartup ? "AO daemon is not ready yet" : daemonFailureTitle(status);
 	const canRestart =
 		!slowStartup &&
 		(status.code === "not_ready" ||
@@ -38,9 +36,9 @@ function DaemonFailureContent({ status }: { status: DaemonStatus }) {
 	const copyDetails = async () => {
 		const lines = [
 			title,
-			status.code ? t("daemon.details.code", { code: status.code }) : "",
-			t("daemon.details.message", { message: daemonFailureMessage(status, t) }),
-			details ? `\n${t("daemon.details.heading", { details })}` : "",
+			status.code ? `Code: ${status.code}` : "",
+			`Message: ${daemonFailureMessage(status)}`,
+			details ? `\n${`Details: ${details}`}` : "",
 		];
 		await aoBridge.clipboard.writeText(lines.filter(Boolean).join("\n"));
 		setCopied(true);
@@ -56,10 +54,10 @@ function DaemonFailureContent({ status }: { status: DaemonStatus }) {
 		try {
 			const nextStatus = await aoBridge.daemon.restart();
 			if (nextStatus.state === "error" || nextStatus.state === "stopped") {
-				setRestartError(daemonFailureMessage(nextStatus, t));
+				setRestartError(daemonFailureMessage(nextStatus));
 			}
 		} catch (error) {
-			setRestartError(error instanceof Error ? error.message : t("daemon.restartFailed"));
+			setRestartError(error instanceof Error ? error.message : "Could not restart the daemon.");
 		} finally {
 			setRestarting(false);
 		}
@@ -82,7 +80,7 @@ function DaemonFailureContent({ status }: { status: DaemonStatus }) {
 				<div className="min-w-0 flex-1">
 					<p className="font-medium text-(--color-text-import-title)">{title}</p>
 					<p className="mt-0.5 wrap-break-word text-pretty text-[var(--color-text-import-muted)]">
-						{daemonFailureMessage(status, t)}
+						{daemonFailureMessage(status)}
 					</p>
 					{hint ? <p className="mt-1 text-[var(--color-text-import-muted)]">{hint}</p> : null}
 					{canRestart ? (
@@ -92,7 +90,7 @@ function DaemonFailureContent({ status }: { status: DaemonStatus }) {
 							disabled={restarting}
 							onClick={() => void restartDaemon()}
 						>
-							{restarting ? t("daemon.restarting") : t("daemon.restart")}
+							{restarting ? "Restarting…" : "Restart daemon"}
 						</button>
 					) : null}
 					{restartError ? <p className="mt-2 text-error">{restartError}</p> : null}
@@ -103,14 +101,14 @@ function DaemonFailureContent({ status }: { status: DaemonStatus }) {
 								className="text-xs text-[var(--color-text-import-title)] underline-offset-2 hover:underline"
 								onClick={() => setDetailsOpen((open) => !open)}
 							>
-								{detailsOpen ? t("daemon.hideDetails") : t("daemon.showDetails")}
+								{detailsOpen ? "Hide details" : "Show details"}
 							</button>
 							<button
 								type="button"
 								className="text-xs text-[var(--color-text-import-title)] underline-offset-2 hover:underline"
 								onClick={() => void copyDetails()}
 							>
-								{copied ? t("daemon.copied") : t("daemon.copyDetails")}
+								{copied ? "Copied" : "Copy details"}
 							</button>
 						</div>
 					) : null}

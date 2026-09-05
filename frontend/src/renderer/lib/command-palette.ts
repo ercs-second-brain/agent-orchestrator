@@ -1,4 +1,3 @@
-import type { TFunction } from "i18next";
 import {
 	attentionZone,
 	attentionZoneOrder,
@@ -18,7 +17,6 @@ import {
 	reviewSessionRunAction,
 	type PRReviewState,
 } from "./session-reviews";
-import { appI18n, type MessageKey } from "../i18n";
 
 export type CommandGroupId = "current" | "attention" | "projects" | "sessions" | "prs" | "global";
 
@@ -71,36 +69,16 @@ export type CommandPaletteContext = {
 
 export const commandGroupOrder: CommandGroupId[] = ["current", "attention", "projects", "sessions", "prs", "global"];
 
-const commandGroupLabelKeys: Record<CommandGroupId, MessageKey> = {
-	current: "command.group.current",
-	attention: "command.group.attention",
-	projects: "command.group.projects",
-	sessions: "command.group.sessions",
-	prs: "command.group.prs",
-	global: "command.group.global",
+const commandGroupLabels: Record<CommandGroupId, string> = {
+	current: "Current",
+	attention: "Needs attention",
+	projects: "Projects",
+	sessions: "Sessions",
+	prs: "Pull requests",
+	global: "Global",
 };
 
-/** Live labels for the current locale. */
-export const commandGroupLabel: Record<CommandGroupId, string> = {
-	get current() {
-		return appI18n.t(commandGroupLabelKeys.current);
-	},
-	get attention() {
-		return appI18n.t(commandGroupLabelKeys.attention);
-	},
-	get projects() {
-		return appI18n.t(commandGroupLabelKeys.projects);
-	},
-	get sessions() {
-		return appI18n.t(commandGroupLabelKeys.sessions);
-	},
-	get prs() {
-		return appI18n.t(commandGroupLabelKeys.prs);
-	},
-	get global() {
-		return appI18n.t(commandGroupLabelKeys.global);
-	},
-};
+export const commandGroupLabel: Record<CommandGroupId, string> = commandGroupLabels;
 
 function isSyntheticBranch(session: WorkspaceSession): boolean {
 	return session.branch === `session/${session.id}`;
@@ -141,14 +119,13 @@ function sessionCommand(
 export function buildSessionActions(
 	workspace: WorkspaceSummary,
 	session: WorkspaceSession,
-	t: TFunction = appI18n.t,
 ): CommandItem[] {
 	const items: CommandItem[] = [];
 
 	items.push({
 		id: `session-action:jump:${session.id}`,
 		group: "current",
-		title: t("command.jumpToSession"),
+		title: "Jump to session",
 		keywords: ["open", "go", "view", session.title],
 		action: { kind: "navigate", target: jumpTarget(workspace, session) },
 	});
@@ -157,8 +134,8 @@ export function buildSessionActions(
 		items.push({
 			id: `session-action:resume:${session.id}`,
 			group: "current",
-			title: t("command.resumeAgent"),
-			subtitle: t("command.resumeAgentSubtitle"),
+			title: "Resume agent",
+			subtitle: "Relaunch this terminated session",
 			keywords: ["restore", "restart", "retry", "resume", session.title],
 			action: { kind: "resume-session", projectId: workspace.id, sessionId: session.id },
 		});
@@ -168,7 +145,7 @@ export function buildSessionActions(
 		items.push({
 			id: `session-action:copy-branch:${session.id}`,
 			group: "current",
-			title: t("command.copyBranch"),
+			title: "Copy branch name",
 			subtitle: session.branch,
 			keywords: ["branch", "git", session.branch, session.title],
 			action: { kind: "copy-branch", branch: session.branch },
@@ -186,7 +163,7 @@ export function findSession(workspaces: WorkspaceSummary[], sessionId: string): 
 	return undefined;
 }
 
-export function buildCommands(ctx: CommandPaletteContext, t: TFunction = appI18n.t): CommandItem[] {
+export function buildCommands(ctx: CommandPaletteContext): CommandItem[] {
 	const { workspaces, currentProjectId, currentSessionId, restartingProjectIds, reviewStatesBySessionId } = ctx;
 	const items: CommandItem[] = [];
 
@@ -199,14 +176,14 @@ export function buildCommands(ctx: CommandPaletteContext, t: TFunction = appI18n
 	items.push({
 		id: "current-new-task",
 		group: "current",
-		title: t("command.newTask"),
+		title: "New task",
 		subtitle: currentProject?.name,
 		keywords: ["worker", "chat", "start"],
 		disabled: !currentProject || isProjectRestarting,
 		disabledReason: !currentProject
-			? t("command.noCurrentProject")
+			? "No current project"
 			: isProjectRestarting
-				? t("command.orchestratorRestarting")
+				? "Orchestrator restarting"
 				: undefined,
 		...(currentProject ? { action: { kind: "open-new-task" as const, projectId: currentProject.id } } : {}),
 	});
@@ -215,17 +192,17 @@ export function buildCommands(ctx: CommandPaletteContext, t: TFunction = appI18n
 		items.push({
 			id: "current-open-orchestrator",
 			group: "current",
-			title: t("command.openOrchestrator"),
+			title: "Open orchestrator",
 			subtitle: currentProject.name,
 			keywords: ["orchestrator", "spawn", currentProject.name],
 			disabled: isProjectRestarting,
-			disabledReason: isProjectRestarting ? t("command.orchestratorRestarting") : undefined,
+			disabledReason: isProjectRestarting ? "Orchestrator restarting" : undefined,
 			action: { kind: "open-orchestrator", projectId: currentProject.id },
 		});
 		items.push({
 			id: "current-project-settings",
 			group: "current",
-			title: t("command.projectSettings"),
+			title: "Project settings",
 			subtitle: currentProject.name,
 			keywords: ["settings", "config", currentProject.name],
 			action: {
@@ -240,7 +217,7 @@ export function buildCommands(ctx: CommandPaletteContext, t: TFunction = appI18n
 		items.push({
 			id: "current-copy-branch",
 			group: "current",
-			title: t("command.copyBranch"),
+			title: "Copy branch name",
 			subtitle: currentBranch,
 			keywords: ["branch", "git", "copy", currentBranch, currentSession.title],
 			action: { kind: "copy-branch", branch: currentBranch },
@@ -320,7 +297,7 @@ export function buildCommands(ctx: CommandPaletteContext, t: TFunction = appI18n
 				items.push({
 					id: `pr-open:${session.id}:${pr.number}`,
 					group: "prs",
-					title: t("command.openPr", { number: pr.number }),
+					title: `Open PR #${pr.number}`,
 					subtitle,
 					keywords: [...prKeywords, "open", "open pr", "github", "browser"],
 					searchOnly: true,
@@ -329,14 +306,14 @@ export function buildCommands(ctx: CommandPaletteContext, t: TFunction = appI18n
 				items.push({
 					id: `pr-copy:${session.id}:${pr.number}`,
 					group: "prs",
-					title: t("command.copyPrUrl", { number: pr.number }),
+					title: `Copy PR URL #${pr.number}`,
 					subtitle,
 					keywords: [...prKeywords, "copy", "copy pr", "url", "link", "share"],
 					searchOnly: true,
 					action: { kind: "copy-pr-url", url: pr.url },
 				});
 				if (sessionIsActive(session) && dataLoadedForSession) {
-					items.push(prReviewCommand(session, pr, openReviewStates, sessionReviewRunning, subtitle, prKeywords, t));
+					items.push(prReviewCommand(session, pr, openReviewStates, sessionReviewRunning, subtitle, prKeywords));
 				}
 			}
 		}
@@ -345,21 +322,21 @@ export function buildCommands(ctx: CommandPaletteContext, t: TFunction = appI18n
 	items.push({
 		id: "global-new-project",
 		group: "global",
-		title: t("command.newProject"),
+		title: "New project",
 		keywords: ["add", "import", "repo", "workspace"],
 		action: { kind: "open-new-project" },
 	});
 	items.push({
 		id: "global-settings",
 		group: "global",
-		title: t("command.globalSettings"),
+		title: "Global settings",
 		keywords: ["settings", "preferences", "config"],
 		action: { kind: "navigate", target: { to: "/settings" } },
 	});
 	items.push({
 		id: "global-theme",
 		group: "global",
-		title: t("command.toggleTheme"),
+		title: "Toggle theme",
 		keywords: ["dark", "light", "appearance"],
 		action: { kind: "toggle-theme" },
 	});
@@ -382,23 +359,22 @@ function prReviewCommand(
 	sessionReviewRunning: boolean,
 	subtitle: string,
 	keywords: string[],
-	t: TFunction,
 ): CommandItem {
 	const prReviewState = openReviewStates?.find((reviewState) => reviewState.prUrl === pr.url);
 	const ineligible = openReviewStates !== undefined && (!prReviewState || prReviewState.status === "ineligible");
 	const disabled = sessionReviewRunning || ineligible;
 	const disabledReason = sessionReviewRunning
-		? t("command.reviewAlreadyRunning")
+		? "Review already running"
 		: ineligible
-			? t("command.notEligibleForReview")
+			? "Not eligible for review"
 			: undefined;
 	const runLabel = prReviewState
 		? reviewSessionRunAction([prReviewState], false)
-		: t("inspector.review.run");
+		: "Run review";
 	return {
 		id: `pr-review:${session.id}:${pr.number}`,
 		group: "prs",
-		title: t("command.reviewPr", { action: runLabel, number: pr.number }),
+		title: `${runLabel} #${pr.number}`,
 		subtitle,
 		keywords: [...keywords, "review", "run review", "re-run review", "ao review"],
 		searchOnly: true,
@@ -454,12 +430,11 @@ export const MAX_SEARCH_RESULTS = 20;
 
 export function groupCommands(
 	items: CommandItem[],
-	t: TFunction = appI18n.t,
 ): { id: CommandGroupId; label: string; items: CommandItem[] }[] {
 	return commandGroupOrder
 		.map((id) => ({
 			id,
-			label: t(commandGroupLabelKeys[id]),
+			label: commandGroupLabels[id],
 			items: items.filter((item) => item.group === id).slice(0, MAX_ITEMS_PER_GROUP),
 		}))
 		.filter((group) => group.items.length > 0);
@@ -487,9 +462,9 @@ export function visibleForQuery(items: CommandItem[], query: string): CommandIte
 	return [...attention, ...rest, ...backfill];
 }
 
-export function displayGroups(items: CommandItem[], query: string, t: TFunction = appI18n.t): DisplayGroup[] {
+export function displayGroups(items: CommandItem[], query: string): DisplayGroup[] {
 	// Keep matches under their category headings (Cursor-style), including while typing.
-	const groups = groupCommands(visibleForQuery(items, query), t);
+	const groups = groupCommands(visibleForQuery(items, query));
 	if (!query.trim()) return groups;
 	// The palette runs cmdk with shouldFilter:false and selects the first item in DOM
 	// order, so Enter follows category order. Rank categories by their best match to

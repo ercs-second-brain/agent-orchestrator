@@ -1,5 +1,4 @@
 import { lazy, Suspense } from "react";
-import { Trans, useTranslation } from "react-i18next";
 import type { GlobalSettingsSection as GlobalSettingsPage } from "../stores/ui-store";
 import { GeneralSettingsSection } from "./settings/GeneralSettingsSection";
 import { HarnessSettingsSection } from "./settings/HarnessSettingsSection";
@@ -30,7 +29,6 @@ export function GlobalSettingsForm({
 }: {
 	section?: GlobalSettingsSection;
 }) {
-	const { t } = useTranslation();
 	const isRemote = useRemoteConnection();
 	const all = section === "all";
 	// One section per page means the dialog header already names it, so a
@@ -39,7 +37,7 @@ export function GlobalSettingsForm({
 
 	return (
 		<div
-			aria-label={t("settings.title")}
+			aria-label={"Settings"}
 			className="flex w-full flex-col gap-(--size-settings-section-gap)"
 			data-testid="settings-page"
 		>
@@ -52,7 +50,7 @@ export function GlobalSettingsForm({
 			{(all || section === "browserProfiles") && !isRemote ? <BrowserProfilesSection titleHidden={titleHidden} /> : null}
 
 			{(all || section === "mobile") && !isRemote ? (
-				<SettingsSection title={t("settings.mobile")} titleHidden={titleHidden}>
+				<SettingsSection title={"Mobile"} titleHidden={titleHidden}>
 					<div className="rounded-md bg-[var(--color-bg-settings-row)] px-4 pb-4 pt-0">
 						<ConnectMobileContent active />
 						<MobileDevicesSection />
@@ -60,18 +58,17 @@ export function GlobalSettingsForm({
 				</SettingsSection>
 			) : null}
 			{(all || section === "mobile") && isRemote ? (
-				<SettingsSection title={t("settings.mobile")} titleHidden={titleHidden}>
+				<SettingsSection title={"Mobile"} titleHidden={titleHidden}>
 					<p className="rounded-md bg-[var(--color-bg-settings-row)] px-4 py-4 text-sm text-muted-foreground">
-						<Trans
-							components={{ code: <code className="font-mono text-xs" /> }}
-							i18nKey="mobile.remoteManaged"
-						/>
+						{"Connect Mobile is managed on the LAN server. Run "}
+						<code className="font-mono text-xs">ao mobile enable</code>
+						{" on that host."}
 					</p>
 				</SettingsSection>
 			) : null}
 
 			{(all || section === "shortcuts") && (
-				<SettingsSection title={t("settings.keyboardShortcuts")} titleHidden={titleHidden}>
+				<SettingsSection title={"Keyboard shortcuts"} titleHidden={titleHidden}>
 					<SettingsContentPanel>
 						<KeyboardShortcutsContent active />
 					</SettingsContentPanel>
@@ -85,7 +82,7 @@ export function GlobalSettingsForm({
 			)}
 
 			{(all || section === "help") && (
-				<SettingsSection title={t("settings.reportProblem")} titleHidden={titleHidden}>
+				<SettingsSection title={"Report a problem"} titleHidden={titleHidden}>
 					<SettingsContentPanel>
 						<ReportProblemContent active />
 					</SettingsContentPanel>

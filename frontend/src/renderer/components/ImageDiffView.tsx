@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { useTranslation } from "react-i18next";
 import { getApiBaseUrl } from "../lib/api-client";
 import { cn } from "../lib/utils";
 import type { WorkspaceFileSummary } from "../hooks/useSessionWorkspaceFiles";
@@ -44,7 +43,6 @@ export function ImageDiffView({
 	status: WorkspaceFileStatus;
 	version: number;
 }) {
-	const { t } = useTranslation();
 	// A file with no change on this side has nothing to compare against: an added
 	// file has no base revision, a deleted one has no worktree copy, and an
 	// unmodified one would just render the same image twice.
@@ -56,7 +54,7 @@ export function ImageDiffView({
 			{showBefore ? (
 				<ImageDiffPane
 					key={`before:${path}:${version}`}
-					label={t("files.imageBefore")}
+					label={"Before"}
 					path={path}
 					side="before"
 					sessionId={sessionId}
@@ -66,7 +64,7 @@ export function ImageDiffView({
 			{showAfter ? (
 				<ImageDiffPane
 					key={`after:${path}:${version}`}
-					label={t("files.imageAfter")}
+					label={"After"}
 					path={path}
 					side="after"
 					sessionId={sessionId}
@@ -90,7 +88,6 @@ function ImageDiffPane({
 	sessionId: string;
 	version: number;
 }) {
-	const { t } = useTranslation();
 	const [size, setSize] = useState<{ width: number; height: number } | null>(null);
 	const [failed, setFailed] = useState(false);
 	return (
@@ -102,15 +99,15 @@ function ImageDiffPane({
 					{label}
 				</span>
 				<span className="truncate font-mono text-2xs text-passive">
-					{size ? t("files.imageDimensions", { height: size.height, width: size.width }) : null}
+					{size ? `${size.width} × ${size.height}` : null}
 				</span>
 			</figcaption>
 			<div className="grid min-h-24 place-items-center p-3 text-passive" style={{ background: CHECKERBOARD }}>
 				{failed ? (
-					<p className="text-center text-xs text-muted-foreground">{t("files.imagePreviewFailed")}</p>
+					<p className="text-center text-xs text-muted-foreground">{"Image preview could not be loaded."}</p>
 				) : (
 					<img
-						alt={t("files.imageAlt", { file: path, side: label })}
+						alt={`${label} version of ${path}`}
 						className="max-h-[420px] max-w-full object-contain"
 						onError={() => setFailed(true)}
 						onLoad={(event) =>

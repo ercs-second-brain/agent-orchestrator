@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Check } from "lucide-react";
-import { useTranslation } from "react-i18next";
 import type { components } from "../../api/schema";
 import { agentModelsQueryOptions, type AgentModelCatalog } from "../hooks/useAgentModelsQuery";
 import { agentLabel } from "../lib/agent-options";
@@ -75,7 +74,6 @@ export function ReviewerSelect({
 	agents?: components["schemas"]["AgentReadinessSnapshot"][];
 	excludedHarness?: string;
 }) {
-	const { t } = useTranslation();
 	const queryClient = useQueryClient();
 	const [menuOpen, setMenuOpen] = useState(false);
 	// The daemon's readiness snapshot is the only source of reviewer candidates:
@@ -107,7 +105,7 @@ export function ReviewerSelect({
 			void queryClient.prefetchQuery(agentModelsQueryOptions(harness, menuProjectID));
 		}
 	}, [defaultHarness, menuOpen, menuProjectID, queryClient, selectableOptions]);
-	const selectedModelLabel = modelOrModeLabel(triggerCatalog.data, model, mode, t("settings.models.agentDefault"));
+	const selectedModelLabel = modelOrModeLabel(triggerCatalog.data, model, mode, "Agent default");
 	const triggerLabel = [value ? agentLabel(value) : (defaultTriggerLabel ?? defaultOptionLabel ?? defaultHarness), selectedModelLabel]
 		.filter(Boolean)
 		.join(" · ");
@@ -190,7 +188,6 @@ function ReviewerHarnessOption({
 	persistHarness: string;
 	closeMenu: () => void;
 }) {
-	const { t } = useTranslation();
 	const [open, setOpen] = useState(false);
 	const catalogQuery = useQuery({
 		...agentModelsQueryOptions(resolvedHarness ?? "", projectId),
@@ -268,12 +265,12 @@ function ReviewerHarnessOption({
 					active={isCurrentDefaultSelection}
 				>
 					<span className="flex min-w-0 items-center justify-between gap-3">
-						<span>{t("settings.models.agentDefault")}</span>
+						<span>{"Agent default"}</span>
 						{isCurrentDefaultSelection ? <Check aria-hidden="true" className="size-4" /> : null}
 					</span>
 				</OptionMenuItem>
 				{!catalogKnown ? (
-					<OptionMenuItem disabled>{t("common.loading", { defaultValue: "Loading…" })}</OptionMenuItem>
+					<OptionMenuItem disabled>{"\"Loading…\""}</OptionMenuItem>
 				) : null}
 				{modelOptions(catalog).map((option) => {
 					const selected =

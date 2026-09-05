@@ -1,7 +1,6 @@
 import { useCanGoBack, useRouter } from "@tanstack/react-router";
 import { ArrowLeft, ArrowRight, PanelLeft } from "lucide-react";
 import { useEffect, useState } from "react";
-import { useTranslation } from "react-i18next";
 import { isLinuxPlatform, isMacPlatform } from "../lib/platform";
 import { sidebarIsVisible, sidebarOccupiesLayout, useUiStore } from "../stores/ui-store";
 import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip";
@@ -48,7 +47,6 @@ export function TitlebarNav({
   hasSessionTopbar?: boolean;
   isFullScreen?: boolean;
 }) {
-  const { t } = useTranslation();
   const toggleSidebar = useUiStore((state) => state.toggleSidebar);
   const isSidebarOpen = useUiStore(sidebarIsVisible);
   const sidebarHasLayout = useUiStore(sidebarOccupiesLayout);
@@ -93,30 +91,30 @@ export function TitlebarNav({
     >
       <TitlebarButton
         label={
-          isSidebarOpen ? t("shell.collapseSidebar") : t("shell.expandSidebar")
+          isSidebarOpen ? "Collapse sidebar" : "Expand sidebar"
         }
         onClick={toggleSidebar}
         title={
           isSidebarOpen
-            ? t("titlebar.collapseSidebarShortcut")
-            : t("titlebar.expandSidebarShortcut")
+            ? "Collapse sidebar · ⌘B"
+            : "Expand sidebar · ⌘B"
         }
       >
         <PanelLeft className="size-icon-lg" aria-hidden="true" />
       </TitlebarButton>
       <TitlebarButton
         disabled={historyLocked || !canGoBack}
-        label={t("titlebar.goBack")}
+        label={"Go back"}
         onClick={() => router.history.back()}
-        title={t("titlebar.goBack")}
+        title={"Go back"}
       >
         <ArrowLeft className="size-icon-lg" aria-hidden="true" />
       </TitlebarButton>
       <TitlebarButton
         disabled={historyLocked || !canGoForward}
-        label={t("titlebar.goForward")}
+        label={"Go forward"}
         onClick={() => router.history.forward()}
-        title={t("titlebar.goForward")}
+        title={"Go forward"}
       >
         <ArrowRight className="size-icon-lg" aria-hidden="true" />
       </TitlebarButton>

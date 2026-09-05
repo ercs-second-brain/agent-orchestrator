@@ -1,7 +1,6 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Check, Copy, Download, LoaderCircle, LogIn, RefreshCw, Search, TriangleAlert, X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useTranslation } from "react-i18next";
 import type { components } from "../../../api/schema";
 import {
 	agentReadinessQueryKey,
@@ -84,7 +83,6 @@ function diagnosticsText(agentId: AgentId, job: InstallJob): string {
 }
 
 export function HarnessSettingsSection({ titleHidden = false }: { titleHidden?: boolean }) {
-	const { t } = useTranslation();
 	const queryClient = useQueryClient();
 	const agents = useAgentReadinessQuery();
 	useEnsureAgentReadiness();
@@ -189,7 +187,7 @@ export function HarnessSettingsSection({ titleHidden = false }: { titleHidden?: 
 				body: { method, operation: "install" },
 			});
 			if (error || !data) {
-				setActionErrors((current) => ({ ...current, [agentId]: apiErrorMessage(error, t("settings.harness.startFailed")) }));
+				setActionErrors((current) => ({ ...current, [agentId]: apiErrorMessage(error, "Could not start the installation.") }));
 				return;
 			}
 			updateJob(data);
@@ -206,7 +204,7 @@ export function HarnessSettingsSection({ titleHidden = false }: { titleHidden?: 
 				params: { path: { agent: agentId } },
 			});
 			if (error || !data) {
-				setActionErrors((current) => ({ ...current, [agentId]: apiErrorMessage(error, t("settings.harness.verifyFailed", { agent: agentLabel(agentId) })) }));
+				setActionErrors((current) => ({ ...current, [agentId]: apiErrorMessage(error, `${agentLabel(agentId)} finished installing, but AO could not find its executable.`) }));
 				return;
 			}
 			updateJob(data);
@@ -245,7 +243,7 @@ export function HarnessSettingsSection({ titleHidden = false }: { titleHidden?: 
 			setAuthWorkflow(workflow);
 			void queryClient.invalidateQueries({ queryKey: shellTerminalsQueryKey });
 		} catch (error) {
-			updateAuthState(agentId, { error: error instanceof Error ? error.message : t("settings.harness.authFailed") });
+			updateAuthState(agentId, { error: error instanceof Error ? error.message : "Authentication failed." });
 			return undefined;
 		} finally {
 			authStartPendingRef.current = false;
@@ -261,12 +259,12 @@ export function HarnessSettingsSection({ titleHidden = false }: { titleHidden?: 
 			cacheAgentReadiness(queryClient, readiness);
 			return result;
 		} catch (error) {
-			updateAuthState(agentId, { error: error instanceof Error ? error.message : t("settings.harness.authFailed") });
+			updateAuthState(agentId, { error: error instanceof Error ? error.message : "Authentication failed." });
 			return undefined;
 		} finally {
 			updateAuthState(agentId, { checking: false });
 		}
-	}, [queryClient, t, updateAuthState]);
+	}, [queryClient, updateAuthState]);
 
 	const finishAuth = useCallback(async (workflow: AuthTerminalWorkflow) => {
 		if (authWorkflowRef.current?.terminal.handleId !== workflow.terminal.handleId) return;
@@ -280,7 +278,7 @@ export function HarnessSettingsSection({ titleHidden = false }: { titleHidden?: 
 				await closeAuthTerminal(workflow.terminal.handleId);
 			} catch (error) {
 				setAuthWorkflow((current) => current?.terminal.handleId === workflow.terminal.handleId
-					? { ...current, phase: "cleanup_failed", reason: error instanceof Error ? error.message : t("settings.harness.authFailed") }
+					? { ...current, phase: "cleanup_failed", reason: error instanceof Error ? error.message : "Authentication failed." }
 					: current);
 				return;
 			}
@@ -294,11 +292,11 @@ export function HarnessSettingsSection({ titleHidden = false }: { titleHidden?: 
 				...current,
 				phase: result?.agent.authStatus === "unauthorized" ? "unauthorized" : "unverified",
 				reason: result?.agent.authStatus === "unauthorized"
-					? t("settings.harness.notLoggedIn")
-					: t("settings.harness.loginUnknown"),
+					? "Not logged in"
+					: "Login status unknown",
 			}
 			: current);
-	}, [checkAuth, queryClient, t]);
+	}, [checkAuth, queryClient]);
 
 	const closeAuth = useCallback(async (workflow: AuthTerminalWorkflow): Promise<boolean> => {
 		if (authWorkflowRef.current?.terminal.handleId !== workflow.terminal.handleId) return false;
@@ -314,11 +312,11 @@ export function HarnessSettingsSection({ titleHidden = false }: { titleHidden?: 
 			return true;
 		} catch (error) {
 			setAuthWorkflow((current) => current?.terminal.handleId === workflow.terminal.handleId
-				? { ...current, phase: "cleanup_failed", reason: error instanceof Error ? error.message : t("settings.harness.authFailed") }
+				? { ...current, phase: "cleanup_failed", reason: error instanceof Error ? error.message : "Authentication failed." }
 				: current);
 			return false;
 		}
-	}, [checkAuth, queryClient, t]);
+	}, [checkAuth, queryClient]);
 
 	useEffect(() => {
 		if (!authWorkflow || authWorkflow.phase !== "running") return;
@@ -332,17 +330,17 @@ export function HarnessSettingsSection({ titleHidden = false }: { titleHidden?: 
 			try {
 				await closeAuthTerminal(handleId);
 				setAuthWorkflow((current) => current?.terminal.handleId === handleId
-					? { ...current, phase: "timed_out", reason: t("settings.harness.authTimedOut") }
+					? { ...current, phase: "timed_out", reason: "Authentication timed out. Retry to continue." }
 					: current);
 				void queryClient.invalidateQueries({ queryKey: shellTerminalsQueryKey });
 			} catch (error) {
 				setAuthWorkflow((current) => current?.terminal.handleId === handleId
-					? { ...current, phase: "cleanup_failed", reason: error instanceof Error ? error.message : t("settings.harness.authFailed") }
+					? { ...current, phase: "cleanup_failed", reason: error instanceof Error ? error.message : "Authentication failed." }
 					: current);
 			}
 		}, remaining);
 		return () => window.clearTimeout(timeout);
-	}, [authWorkflow, queryClient, t]);
+	}, [authWorkflow, queryClient]);
 
 	useEffect(() => () => {
 		const workflow = authWorkflowRef.current;
@@ -361,29 +359,29 @@ export function HarnessSettingsSection({ titleHidden = false }: { titleHidden?: 
 			if (error) throw new Error(apiErrorMessage(error));
 			await queryClient.invalidateQueries({ queryKey: agentReadinessQueryKey });
 		} catch (error) {
-			setRefreshError(error instanceof Error ? error.message : t("settings.harness.loadFailed"));
+			setRefreshError(error instanceof Error ? error.message : "Could not load harness installation status.");
 		}
 	};
 
 	return (
-		<SettingsSection title={t("settings.harness")} titleHidden={titleHidden} sectionId="harness">
+		<SettingsSection title={"Harness"} titleHidden={titleHidden} sectionId="harness">
 			<div className="flex items-center gap-2 px-1">
 				<label className="flex h-9 min-w-0 flex-1 items-center gap-2 rounded-md border border-(--color-border-settings-input) bg-(--color-bg-settings-input) px-3">
 					<Search aria-hidden="true" className="size-4 shrink-0 text-settings-muted" />
-					<span className="sr-only">{t("settings.harness.search")}</span>
-					<input aria-label={t("settings.harness.search")} className="min-w-0 flex-1 bg-transparent text-sm text-settings-label outline-none placeholder:text-settings-muted" placeholder={t("settings.harness.searchPlaceholder")} value={search} onChange={(event) => setSearch(event.target.value)} />
+					<span className="sr-only">{"Search harnesses"}</span>
+					<input aria-label={"Search harnesses"} className="min-w-0 flex-1 bg-transparent text-sm text-settings-label outline-none placeholder:text-settings-muted" placeholder={"Search harnesses…"} value={search} onChange={(event) => setSearch(event.target.value)} />
 				</label>
-				<Button aria-label={t("settings.harness.refresh")} size="icon-sm" variant="outline" onClick={() => void refresh()}>
+				<Button aria-label={"Refresh harness status"} size="icon-sm" variant="outline" onClick={() => void refresh()}>
 					<RefreshCw className={cn((agents.isFetching || installers.isFetching || jobs.isFetching) && "animate-spin")} />
 				</Button>
 			</div>
 
-			<p className="px-1 text-xs text-settings-muted">{t("settings.harness.summary", { installed: installed.size, total: AGENT_OPTIONS.length })}</p>
+			<p className="px-1 text-xs text-settings-muted">{`${installed.size} of ${AGENT_OPTIONS.length} installed`}</p>
 
 			{installers.error || authPlans.error || agents.error || jobs.error || refreshError ? (
 				<div className="flex items-center gap-2 rounded-md border border-error/30 bg-error/10 px-3 py-2 text-xs text-error">
 					<TriangleAlert className="size-4" aria-hidden="true" />
-					{refreshError ?? (jobs.error instanceof Error ? jobs.error.message : t("settings.harness.loadFailed"))}
+					{refreshError ?? (jobs.error instanceof Error ? jobs.error.message : "Could not load harness installation status.")}
 				</div>
 			) : null}
 
@@ -415,15 +413,15 @@ export function HarnessSettingsSection({ titleHidden = false }: { titleHidden?: 
 					const authSummary = authState?.error
 						? authState.error
 						: authStatus === "authorized"
-							? (isSetupAction ? t("settings.harness.configured") : t("settings.harness.loggedIn"))
+							? (isSetupAction ? "Configured" : "Logged in")
 							: authPlan && !authPlan.available
-								? (authPlan.reason ?? t("settings.harness.authFailed"))
+								? (authPlan.reason ?? "Authentication failed.")
 								: authStatus === "unauthorized"
-									? (isSetupAction ? t("settings.harness.notConfigured") : t("settings.harness.notLoggedIn"))
-									: isSetupAction ? t("settings.harness.configurationUnknown") : t("settings.harness.loginUnknown");
+									? (isSetupAction ? "Not configured" : "Not logged in")
+									: isSetupAction ? "Configuration status unknown" : "Login status unknown";
 					const methodLabel = selectedMethod?.label ?? plan?.method;
 					const methodSelect = availableMethods.length > 1 ? (
-						<select aria-label={t("settings.harness.installMethod")} className="h-8 rounded-md border border-(--color-border-settings-input) bg-(--color-bg-settings-input) px-2 text-xs text-settings-label" value={selectedMethodId} onChange={(event) => setSelectedMethods((current) => ({ ...current, [agentId]: event.target.value }))}>
+						<select aria-label={"Installation method"} className="h-8 rounded-md border border-(--color-border-settings-input) bg-(--color-bg-settings-input) px-2 text-xs text-settings-label" value={selectedMethodId} onChange={(event) => setSelectedMethods((current) => ({ ...current, [agentId]: event.target.value }))}>
 							{availableMethods.map((method) => <option key={method.id} value={method.id}>{method.label}</option>)}
 						</select>
 					) : null;
@@ -434,29 +432,29 @@ export function HarnessSettingsSection({ titleHidden = false }: { titleHidden?: 
 							{authStatus === "authorized" ? (
 								<span className="inline-flex items-center gap-1 text-xs font-medium text-success">
 									<Check className="size-4" aria-hidden="true" />
-									{isSetupAction ? t("settings.harness.configured") : t("settings.harness.loggedIn")}
+									{isSetupAction ? "Configured" : "Logged in"}
 								</span>
 							) : (
 								<Button disabled={!authPlan.available || authState?.pending || Boolean(authWorkflow)} size="sm" onClick={() => void startAuth(agentId)}>
 									{authState?.pending ? <LoaderCircle className="animate-spin" aria-hidden="true" /> : null}
 									{authState?.pending
-										? t("settings.harness.loggingIn")
+										? "Opening…"
 										: authPlan.action === "setup"
-											? t("settings.harness.setup")
-											: t("settings.harness.login")}
+											? "Set up"
+											: "Login"}
 								</Button>
 							)}
 							{authPlan.available && (authStatus === "unknown" || authStatus === "unauthorized") ? (
 								<Button disabled={authState?.checking} size="sm" variant="outline" onClick={() => void checkAuth(agentId)}>
 									{authState?.checking ? <LoaderCircle className="animate-spin" aria-hidden="true" /> : <RefreshCw aria-hidden="true" />}
 									{authState?.checking
-										? t("settings.harness.checkingLogin")
-										: isSetupAction ? t("settings.harness.checkConfiguration") : t("settings.harness.checkLogin")}
+										? "Checking…"
+										: isSetupAction ? "Check configuration" : "Check login"}
 								</Button>
 							) : null}
 						</>
 					) : (
-						<span className="text-xs text-settings-muted">{t("settings.harness.installed")}</span>
+						<span className="text-xs text-settings-muted">{"Installed"}</span>
 					);
 					return (
 						<div className="settings-row-bar min-h-14 flex-wrap gap-3" data-agent={agentId} key={agentId}>
@@ -466,42 +464,42 @@ export function HarnessSettingsSection({ titleHidden = false }: { titleHidden?: 
 								<p className={cn("truncate text-xs text-settings-muted", rowHasError && "text-error")} title={authState?.error ?? actionError ?? job?.error ?? authPlan?.reason ?? plan?.reason}>
 									{isInstalled
 										? authSummary
-										: actionError ?? (job?.status === "interrupted" ? t("settings.harness.interrupted") : failed ? (job?.error ?? t("settings.harness.installFailed")) : plan?.available ? t("settings.harness.availableWith", { method: methodLabel }) : (plan?.reason ?? t("settings.harness.manualRequired")))}
+										: actionError ?? (job?.status === "interrupted" ? "Interrupted" : failed ? (job?.error ?? "Installation failed.") : plan?.available ? `Available via ${methodLabel}` : (plan?.reason ?? "Manual installation required."))}
 								</p>
 							</div>
 							{active ? (
-								<span className="inline-flex items-center gap-1.5 text-xs text-settings-muted" role="status"><LoaderCircle className="size-4 animate-spin" aria-hidden="true" />{job?.status === "installing" ? t("settings.harness.installing") : t("settings.harness.verifying")}</span>
+								<span className="inline-flex items-center gap-1.5 text-xs text-settings-muted" role="status"><LoaderCircle className="size-4 animate-spin" aria-hidden="true" />{job?.status === "installing" ? "Installing…" : "Verifying…"}</span>
 							) : isInstalled ? (
 								<div className="flex shrink-0 items-center gap-2">{authControls}</div>
 							) : failed ? (
 								<div className="flex items-center gap-1.5">
 									{methodSelect}
-									<Button size="sm" variant="outline" disabled={pending} onClick={() => void verifyInstall(agentId)}>{t("settings.harness.verifyAgain")}</Button>
-									{selectedMethodId ? <Button size="sm" onClick={() => void startInstall(agentId, selectedMethodId)} disabled={pending}>{t("settings.harness.retry")}</Button> : null}
+									<Button size="sm" variant="outline" disabled={pending} onClick={() => void verifyInstall(agentId)}>{"Verify again"}</Button>
+									{selectedMethodId ? <Button size="sm" onClick={() => void startInstall(agentId, selectedMethodId)} disabled={pending}>{"Retry"}</Button> : null}
 								</div>
 							) : !plan && installers.isPending ? (
 								<span className="inline-flex items-center gap-1.5 text-xs text-settings-muted" role="status"><LoaderCircle className="size-4 animate-spin" aria-hidden="true" /></span>
 							) : availableMethods.length > 0 ? (
 								<div className="flex items-center gap-1.5">
 									{methodSelect}
-									<Button size="sm" disabled={pending} onClick={() => selectedMethodId && void startInstall(agentId, selectedMethodId)}><Download aria-hidden="true" />{t("settings.harness.install")}</Button>
+									<Button size="sm" disabled={pending} onClick={() => selectedMethodId && void startInstall(agentId, selectedMethodId)}><Download aria-hidden="true" />{"Install"}</Button>
 								</div>
 							) : plan?.command ? (
-								<Button size="sm" variant="outline" onClick={() => void copyText(agentId, plan.command!)}>{copiedAgent === agentId ? <Check aria-hidden="true" /> : <Copy aria-hidden="true" />}{copiedAgent === agentId ? t("settings.harness.copied") : t("settings.harness.copyCommand")}</Button>
+								<Button size="sm" variant="outline" onClick={() => void copyText(agentId, plan.command!)}>{copiedAgent === agentId ? <Check aria-hidden="true" /> : <Copy aria-hidden="true" />}{copiedAgent === agentId ? "Copied" : "Copy command"}</Button>
 							) : null}
 
 							{hasDiagnostics ? (
 								<div className="basis-full pl-10">
 									<Button aria-expanded={expandedDiagnostics[agentId] === true} size="sm" variant="ghost" onClick={() => setExpandedDiagnostics((current) => ({ ...current, [agentId]: !current[agentId] }))}>
-										{expandedDiagnostics[agentId] ? t("settings.harness.hideDiagnostics") : t("settings.harness.showDiagnostics")}
+										{expandedDiagnostics[agentId] ? "Hide diagnostics" : "Show diagnostics"}
 									</Button>
 									{expandedDiagnostics[agentId] ? (
 										<div className="mt-1 rounded-md border border-(--color-border-settings-input) bg-(--color-bg-settings-input) p-3 text-xs text-settings-muted">
-											{job?.method ? <p><span className="font-medium text-settings-label">{t("settings.harness.method")}:</span> {job.method}</p> : null}
-											{job?.expectedDestination ? <p className="break-all"><span className="font-medium text-settings-label">{t("settings.harness.expectedDestination")}:</span> {job.expectedDestination}</p> : null}
+											{job?.method ? <p><span className="font-medium text-settings-label">{"Method"}:</span> {job.method}</p> : null}
+											{job?.expectedDestination ? <p className="break-all"><span className="font-medium text-settings-label">{"Expected destination"}:</span> {job.expectedDestination}</p> : null}
 											{job?.error ? <p className="mt-2 whitespace-pre-wrap text-error">{job.error}</p> : null}
 											{job?.output ? <pre className="mt-2 max-h-40 overflow-auto whitespace-pre-wrap break-words font-mono">{job.output}</pre> : null}
-											<Button className="mt-2" size="sm" variant="outline" onClick={() => job && void copyText(agentId, diagnosticsText(agentId, job))}><Copy aria-hidden="true" />{t("settings.harness.copyDiagnostics")}</Button>
+											<Button className="mt-2" size="sm" variant="outline" onClick={() => job && void copyText(agentId, diagnosticsText(agentId, job))}><Copy aria-hidden="true" />{"Copy diagnostics"}</Button>
 										</div>
 									) : null}
 								</div>
@@ -523,7 +521,7 @@ export function HarnessSettingsSection({ titleHidden = false }: { titleHidden?: 
 						</div>
 					);
 				})}
-				{rows.length === 0 ? <p className="px-3 py-6 text-center text-sm text-settings-muted">{t("settings.harness.noResults")}</p> : null}
+				{rows.length === 0 ? <p className="px-3 py-6 text-center text-sm text-settings-muted">{"No harnesses match your search."}</p> : null}
 			</div>
 		</SettingsSection>
 	);
@@ -535,7 +533,6 @@ function HarnessAuthTerminalPanel({ workflow, onClose, onRetry, onTerminalState 
 	onRetry: () => void;
 	onTerminalState: (state: TerminalSessionState) => void;
 }) {
-	const { t } = useTranslation();
 	const theme = useResolvedTheme();
 	const shell = useShellMaybe();
 	const panelRef = useRef<HTMLDivElement>(null);
@@ -555,12 +552,12 @@ function HarnessAuthTerminalPanel({ workflow, onClose, onRetry, onTerminalState 
 		panelRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
 	}, [workflow.terminal.handleId]);
 	const status = workflow.phase === "running"
-		? workflow.guidance || t("settings.harness.loggingIn")
+		? workflow.guidance || "Opening…"
 		: workflow.phase === "verifying"
-			? t("settings.harness.checkingLogin")
+			? "Checking…"
 			: workflow.phase === "closing"
-				? t("settings.harness.authClosing")
-				: workflow.reason ?? t("settings.harness.loginUnknown");
+				? "Closing authentication terminal…"
+				: workflow.reason ?? "Login status unknown";
 	const retryable = workflow.phase === "unauthorized" || workflow.phase === "unverified" || workflow.phase === "timed_out" || workflow.phase === "cleanup_failed";
 	const openAuthAction = () => {
 		if (!workflow.terminalInput || terminalState !== "attached" || commandPending || commandSent) return;
@@ -588,11 +585,11 @@ function HarnessAuthTerminalPanel({ workflow, onClose, onRetry, onTerminalState 
 						<Button type="button" size="sm" variant="outline" disabled={terminalState !== "attached" || commandPending || commandSent} onClick={openAuthAction}>
 							{commandSent ? <Check aria-hidden="true" /> : <LogIn aria-hidden="true" />}
 							{workflow.action === "setup"
-								? commandSent ? t("settings.harness.setupOpened") : t("settings.harness.openSetup")
-								: commandSent ? t("settings.harness.loginOpened") : t("settings.harness.openLogin")}
+								? commandSent ? "Setup opened" : "Open setup"
+								: commandSent ? "Login opened" : "Open login"}
 						</Button>
 					) : null}
-					<button type="button" aria-label={t("settings.close")} className="grid size-7 place-items-center rounded text-settings-muted hover:bg-interactive-hover" disabled={workflow.phase === "closing" || workflow.phase === "verifying"} onClick={onClose}>
+					<button type="button" aria-label={"Close settings"} className="grid size-7 place-items-center rounded text-settings-muted hover:bg-interactive-hover" disabled={workflow.phase === "closing" || workflow.phase === "verifying"} onClick={onClose}>
 						<X className="size-4" aria-hidden="true" />
 					</button>
 				</div>
@@ -612,8 +609,8 @@ function HarnessAuthTerminalPanel({ workflow, onClose, onRetry, onTerminalState 
 				<div className="flex items-center justify-end border-t border-(--color-border-settings-input) bg-surface/90 px-3 py-2">
 					<Button type="button" size="sm" variant="outline" onClick={workflow.phase === "cleanup_failed" ? onClose : onRetry}>
 						{workflow.phase === "cleanup_failed"
-							? t("settings.harness.retry")
-							: workflow.action === "setup" ? t("settings.harness.setup") : t("settings.harness.login")}
+							? "Retry"
+							: workflow.action === "setup" ? "Set up" : "Login"}
 					</Button>
 				</div>
 			) : null}

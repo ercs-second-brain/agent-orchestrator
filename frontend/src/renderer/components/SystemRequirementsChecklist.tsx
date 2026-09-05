@@ -1,8 +1,5 @@
 import { CheckCircle2, TriangleAlert, XCircle } from "lucide-react";
-import type { TFunction } from "i18next";
-import { useTranslation } from "react-i18next";
 import type { components } from "../../api/schema";
-import type { MessageKey } from "../i18n";
 
 export type SystemRequirement = components["schemas"]["SystemRequirement"];
 
@@ -11,26 +8,23 @@ const STAGGER_STEP_MS = 150;
 
 // The backend's stable id -> label for "harness" is "agent harness" (see
 // systemcheck.go); the product name for this row is "Coding agent".
-export function requirementDisplayLabel(requirement: SystemRequirement, t: TFunction): string {
-	return requirement.id === "harness" ? t("startup.codingAgentLabel") : requirement.label;
+export function requirementDisplayLabel(requirement: SystemRequirement): string {
+	return requirement.id === "harness" ? "Coding agent" : requirement.label;
 }
 
-const MISSING_DETAIL_KEYS: Record<string, MessageKey> = {
-	git: "startup.detailGitMissing",
-	tmux: "startup.detailTmuxMissing",
-	harness: "startup.detailHarnessMissing",
-	gh: "startup.detailGhMissing",
+const MISSING_DETAILS: Record<string, string> = {
+	git: "git was not found on PATH.",
+	tmux: "tmux was not found on PATH; it is required on macOS/Linux to start sessions.",
+	harness: "No agent CLI (Claude Code, Codex, etc.) was found on PATH.",
+	gh: "gh was not found on PATH. It lets agent sessions open pull requests and read issues, but AO runs fine without it.",
 };
 
 // requirement.detail is backend-authoritative (systemcheck.go) and hardcoded
 // English. That's fine when satisfied — it's a resolved path or a
-// comma-joined list of installed agent names, not prose — but the "why this
-// is missing" sentence needs to live in the frontend's i18n system like every
-// other string here, not leak untranslated English next to a localized label.
-export function requirementDetailText(requirement: SystemRequirement, t: TFunction): string | undefined {
+// comma-joined list of installed agent names, not prose.
+export function requirementDetailText(requirement: SystemRequirement): string | undefined {
 	if (requirement.satisfied) return requirement.detail;
-	const key = MISSING_DETAIL_KEYS[requirement.id];
-	return key ? t(key) : requirement.detail;
+	return MISSING_DETAILS[requirement.id] ?? requirement.detail;
 }
 
 /** Checklist of startup requirements, in the backend's stable order. */
@@ -41,7 +35,6 @@ export function SystemRequirementsChecklist({
 	requirements: SystemRequirement[];
 	ready: boolean;
 }) {
-	const { t } = useTranslation();
 	return (
 		<div
 			aria-live="polite"
@@ -56,16 +49,16 @@ export function SystemRequirementsChecklist({
 				>
 					<RequirementGlyph requirement={requirement} />
 					<div className="min-w-0">
-						<p className="text-control font-medium text-foreground">{requirementDisplayLabel(requirement, t)}</p>
-						{requirementDetailText(requirement, t) ? (
-							<p className="text-caption leading-snug text-muted-foreground">{requirementDetailText(requirement, t)}</p>
+						<p className="text-control font-medium text-foreground">{requirementDisplayLabel(requirement)}</p>
+						{requirementDetailText(requirement) ? (
+							<p className="text-caption leading-snug text-muted-foreground">{requirementDetailText(requirement)}</p>
 						) : null}
 					</div>
 				</div>
 			))}
 			{ready ? (
 				<p className="ao-startup-checklist__row mt-0.5 text-caption font-medium text-success">
-					{t("startup.allChecksPassed")}
+					{"All checks passed"}
 				</p>
 			) : null}
 		</div>

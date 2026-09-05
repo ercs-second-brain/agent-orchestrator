@@ -13,7 +13,6 @@ import {
 	type RefObject,
 } from "react";
 import { createPortal } from "react-dom";
-import { useTranslation } from "react-i18next";
 import type { components } from "../../api/schema";
 import { defaultShortcutBindings, shortcutBindingLabel } from "../../shared/shortcuts";
 import { BrowserPanelView, useBrowserAnnotationQueue } from "./BrowserPanel";
@@ -373,7 +372,6 @@ function SessionInspectorRail({
 // automatically grows into a co-work canvas. Chat readability clamps either
 // profile before the conversation can become unusably narrow.
 export function SessionView({ sessionId, projectId }: SessionViewProps) {
-	const { t } = useTranslation();
 	const queryClient = useQueryClient();
 	const refreshWorkspaces = useCallback(
 		() => queryClient.invalidateQueries({ queryKey: workspaceQueryKey }),
@@ -986,7 +984,7 @@ export function SessionView({ sessionId, projectId }: SessionViewProps) {
 			<Tooltip>
 				<TooltipTrigger asChild>
 					<TopbarButton
-						aria-label={t("shortcut.new-shell-terminal")}
+						aria-label={"New terminal"}
 						onClick={addShellTerminal}
 						type="button"
 						variant="icon"
@@ -995,7 +993,7 @@ export function SessionView({ sessionId, projectId }: SessionViewProps) {
 					</TopbarButton>
 				</TooltipTrigger>
 				<TooltipContent side="bottom">
-					{newTerminalError ?? t("terminal.newWithShortcut", { shortcut: newTerminalShortcutLabel })}
+					{newTerminalError ?? `New terminal (${newTerminalShortcutLabel})`}
 				</TooltipContent>
 			</Tooltip>
 		) : null;
@@ -1182,9 +1180,9 @@ export function SessionView({ sessionId, projectId }: SessionViewProps) {
 
 	const fetchWorkspaceFiles = useCallback(async () => {
 		return queryClient.fetchQuery(
-			sessionWorkspaceFilesQueryOptions(sessionId, t("files.error.loadWorkspace")),
+			sessionWorkspaceFilesQueryOptions(sessionId, "Unable to load workspace files"),
 		);
-	}, [queryClient, sessionId, t]);
+	}, [queryClient, sessionId]);
 
 	const revealResolvedWorkspaceFile = useCallback(
 		async (rawPath: string) => {
@@ -1452,8 +1450,8 @@ export function SessionView({ sessionId, projectId }: SessionViewProps) {
 		return (
 			<div className="grid h-full place-items-center p-6 text-center font-mono text-xs text-passive">
 				{workspaceQuery.isLoading
-					? t("terminal.preparingOrchestrator")
-					: settledError || t("session.notFound")}
+					? "Preparing the orchestrator terminal. This can take a moment while AO creates the workspace and starts the agent."
+					: settledError || "Session not found. It may have been cleaned up — pick another from the sidebar."}
 			</div>
 		);
 	}
@@ -1467,13 +1465,13 @@ export function SessionView({ sessionId, projectId }: SessionViewProps) {
 				>
 					<div className="flex max-w-sm flex-col items-center gap-3 rounded-xl border border-border bg-card px-6 py-5 text-center shadow-lg">
 						<div aria-live="assertive" className="flex flex-col items-center gap-3" role="status">
-							{codexAccountSwitchPresentation?.busy ? <LoaderCircle className="size-5 animate-spin text-passive" aria-label={t(codexAccountSwitchPresentation.key)} /> : null}
+							{codexAccountSwitchPresentation?.busy ? <LoaderCircle className="size-5 animate-spin text-passive" aria-label={codexAccountSwitchPresentation.key} /> : null}
 							<p className="text-sm font-medium">
 								{codexAccountSwitchPresentation?.canRecover
-									? t(codexAccountSwitchPresentation.key)
-									: t("settings.codexAccounts.switchingSessions")}
+									? codexAccountSwitchPresentation.key
+									: "Switching the device Codex account and restarting AO sessions"}
 							</p>
-							{codexAccountSwitchPresentation && !codexAccountSwitchPresentation.canRecover ? <p className="text-xs text-passive">{t(codexAccountSwitchPresentation.key)}</p> : null}
+							{codexAccountSwitchPresentation && !codexAccountSwitchPresentation.canRecover ? <p className="text-xs text-passive">{codexAccountSwitchPresentation.key}</p> : null}
 						</div>
 						{codexAccountSwitchPresentation?.canRecover && codexAccountSwitch ? (
 							<Button
@@ -1483,8 +1481,8 @@ export function SessionView({ sessionId, projectId }: SessionViewProps) {
 								disabled={codexAccountActions.recoverPending}
 								onClick={() => void codexAccountActions.recoverSwitch(codexAccountSwitch.id)}
 							>
-								{codexAccountActions.recoverPending ? <LoaderCircle className="animate-spin" aria-label={t("settings.codexAccounts.recovering")} /> : null}
-								{t("settings.codexAccounts.retryRecovery")}
+								{codexAccountActions.recoverPending ? <LoaderCircle className="animate-spin" aria-label={"Recovering sessions"} /> : null}
+								{"Retry recovery"}
 							</Button>
 						) : null}
 						{codexAccountActions.error ? <p className="text-xs text-error" role="alert">{codexAccountActions.error}</p> : null}
@@ -1670,7 +1668,7 @@ export function SessionView({ sessionId, projectId }: SessionViewProps) {
 					<Tooltip>
 						<TooltipTrigger asChild>
 							<TopbarButton
-								aria-label={isInspectorOpen ? t("shell.closeInspector") : t("shell.openInspector")}
+								aria-label={isInspectorOpen ? "Close inspector panel" : "Open inspector panel"}
 								aria-pressed={isInspectorOpen}
 								onClick={handleToggleInspector}
 								style={noDragStyle}
@@ -1680,7 +1678,7 @@ export function SessionView({ sessionId, projectId }: SessionViewProps) {
 							</TopbarButton>
 						</TooltipTrigger>
 						<TooltipContent side="bottom">
-							{isInspectorOpen ? t("shell.closeInspectorTitle") : t("shell.openInspectorTitle")}
+							{isInspectorOpen ? "Close inspector · ⌘⇧B" : "Open inspector · ⌘⇧B"}
 						</TooltipContent>
 					</Tooltip>
 					{/* Keep the global notification action trailing at the window edge. */}

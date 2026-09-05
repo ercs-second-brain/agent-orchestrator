@@ -10,8 +10,6 @@ import {
 	type RefObject,
 } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import type { TFunction } from "i18next";
-import { useTranslation } from "react-i18next";
 import { Check, Plus, Send as SendIcon } from "lucide-react";
 import type { FileAnnotationTarget } from "../../shared/file-annotations";
 import {
@@ -22,7 +20,7 @@ import {
 import { useParsedDiff } from "../hooks/useParsedDiff";
 import { useDiffHighlight } from "../hooks/useDiffHighlight";
 import { cn } from "../lib/utils";
-import { statusLabel, statusTone } from "../lib/workspace-file-status";
+import { statusLabel, statusText, statusTone } from "../lib/workspace-file-status";
 import type { DiffRow, DiffRowKind } from "../lib/diff-parser";
 import type { DiffRun } from "../lib/diff-highlight";
 import type { DiffSelectionLine } from "../../shared/diff-selection";
@@ -55,8 +53,8 @@ export function canSplitCompare(status: WorkspaceFileStatus): boolean {
 }
 
 
-function emptyDiffMessage(compareMode: WorkspaceCompareMode | undefined, t: TFunction): string {
-	return compareMode === "base" ? t("files.noChangesBase") : t("files.noChangesHead");
+function emptyDiffMessage(compareMode: WorkspaceCompareMode | undefined): string {
+	return compareMode === "base" ? "No changes against base." : "No changes against HEAD.";
 }
 
 
@@ -81,7 +79,6 @@ export function ReviewDiffBody({
 	split: boolean;
 	wrap: boolean;
 }) {
-	const { t } = useTranslation();
 	const { rows, pending } = useParsedDiff(detail.diff);
 	// An image has no readable line diff, so it renders as the images themselves
 	// rather than the binary placeholder.
@@ -97,13 +94,13 @@ export function ReviewDiffBody({
 		);
 	}
 	if (detail.binary) {
-		return <PanelMessage compact>{t("files.binaryUnavailable")}</PanelMessage>;
+		return <PanelMessage compact>{"Binary file preview is not available."}</PanelMessage>;
 	}
 	if (pending) {
-		return <PanelMessage compact>{t("files.loadingDiff")}</PanelMessage>;
+		return <PanelMessage compact>{"Loading diff..."}</PanelMessage>;
 	}
 	if (rows.length === 0) {
-		return emptyFallback ?? <PanelMessage compact>{emptyDiffMessage(detail.compareMode, t)}</PanelMessage>;
+		return emptyFallback ?? <PanelMessage compact>{emptyDiffMessage(detail.compareMode)}</PanelMessage>;
 	}
 	return (
 		<DiffView
@@ -274,7 +271,6 @@ function DiffView({
 	truncated?: boolean;
 	wrap: boolean;
 }) {
-	const { t } = useTranslation();
 	const containerRef = useRef<HTMLDivElement>(null);
 	const [hasSelection, setHasSelection] = useState(false);
 	const [menuState, setMenuState] = useState<DiffViewMenuState | null>(null);
@@ -340,7 +336,7 @@ function DiffView({
 		<div>
 			{truncated ? (
 				<div className="shrink-0 border-b border-border bg-warning/10 px-3 py-1.5 text-xs text-warning">
-					{t("files.diffTruncated")}
+					{"Diff preview truncated."}
 				</div>
 			) : null}
 			<div
@@ -356,7 +352,6 @@ function DiffView({
 						path={path}
 						previousPath={previousPath}
 						rows={rows}
-						t={t}
 					/>
 				) : shouldVirtualize ? (
 					<div
@@ -386,7 +381,6 @@ function DiffView({
 										previousPath={previousPath}
 										row={row}
 										runs={runs[virtualRow.index]}
-										t={t}
 										wrap={wrap}
 									/>
 								</div>
@@ -404,7 +398,6 @@ function DiffView({
 								previousPath={previousPath}
 								row={row}
 								runs={runs[index]}
-								t={t}
 								wrap={wrap}
 							/>
 						))}
@@ -440,13 +433,12 @@ type DiffRowContentProps = {
 	previousPath?: string;
 	row: DiffRow;
 	runs: DiffRun[];
-	t: TFunction;
 	wrap: boolean;
 };
 
 // One unified-view diff row, shared between the plain (non-virtualized) and
 // virtualized render paths so they can't drift apart from each other.
-function DiffRowContentInner({ annotation, index, path, previousPath, row, runs, t, wrap }: DiffRowContentProps) {
+function DiffRowContentInner({ annotation, index, path, previousPath, row, runs, wrap }: DiffRowContentProps) {
 	if (row.kind === "hunk") return <HunkBand row={row} />;
 	return (
 		<div>
@@ -461,7 +453,6 @@ function DiffRowContentInner({ annotation, index, path, previousPath, row, runs,
 				<LineFeedbackButton
 					active={isAnnotationRow(annotation.target, path, index)}
 					onClick={() => annotation.begin(lineAnnotationTarget(path, previousPath, row, index))}
-					t={t}
 					target={lineAnnotationTarget(path, previousPath, row, index)}
 				/>
 				<span className="w-9 shrink-0 select-none border-r border-border/50 bg-terminal px-1.5 text-right text-passive/70 tabular-nums">
@@ -493,7 +484,7 @@ function DiffRowContentInner({ annotation, index, path, previousPath, row, runs,
 // `annotation` changes; every other row only cares about `row`/`index`/
 // `path`/`previousPath`/`wrap`, which are stable across scroll-driven
 // re-renders. This is what actually lets scrolling skip re-running the
-// i18next calls, cn() calls, and nested Button for rows that are already
+// cn() calls and nested Button for rows that are already
 // mounted and unchanged.
 const DiffRowContent = memo(DiffRowContentInner, (prev, next) => {
 	if (
@@ -563,7 +554,6 @@ function SplitDiff({
 	path,
 	previousPath,
 	rows,
-	t,
 }: {
 	annotation: FileAnnotationModel;
 	newRuns: DiffRun[][];
@@ -571,7 +561,6 @@ function SplitDiff({
 	path: string;
 	previousPath?: string;
 	rows: DiffRow[];
-	t: TFunction;
 }) {
 	const splitRows = useMemo(() => toSplitRows(rows), [rows]);
 	return (
@@ -590,7 +579,6 @@ function SplitDiff({
 								rowIndex={splitRow.leftIndex}
 								runs={splitRow.leftIndex === null ? null : oldRuns[splitRow.leftIndex]}
 								side="old"
-								t={t}
 							/>
 							<SplitSide
 								annotation={annotation}
@@ -600,7 +588,6 @@ function SplitDiff({
 								rowIndex={splitRow.rightIndex}
 								runs={splitRow.rightIndex === null ? null : newRuns[splitRow.rightIndex]}
 								side="new"
-								t={t}
 							/>
 						</div>
 						{(splitRow.leftIndex !== null && isAnnotationRow(annotation.target, path, splitRow.leftIndex)) ||
@@ -622,7 +609,6 @@ function SplitSide({
 	rowIndex,
 	runs,
 	side,
-	t,
 }: {
 	annotation: FileAnnotationModel;
 	path: string;
@@ -631,7 +617,6 @@ function SplitSide({
 	rowIndex: number | null;
 	runs: DiffRun[] | null;
 	side: "old" | "new";
-	t: TFunction;
 }) {
 	if (!row || rowIndex === null || !runs) return <div className="bg-surface-faint/20" aria-hidden="true" />;
 	const lineNo = side === "old" ? row.oldNo : row.newNo;
@@ -650,7 +635,6 @@ function SplitSide({
 				<LineFeedbackButton
 					active={isAnnotationRow(annotation.target, path, rowIndex)}
 					onClick={() => annotation.begin(target)}
-					t={t}
 					target={target}
 				/>
 			) : null}
@@ -686,25 +670,20 @@ function isAnnotationRow(target: ActiveFileAnnotationTarget | null, path: string
 	return target?.path === path && target.side !== "file" && target.rowIndex === rowIndex;
 }
 
-// `t` comes from the caller (which already holds one useTranslation()
-// subscription) rather than calling useTranslation() here: this button is
-// invisible until hover on every diff row, and a virtualized file can mount
-// dozens of them per scroll tick — a separate i18n context subscription per
-// row added up on large files.
+// This button is invisible until hover on every diff row, and a virtualized
+// file can mount dozens of them per scroll tick, so it stays cheap on purpose.
 function LineFeedbackButton({
 	active,
 	onClick,
-	t,
 	target,
 }: {
 	active: boolean;
 	onClick: () => void;
-	t: TFunction;
 	target: ActiveFileAnnotationTarget;
 }) {
 	if (active) return null;
-	const side = t(target.side === "old" ? "files.oldSide" : "files.newSide");
-	const label = t("files.addLineFeedback", { file: target.path, line: target.line, side });
+	const side = (target.side === "old" ? "old" : "new");
+	const label = `Add feedback on ${side} line ${target.line} in ${target.path}`;
 	return (
 		<Button
 			aria-label={label}
@@ -720,14 +699,13 @@ function LineFeedbackButton({
 }
 
 export function FileAnnotationComposer({ annotation }: { annotation: FileAnnotationModel }) {
-	const { t } = useTranslation();
 	const target = annotation.target;
 	if (!target) return null;
-	const side = target.side === "file" ? "" : t(target.side === "old" ? "files.oldSide" : "files.newSide");
+	const side = target.side === "file" ? "" : (target.side === "old" ? "old" : "new");
 	const targetLabel =
 		target.side === "file"
-			? t("files.fileFeedbackTarget", { file: target.path })
-			: t("files.lineFeedbackTarget", { file: target.path, line: target.line, side });
+			? `${target.path} · whole file`
+			: `${target.path} · ${side} line ${target.line}`;
 	const submit = () => void annotation.submit();
 
 	return (
@@ -743,12 +721,12 @@ export function FileAnnotationComposer({ annotation }: { annotation: FileAnnotat
 				{annotation.status === "sent" ? (
 					<span className="inline-flex items-center gap-1 text-caption text-success" role="status">
 						<Check className="size-icon-sm" aria-hidden="true" />
-						{t("files.feedbackSent")}
+						{"Sent to agent"}
 					</span>
 				) : null}
 			</div>
 			<textarea
-				aria-label={t("files.feedbackLabel", { target: targetLabel })}
+				aria-label={`Feedback for ${targetLabel}`}
 				autoFocus
 				className="min-h-20 w-full resize-y rounded-md border border-input bg-background px-2.5 py-2 text-sm text-foreground outline-none placeholder:text-passive focus-visible:outline-none disabled:opacity-60"
 				disabled={annotation.status === "sending" || annotation.status === "sent"}
@@ -762,7 +740,7 @@ export function FileAnnotationComposer({ annotation }: { annotation: FileAnnotat
 						submit();
 					}
 				}}
-				placeholder={t("files.feedbackPlaceholder")}
+				placeholder={"Describe what the agent should change..."}
 				value={annotation.draft}
 			/>
 			{annotation.status === "error" ? (
@@ -771,7 +749,7 @@ export function FileAnnotationComposer({ annotation }: { annotation: FileAnnotat
 				</p>
 			) : null}
 			<div className="mt-2 flex items-center justify-end gap-1.5">
-				<span className="mr-auto text-caption text-passive">{t("files.feedbackShortcut")}</span>
+				<span className="mr-auto text-caption text-passive">{"⌘/Ctrl + Enter to send · Esc to cancel"}</span>
 				<Button
 					disabled={annotation.status === "sending" || annotation.status === "sent"}
 					onClick={annotation.cancel}
@@ -779,7 +757,7 @@ export function FileAnnotationComposer({ annotation }: { annotation: FileAnnotat
 					type="button"
 					variant="ghost"
 				>
-					{t("files.cancelFeedback")}
+					{"Cancel"}
 				</Button>
 				<Button
 					disabled={!annotation.draft.trim() || annotation.status === "sending" || annotation.status === "sent"}
@@ -787,7 +765,7 @@ export function FileAnnotationComposer({ annotation }: { annotation: FileAnnotat
 					type="submit"
 				>
 					<SendIcon className="size-icon-sm" aria-hidden="true" />
-					{annotation.status === "sending" ? t("files.sendingFeedback") : t("files.sendFeedback")}
+					{annotation.status === "sending" ? "Sending..." : "Send feedback"}
 				</Button>
 			</div>
 		</form>
@@ -836,16 +814,14 @@ export function PanelMessage({ action, children, compact = false }: { action?: R
 }
 
 export function RetryButton({ onClick }: { onClick: () => void }) {
-	const { t } = useTranslation();
 	return (
 		<Button onClick={onClick} size="sm" type="button" variant="outline">
-			{t("files.retry")}
+			{"Retry"}
 		</Button>
 	);
 }
 
 export function StatusMark({ status }: { status: WorkspaceFileStatus }) {
-	const { t } = useTranslation();
 	const label = statusLabel[status];
 	return (
 		<span
@@ -853,7 +829,7 @@ export function StatusMark({ status }: { status: WorkspaceFileStatus }) {
 				"inline-flex w-5 shrink-0 items-center justify-center font-mono text-caption font-medium",
 				statusTone[status],
 			)}
-			title={t(`files.status.${status}`)}
+			title={statusText[status] || status}
 		>
 			{label}
 		</span>

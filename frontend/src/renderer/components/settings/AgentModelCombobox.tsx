@@ -1,6 +1,5 @@
 import { ChevronDown, Search } from "lucide-react";
 import { type ReactNode, useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { useTranslation } from "react-i18next";
 import type { AgentModelCatalog } from "../../hooks/useAgentModelsQuery";
 import { useSuppressStrayFocusRing } from "../../hooks/useSuppressStrayFocusRing";
 import { cn } from "../../lib/utils";
@@ -88,7 +87,6 @@ export function AgentModelCombobox({
 	disabled?: boolean;
 	"aria-label": string;
 }) {
-	const { t } = useTranslation();
 	const entryMode = customModelEntry ?? (allowCustom ? "direct" : "none");
 	const allowDirectCustom = entryMode === "direct";
 	const [search, setSearch] = useState("");
@@ -127,14 +125,14 @@ export function AgentModelCombobox({
 			compact
 				? [{ key: "all", label: "", kind: "provider" as const, models: visibleModels }]
 				: groupModels(visibleModels, normalizedSearch === "", value, recentModelIDs, {
-						pinned: t("settings.models.currentDefaults"),
-						recent: t("settings.models.recent"),
+						pinned: "Current & defaults",
+						recent: "Recent",
 					}),
-		[compact, normalizedSearch, recentModelIDs, t, value, visibleModels],
+		[compact, normalizedSearch, recentModelIDs, value, visibleModels],
 	);
 	const customSearchValue = search.trim();
 	const showCustomSearchAction = allowDirectCustom && customSearchValue !== "" && rankedModels.length === 0;
-	const noOverrideLabel = emptyLabel ?? t("settings.models.agentDefault");
+	const noOverrideLabel = emptyLabel ?? "Agent default";
 	const currentLabel = (triggerLabel ?? selected?.label ?? value) || noOverrideLabel;
 	const scrollRef = useRef<HTMLDivElement>(null);
 	const [canScrollDown, setCanScrollDown] = useState(false);
@@ -206,14 +204,10 @@ export function AgentModelCombobox({
 						/>
 						<input
 							type="search"
-							aria-label={t("settings.models.searchAria", { label: ariaLabel.toLocaleLowerCase() })}
+							aria-label={`Search ${ariaLabel.toLocaleLowerCase()}`}
 							value={search}
 							onChange={(event) => setSearch(event.target.value)}
-							placeholder={t(
-								hasMultipleProviders
-									? "settings.models.searchModelsOrProvidersPlaceholder"
-									: "settings.models.searchPlaceholder",
-							)}
+							placeholder={(hasMultipleProviders ? "Search models or providers…" : "Search models…")}
 							className="menu-search-input pl-8!"
 						/>
 					</div>
@@ -256,7 +250,7 @@ export function AgentModelCombobox({
 														<span className="truncate text-settings-label">{item.label}</span>
 														{item.model.isDefault && (
 															<span className="rounded-full bg-settings-menu-selected px-1.5 py-0.5 text-micro text-settings-muted">
-																{t("settings.models.default")}
+																{"Default"}
 															</span>
 														)}
 													</div>
@@ -276,23 +270,21 @@ export function AgentModelCombobox({
 
 						{showCustomSearchAction && (
 							<DropdownMenuItem onSelect={() => onCustom(customSearchValue)} className={modelItemClass(false)}>
-								{t("settings.models.useCustom", { model: customSearchValue })}
+								{`Use “${customSearchValue}” as a custom model`}
 							</DropdownMenuItem>
 						)}
 						{normalizedSearch !== "" && rankedModels.length === 0 && !allowDirectCustom && (
-							<p className="px-2 py-1.5 text-xs text-settings-muted">{t("settings.models.noMatches")}</p>
+							<p className="px-2 py-1.5 text-xs text-settings-muted">{"No matching models."}</p>
 						)}
 						{normalizedSearch === "" && entryMode !== "direct" && (
 							<>
 								<DropdownMenuSeparator />
 								<div className="space-y-1 px-2 py-1.5 text-xs text-settings-muted">
-									<p className="text-settings-label">{t("settings.models.cantFind")}</p>
+									<p className="text-settings-label">{"Can’t find your model?"}</p>
 									<p>
 										{entryMode === "configured"
-											? t("settings.models.configureThenRefresh", {
-													agent: agentLabel || t("settings.models.selectedAgent"),
-												})
-											: t("settings.models.unavailable")}
+											? `Configure the model in ${agentLabel || "the selected agent"}, then refresh.`
+											: "This model isn’t available for this account or agent version."}
 									</p>
 									{onRefresh && (
 										<button
@@ -304,21 +296,18 @@ export function AgentModelCombobox({
 												void Promise.resolve(onRefresh()).catch(() => setRefreshFailed(true));
 											}}
 										>
-											{t("settings.models.refresh")}
+											{"Refresh models"}
 										</button>
 									)}
-									{refreshFailed && <p className="text-warning">{t("settings.models.refreshFailed")}</p>}
+									{refreshFailed && <p className="text-warning">{"Could not refresh models."}</p>}
 								</div>
 							</>
 						)}
 						{showSearch && (
 							<p className="px-2 py-1.5 text-xs text-settings-muted" aria-live="polite">
-								{t("settings.models.matchingCount", {
-									visible: visibleModels.length.toLocaleString(),
-									total: rankedModels.length.toLocaleString(),
-								})}
+								{`Showing ${visibleModels.length.toLocaleString()} of ${rankedModels.length.toLocaleString()} matching models`}
 								{normalizedSearch === "" && rankedModels.length > MAX_VISIBLE_MODELS
-									? t("settings.models.typeToNarrow")
+									? " — type to narrow"
 									: ""}
 							</p>
 						)}

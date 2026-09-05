@@ -9,7 +9,6 @@
 
 import { AlertTriangle, CheckCircle2, Loader2, X } from "lucide-react";
 import { useEffect, type ReactNode } from "react";
-import { useTranslation } from "react-i18next";
 import {
 	findActiveAgentSwitch,
 	selectDurableAgentSwitch,
@@ -446,7 +445,6 @@ function ChatAgentSwitchStatus({
 	onDismiss?: () => void;
 	presentation: AgentSwitchPresentation;
 }) {
-	const { t } = useTranslation();
 	const fullOverlay = presentation.lockAgentTerminal && !presentation.allowSourceInput && !auxiliaryActive;
 	const warning = presentation.outcome === "failure" || presentation.outcome === "recovery";
 	const success = presentation.outcome === "success";
@@ -493,16 +491,16 @@ function ChatAgentSwitchStatus({
 				)}
 				<div className="min-w-0 flex-1">
 					<strong className="block text-sm text-foreground">
-						{t(presentation.titleKey, presentation.values)}
+						{presentation.title}
 					</strong>
 					<p className="mt-0.5 text-pretty text-xs leading-relaxed text-muted-foreground">
-						{t(presentation.descriptionKey, presentation.values)}
+						{presentation.description}
 					</p>
 					{inProgress ? <AgentSwitchProgressTrack stage={presentation.stage} /> : null}
 				</div>
 				{onDismiss ? (
 					<button
-						aria-label={t("common.close")}
+						aria-label={"Close"}
 						className="absolute right-2 top-2 grid size-7 place-items-center rounded-md text-muted-foreground transition-colors hover:bg-interactive-hover hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent/50"
 						onClick={onDismiss}
 						type="button"

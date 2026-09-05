@@ -1,5 +1,4 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { useTranslation } from "react-i18next";
 import { useParams } from "@tanstack/react-router";
 import {
 	ArrowUpRight,
@@ -186,7 +185,6 @@ export function NotificationRuntime() {
 }
 
 export function NotificationCenter({ style }: NotificationCenterProps) {
-	const { t } = useTranslation();
 	const queryClient = useQueryClient();
 	const [actionError, setActionError] = useState<string | null>(null);
 	const [markReadError, setMarkReadError] = useState<string | null>(null);
@@ -253,9 +251,9 @@ export function NotificationCenter({ style }: NotificationCenterProps) {
 		void markAllMutate(newly)
 			.catch((error: unknown) => {
 				for (const id of newly) acknowledgedIdsRef.current.delete(id);
-				setMarkReadError(error instanceof Error ? error.message : t("notify.couldNotMarkAllRead"));
+				setMarkReadError(error instanceof Error ? error.message : "Could not mark notifications read");
 			});
-	}, [ackRetryNonce, markAllMutate, open, t, unreadQuery.isLoading, visibleUnreadKey]);
+	}, [ackRetryNonce, markAllMutate, open, unreadQuery.isLoading, visibleUnreadKey]);
 
 	const setPanelOpen = useCallback((nextOpen: boolean) => {
 		setOpen(nextOpen);
@@ -287,11 +285,11 @@ export function NotificationCenter({ style }: NotificationCenterProps) {
 				setPanelOpen(false);
 				return;
 			}
-			setActionError(result.status === "not_resumable" ? t("notify.restoreUnavailable") : result.message);
+			setActionError(result.status === "not_resumable" ? "This session can no longer be restored." : result.message);
 		} finally {
 			setRestoringSessionId(undefined);
 		}
-	}, [openSession, restoreSession, restoringSessionId, setPanelOpen, t]);
+	}, [openSession, restoreSession, restoringSessionId, setPanelOpen]);
 
 	const loadEarlierOnScroll = (event: React.UIEvent<HTMLDivElement>) => {
 		const list = event.currentTarget;
@@ -306,7 +304,7 @@ export function NotificationCenter({ style }: NotificationCenterProps) {
 		<Popover onOpenChange={setPanelOpen} open={open}>
 			<PopoverTrigger asChild>
 				<TopbarButton
-					aria-label={unreadCount > 0 ? t("notify.unreadCount", { count: unreadCount }) : t("notify.bell")}
+					aria-label={unreadCount > 0 ? `${unreadCount} unread notifications` : "Notifications"}
 					className="relative"
 					style={style}
 					variant="icon"
@@ -325,12 +323,12 @@ export function NotificationCenter({ style }: NotificationCenterProps) {
 			</PopoverTrigger>
 			<PopoverContent
 				align="end"
-				aria-label={t("notify.title")}
+				aria-label={"Notifications"}
 				className="w-notification-width max-w-[calc(100vw-1rem)] overflow-hidden rounded-panel border-border-strong p-0 shadow-xl"
 				sideOffset={8}
 			>
 				<div className="border-b border-border bg-[var(--color-overlay-subtle)] px-4 py-3.5">
-					<p className="text-subtitle font-semibold tracking-tight text-foreground">{t("notify.title")}</p>
+					<p className="text-subtitle font-semibold tracking-tight text-foreground">{"Notifications"}</p>
 				</div>
 				<NotificationWorkspaceState>
 					{({ retryWorkspace, sessionMeta, sessionsReady, terminatedIds, workspaceError }) => (
@@ -346,7 +344,7 @@ export function NotificationCenter({ style }: NotificationCenterProps) {
 							onClick={retryMarkRead}
 							type="button"
 						>
-							{t("notify.retry")}
+							{"Retry"}
 						</button>
 					</div>
 				) : null}
@@ -358,22 +356,22 @@ export function NotificationCenter({ style }: NotificationCenterProps) {
 						aria-live="polite"
 						className="flex items-center justify-between gap-2 border-b border-border bg-error/5 px-4 py-2 text-caption text-error"
 					>
-						<span>{t("notify.workspaceLoadFailed")}</span>
+						<span>{"Could not load sessions. Restore and open may be unavailable."}</span>
 						<button
 							className="shrink-0 font-medium underline underline-offset-2 hover:text-foreground"
 							onClick={retryWorkspace}
 							type="button"
 						>
-							{t("notify.retry")}
+							{"Retry"}
 						</button>
 					</div>
 				) : null}
 				{allQuery.isError && isEmpty ? (
-					<NotificationEmpty icon={CircleAlert} message={t("notify.loadFailed")} />
+					<NotificationEmpty icon={CircleAlert} message={"Could not load notifications."} />
 				) : allQuery.isLoading && isEmpty ? (
-					<NotificationEmpty icon={Inbox} message={t("notify.loading")} />
+					<NotificationEmpty icon={Inbox} message={"Loading notifications…"} />
 				) : isEmpty ? (
-					<NotificationEmpty icon={CheckCheck} message={t("notify.emptyAll")} />
+					<NotificationEmpty icon={CheckCheck} message={"No notifications yet."} />
 				) : (
 					<div
 						aria-busy={allQuery.isFetchingNextPage}
@@ -413,13 +411,13 @@ export function NotificationCenter({ style }: NotificationCenterProps) {
 								aria-live="polite"
 								className="flex items-center justify-center gap-2 px-4 py-3 text-caption text-error"
 							>
-								{t("notify.earlierLoadFailed")}
+								{"Couldn’t load earlier notifications."}
 								<button
 									className="font-medium underline underline-offset-2 hover:text-foreground"
 									onClick={() => void allQuery.fetchNextPage()}
 									type="button"
 								>
-									{t("notify.retry")}
+									{"Retry"}
 								</button>
 							</div>
 						) : allQuery.isFetchingNextPage ? (
@@ -428,7 +426,7 @@ export function NotificationCenter({ style }: NotificationCenterProps) {
 								className="flex items-center justify-center gap-2 px-4 py-3 text-caption text-passive"
 							>
 								<LoaderCircle className="size-icon-md animate-spin" aria-hidden="true" />
-								{t("notify.loadingEarlier")}
+								{"Loading earlier notifications…"}
 							</div>
 						) : null}
 					</div>
@@ -487,7 +485,6 @@ const NotificationItem = memo(function NotificationItem({
 	sessionsReady: boolean;
 	terminated: boolean;
 }) {
-	const { t } = useTranslation();
 	const Icon = notificationIcon(notification.type);
 	const sessionId = notification.target.sessionId || notification.sessionId;
 	const canOpenSession = Boolean(sessionId) && sessionsReady && (!terminated || !offerRestore);
@@ -517,7 +514,7 @@ const NotificationItem = memo(function NotificationItem({
 				}}
 				role={canOpenSession ? "button" : undefined}
 				tabIndex={canOpenSession ? 0 : undefined}
-				title={canOpenSession ? t("notify.openSessionTitle") : undefined}
+				title={canOpenSession ? "Open session" : undefined}
 			>
 				<div
 					className={cn(
@@ -541,7 +538,7 @@ const NotificationItem = memo(function NotificationItem({
 								<>
 									{titleLink.before}
 									<a
-										aria-label={t("inspector.openPR", { number: titleLink.number })}
+										aria-label={`Open PR #${titleLink.number}`}
 										className="inline-flex items-center gap-0.5 underline-offset-2 hover:underline focus-visible:rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60"
 										href={titleLink.url}
 										onClick={(event) => {
@@ -586,7 +583,7 @@ const NotificationItem = memo(function NotificationItem({
 						<Tooltip delayDuration={0}>
 							<TooltipTrigger asChild>
 								<button
-									aria-label={t("shell.restoreSession")}
+									aria-label={"Restore session"}
 									className="grid size-notification-icon place-items-center rounded-md text-passive transition-colors hover:bg-interactive-active hover:text-foreground disabled:pointer-events-none disabled:opacity-40"
 									disabled={restoreDisabled}
 									onClick={(event) => {
@@ -599,7 +596,7 @@ const NotificationItem = memo(function NotificationItem({
 								</button>
 							</TooltipTrigger>
 							<TooltipContent side="top">
-								{restoring ? t("shell.restoringSession") : t("shell.restoreSession")}
+								{restoring ? "Restoring session" : "Restore session"}
 							</TooltipContent>
 						</Tooltip>
 					) : null}

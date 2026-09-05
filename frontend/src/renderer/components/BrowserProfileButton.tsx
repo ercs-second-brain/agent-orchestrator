@@ -1,6 +1,5 @@
 import { ChevronDown, UserRound } from "lucide-react";
 import { useEffect, useRef } from "react";
-import { useTranslation } from "react-i18next";
 import type { BrowserProfileViewState } from "../../shared/browser-profiles";
 import { useUiStore } from "../stores/ui-store";
 import { Button } from "./ui/button";
@@ -12,10 +11,9 @@ export function BrowserProfileButton({
 	viewId: string;
 	profileState: BrowserProfileViewState;
 }) {
-	const { t } = useTranslation();
 	const buttonRef = useRef<HTMLButtonElement>(null);
 	const openGlobalSettings = useUiStore((state) => state.openGlobalSettings);
-	const label = profileState.profileName ?? t("browser.profile.temporary");
+	const label = profileState.profileName ?? "Temporary";
 
 	useEffect(() => {
 		return window.ao?.browser.onProfileManage((managedViewId) => {
@@ -32,13 +30,13 @@ export function BrowserProfileButton({
 				viewId,
 				bounds: { x: rect.left, y: rect.top, width: rect.width, height: rect.height },
 				labels: {
-					temporary: t("browser.profile.temporary"),
-					manage: t("browser.profile.manage"),
-					switchTitle: t("browser.profile.switchTitle"),
-					switchMessage: t("browser.profile.switchMessage"),
-					switchDetail: t("browser.profile.switchDetail"),
-					cancel: t("common.no"),
-					confirm: t("common.yes"),
+					temporary: "Temporary",
+					manage: "Manage browser profiles",
+					switchTitle: "Switch browser profile?",
+					switchMessage: "Switching profiles will reload the browser pages.",
+					switchDetail: "Unsaved page state may be lost.",
+					cancel: "No",
+					confirm: "Yes",
 				},
 			})
 			.catch(() => undefined);
@@ -47,7 +45,7 @@ export function BrowserProfileButton({
 	return (
 		<Button
 			aria-haspopup="menu"
-			aria-label={t("browser.profile.select", { profile: label })}
+			aria-label={`Browser profile: ${label}`}
 			className="browser-profile-button max-w-36 min-w-0 gap-1 px-1.5 text-xs"
 			onClick={openMenu}
 			ref={buttonRef}

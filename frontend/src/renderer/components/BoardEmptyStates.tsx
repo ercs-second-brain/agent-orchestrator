@@ -1,5 +1,4 @@
 import { Plus } from "lucide-react";
-import { useTranslation } from "react-i18next";
 import { useShell } from "../lib/shell-context";
 import { CreateProjectFlow } from "./CreateProjectFlow";
 import { TopbarButton } from "./TopbarButton";
@@ -49,19 +48,18 @@ export function ProjectBoardEmpty({
 	onOpenOrchestratorAsTui?: () => void;
 	spawnError?: string | null;
 }) {
-	const { t } = useTranslation();
-	const orchestratorLabel = hasOrchestrator ? t("shell.orchestrator") : t("shell.spawnOrchestrator");
+	const orchestratorLabel = hasOrchestrator ? "Orchestrator" : "Spawn Orchestrator";
 	const busyLabel = isProjectRestarting
-		? t("shell.restartingDots")
+		? "Restarting..."
 		: isSpawning
-			? t("shell.spawningDots")
+			? "Spawning..."
 			: orchestratorLabel;
 
 	return (
 		<div className="flex h-full min-h-0 items-center justify-center overflow-y-auto">
 			<div className="flex w-full max-w-preview-content flex-col items-center pb-empty-offset-y text-center">
-				<h2 className="text-subtitle font-semibold tracking-tight text-foreground">{t("board.empty.title")}</h2>
-				<p className="mt-2 text-md-sm leading-relaxed text-muted-foreground">{t("board.empty.body")}</p>
+				<h2 className="text-subtitle font-semibold tracking-tight text-foreground">{"No worker sessions yet"}</h2>
+				<p className="mt-2 text-md-sm leading-relaxed text-muted-foreground">{"Describe a task and the orchestrator plans it, spawns worker sessions, and tracks them here as work moves forward."}</p>
 				<div className="mt-5 flex items-center gap-2">
 					<TopbarButton
 						aria-label={orchestratorLabel}
@@ -72,9 +70,9 @@ export function ProjectBoardEmpty({
 						<OrchestratorIcon className="size-icon-md" aria-hidden="true" />
 						{busyLabel}
 					</TopbarButton>
-					<TopbarButton aria-label={t("shell.newTask")} disabled={isProjectRestarting} onClick={onNewTask} variant="accent">
+					<TopbarButton aria-label={"New task"} disabled={isProjectRestarting} onClick={onNewTask} variant="accent">
 						<Plus className="size-icon-md" aria-hidden="true" />
-						{t("shell.newTask")}
+						{"New task"}
 					</TopbarButton>
 				</div>
 				{spawnError && (
@@ -84,7 +82,7 @@ export function ProjectBoardEmpty({
 						</p>
 						{onOpenOrchestratorAsTui ? (
 							<TopbarButton disabled={isSpawning || isProjectRestarting} onClick={onOpenOrchestratorAsTui}>
-								{t("newTask.createAsTui")}
+								{"Create as Terminal UI"}
 							</TopbarButton>
 						) : null}
 					</div>

@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from "react";
 import { Loader2 } from "lucide-react";
-import { useTranslation } from "react-i18next";
 import { apiClient, apiErrorMessage } from "../../lib/api-client";
 import { Button } from "../ui/button";
 import { installView, type InstallJob } from "./installState";
@@ -18,7 +17,6 @@ const POLL_INTERVAL_MS = 1500;
  * has to hand over the command instead.
  */
 export function InstallCloudflared({ onInstalled }: { onInstalled: () => void }) {
-	const { t } = useTranslation();
 	const [job, setJob] = useState<InstallJob | undefined>(undefined);
 	const [starting, setStarting] = useState(false);
 	const [error, setError] = useState<string | undefined>(undefined);
@@ -73,25 +71,25 @@ export function InstallCloudflared({ onInstalled }: { onInstalled: () => void })
 		<div className="mt-2 flex flex-col gap-1.5" data-testid="mobile-install-cloudflared">
 			{view.kind === "offer" && (
 				<Button type="button" variant="footer" className="w-full" onClick={() => void start()}>
-					{t("mobile.installConnector", "Install cloudflared")}
+					{"Install cloudflared"}
 				</Button>
 			)}
 			{view.kind === "running" && (
 				<p className="flex items-center gap-1.5 text-xs text-settings-muted">
 					<Loader2 className="size-3 shrink-0 animate-spin" aria-hidden="true" />
-					{t("mobile.installingConnector", "Installing cloudflared…")}
+					{"Installing cloudflared…"}
 				</p>
 			)}
 			{view.kind === "manual" && (
 				<>
 					<p className="text-xs text-settings-muted">
-						{view.reason || t("mobile.installConnectorManual", "Run this in a terminal, then try again.")}
+						{view.reason || "Run this in a terminal, then try again."}
 					</p>
 					<code className="block overflow-x-auto rounded bg-(--color-bg-settings-input) px-2 py-1 text-xs text-settings-label">
 						{view.command}
 					</code>
 					<Button type="button" variant="footer" className="w-full" onClick={onInstalled}>
-						{t("mobile.checkConnectorAgain", "Check again")}
+						{"Check again"}
 					</Button>
 				</>
 			)}

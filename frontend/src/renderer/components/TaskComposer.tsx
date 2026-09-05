@@ -6,7 +6,6 @@ import {
 	type TaskComposerModelControl,
 } from "@ercs-second-brain/product-ui";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useTranslation } from "react-i18next";
 import { Loader2 } from "lucide-react";
 import { RequiredAgentField } from "./CreateProjectAgentSheet";
 import type { components } from "../../api/schema";
@@ -27,6 +26,25 @@ import {
 } from "../hooks/useAgentModelsQuery";
 import { AgentModelCombobox } from "./settings/AgentModelCombobox";
 import { SettingsOptionMenu } from "./settings/SettingsOptionMenu";
+
+const taskPlaceholders = [
+	"Go through the backend files and let me know if there is any dead code in there",
+	"Set up a GitHub Actions workflow that runs tests on every pull request",
+	"Refactor the authentication module to use JWT tokens instead of sessions",
+	"Write unit tests for the payment processing service",
+	"Find and fix the memory leak in the WebSocket connection handler",
+	"Add rate limiting to the public API endpoints",
+	"Migrate the database schema to support multi-tenancy",
+	"Review the frontend bundle size and suggest optimizations",
+	"Document all public API endpoints with OpenAPI annotations",
+	"Add error boundaries to the React component tree and improve error messages",
+	"Investigate why the nightly build is 40% slower than last week",
+	"Replace the deprecated library usages flagged in the latest audit",
+	"Implement dark mode support across all UI components",
+	"Profile the database queries on the dashboard page and add missing indexes",
+	"Set up structured logging with correlation IDs across all services",
+];
+
 
 type Project = components["schemas"]["Project"];
 type DelegateAgent = components["schemas"]["DelegateTaskRequest"]["agent"];
@@ -83,13 +101,9 @@ export function TaskComposer({
 	onSubmittingChange,
 	autoFocusTitle,
 }: TaskComposerProps) {
-	const { t } = useTranslation();
 	const taskPlaceholder = useMemo(() => {
-		const placeholders = t("newTask.taskPlaceholders" as never, { returnObjects: true }) as string[];
-		return Array.isArray(placeholders)
-			? (placeholders[Math.floor(Math.random() * placeholders.length)] ?? "")
-			: "";
-	}, [t]);
+		return taskPlaceholders[Math.floor(Math.random() * taskPlaceholders.length)] ?? "";
+	}, []);
 	const queryClient = useQueryClient();
 	const [isPromptDirty, setIsPromptDirty] = useState(false);
 	const [model, setModel] = useState("");
@@ -128,12 +142,12 @@ export function TaskComposer({
 				});
 				if (error) {
 					throw new TaskCreateError(
-						apiErrorMessage(error, t("newTask.unableToStart")),
+						apiErrorMessage(error, "Unable to start task"),
 						apiErrorCode(error),
 						error.details,
 					);
 				}
-				if (!data?.workerId) throw new Error(t("newTask.noSession"));
+				if (!data?.workerId) throw new Error("Task creation returned no session");
 				return data.workerId;
 			} catch (err) {
 				if (
@@ -149,10 +163,10 @@ export function TaskComposer({
 						// Preserve the launch error when opportunistic reconciliation fails.
 					}
 				}
-				throw err instanceof Error ? err : new Error(t("newTask.unableToStart"));
+				throw err instanceof Error ? err : new Error("Unable to start task");
 			}
 		},
-		[queryClient, t],
+		[queryClient],
 	);
 
 	const createTask = useCallback(
@@ -168,7 +182,7 @@ export function TaskComposer({
 				params: { path: { id: projectId ?? "" } },
 			});
 			if (apiError) throw new Error(apiErrorMessage(apiError));
-			if (data?.status !== "ok") throw new Error(t("newTask.configUnavailable"));
+			if (data?.status !== "ok") throw new Error("Project config is unavailable.");
 			return data.project as Project;
 		},
 	});
@@ -221,13 +235,13 @@ export function TaskComposer({
 		(revalidationQuery.isError
 			? revalidationQuery.error instanceof Error
 				? revalidationQuery.error.message
-				: t("settings.models.validateFailed")
+				: "Could not validate cached models."
 			: undefined) ??
 		modelCatalogQuery.data?.warning ??
 		(modelCatalogQuery.isError
 			? modelCatalogQuery.error instanceof Error
 				? modelCatalogQuery.error.message
-				: t("settings.models.loadFailed")
+				: "Could not load models."
 			: undefined);
 	const modelCatalog: TaskComposerModelCatalog | undefined = modelCatalogQuery.data
 		? {
@@ -325,7 +339,7 @@ export function TaskComposer({
 						? "tui"
 						: undefined,
 			);
-			setError(err instanceof Error ? err.message : t("newTask.unableToStart"));
+			setError(err instanceof Error ? err.message : "Unable to start task");
 		} finally {
 			setIsSubmitting(false);
 		}
@@ -337,20 +351,20 @@ export function TaskComposer({
 			canSubmit={Boolean(projectId)}
 			onPromptChange={handlePromptChange}
 			labels={{
-				addFile: t("newTask.addFile"),
+				addFile: "Add file",
 				fallbackAction: fallbackAction === "bypass-permissions"
-					? t("newTask.startWithoutApprovals", { defaultValue: "Start without approvals" })
-					: t("newTask.createAsTui"),
-				removeFile: (name) => t("newTask.removeFile", { name }),
-				runsWith: t("newTask.runsWith"),
-				start: t("newTask.start"),
-				starting: t("newTask.starting"),
-				task: t("newTask.task"),
+					? "Start without approvals"
+					: "Create as Terminal UI",
+				removeFile: (name) => `Remove ${name}`,
+				runsWith: "Runs with",
+				start: "Start task",
+				starting: "Starting...",
+				task: "Task",
 				taskPlaceholder,
 			}}
 			agent={{
-				label: t("newTask.agent"),
-				placeholder: t("newTask.selectAgent"),
+				label: "Agent",
+				placeholder: "Select agent",
 				value: selectedAgent,
 				agents: agentCatalog?.agents,
 				disabled: isSubmitting || (agentsQuery.isFetching && agentCatalog === undefined),
@@ -432,27 +446,26 @@ function TaskModelPicker({
 	onModeChange,
 	onRefresh,
 }: TaskComposerModelControl & { onRefresh: () => Promise<void> }) {
-	const { t } = useTranslation();
 
 	// Says what happens with no override, rather than labelling it "Agent default".
 	const noOverrideLabel = agentLabel
-		? t("newTask.letAgentChoose", { agent: agentLabel })
-		: t("settings.models.agentDefault");
+		? `Use ${agentLabel}'s default`
+		: "Agent default";
 
 	if (loading || agentId === "") {
 		return (
 			<span
 				className="composer-chip composer-toolbar-option w-full cursor-not-allowed justify-start opacity-50"
-				aria-label={t("newTask.model")}
+				aria-label={"Model"}
 			>
 				<span
 					className="inline-flex min-w-0 items-center gap-1.5"
 					role="status"
-					aria-label={t("settings.models.loading")}
+					aria-label={"Loading models…"}
 					aria-busy="true"
 				>
 					<Loader2 className="size-icon-sm shrink-0 animate-spin text-settings-muted" aria-hidden="true" />
-					<span className="truncate text-settings-muted">{t("settings.models.loading")}</span>
+					<span className="truncate text-settings-muted">{"Loading models…"}</span>
 				</span>
 			</span>
 		);
@@ -466,7 +479,7 @@ function TaskModelPicker({
 		const visibleModeLabel = mode ? (options.find((option) => option.value === mode)?.label ?? mode) : noOverrideLabel;
 		return (
 			<SettingsOptionMenu
-				aria-label={t("newTask.model")}
+				aria-label={"Model"}
 				disabled={disabled}
 				value={mode || "__default__"}
 				options={options}
@@ -484,7 +497,7 @@ function TaskModelPicker({
 
 	const customModelEntry = catalog?.customModelEntry ?? (catalog?.allowCustom ? "direct" : "none");
 	const displayModels = (catalog?.models ?? []).map((item) =>
-		item.id === "auto" ? { ...item, label: t("settings.models.autoRouteLabel") } : item,
+		item.id === "auto" ? { ...item, label: "Auto (routes automatically)" } : item,
 	);
 	const selectCatalogModel = (nextModel: string) => {
 		onModelChange(nextModel);
@@ -496,7 +509,7 @@ function TaskModelPicker({
 	return (
 		<AgentModelCombobox
 			key={agentId}
-			aria-label={t("newTask.model")}
+			aria-label={"Model"}
 			value={value}
 			models={displayModels}
 			allowCustom={catalog?.allowCustom}
@@ -504,7 +517,7 @@ function TaskModelPicker({
 			agentLabel={agentLabel}
 			onRefresh={onRefresh}
 			disabled={disabled || agentId === ""}
-			emptyLabel={fetching ? t("settings.models.loading") : noOverrideLabel}
+			emptyLabel={fetching ? "Loading models…" : noOverrideLabel}
 			onChange={selectCatalogModel}
 			onCustom={selectCustomModel}
 			compact

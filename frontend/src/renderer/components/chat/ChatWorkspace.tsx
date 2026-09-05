@@ -30,7 +30,6 @@ import {
 } from "react";
 import { ArrowDown, Loader2, TriangleAlert, Undo2 } from "lucide-react";
 import { Reorder, useDragControls } from "motion/react";
-import { useTranslation } from "react-i18next";
 import { cn } from "../../lib/utils";
 import { sameContent, useStableList } from "../../lib/stable-list";
 import { useTabScrollEdges } from "../../hooks/useTabScrollEdges";
@@ -1363,13 +1362,12 @@ function ChatHeader({
 	inline?: boolean;
 	topbarBounds: TopbarBounds;
 }) {
-	const { t } = useTranslation();
 	const providerLabel = agentLabel(snapshot.harness);
 	const sessionIsOrchestrator = session
 		? isOrchestratorSession(session)
 		: sessionRole === "orchestrator";
 	const label = sessionIsOrchestrator
-		? t("shell.orchestrator")
+		? "Orchestrator"
 		: (sessionTitle || session?.title || snapshot.title || snapshot.sessionId);
 	const tabScrollWatch = `${session?.id ?? ""}|${orderedAuxiliaryTabs.map((tab) => tab.key).join("|")}`;
 	const {

@@ -1,5 +1,4 @@
 import { QrCode } from "lucide-react";
-import { useTranslation } from "react-i18next";
 import { useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
 import { aoBridge } from "../../lib/bridge";
@@ -33,19 +32,18 @@ const STORE_QR_SIZE = 140;
 // the LAN bridge is running. The QR (of the store listing itself) hides
 // behind a disclosure so the widened modal keeps its height.
 export function ConnectMobileGetApp() {
-	const { t } = useTranslation();
 	const [showQR, setShowQR] = useState(false);
 
 	return (
 		<div className="flex flex-col">
-			<span className="px-3 py-3 text-subtitle leading-(--leading-settings-mobile-title) text-settings-label">{t("mobile.getApp")}</span>
+			<span className="px-3 py-3 text-subtitle leading-(--leading-settings-mobile-title) text-settings-label">{"Get the app"}</span>
 
 			{/* iOS — items-center so the action cluster sits on the row's optical centre. */}
 			<div className="flex items-center justify-between gap-3 px-3 py-3">
 				<div className="flex min-w-0 flex-col">
-					<span className="text-sm leading-5 text-settings-label">{t("mobile.ios")}</span>
+					<span className="text-sm leading-5 text-settings-label">{"iOS"}</span>
 					<span className="text-caption leading-(--leading-settings-mobile-hint) text-settings-muted">
-						{t("mobile.iosHint")}
+						{"Get Agent Orchestrator on the App Store"}
 					</span>
 				</div>
 				<div className="flex shrink-0 items-center gap-1.5">
@@ -53,14 +51,14 @@ export function ConnectMobileGetApp() {
 						type="button"
 						variant="footer"
 						className="rounded-md"
-						aria-label={t("mobile.iosStoreAria")}
+						aria-label={"Open Agent Orchestrator on the App Store"}
 						onClick={() => void aoBridge.app.openExternal(IOS_APP_STORE_URL)}
 					>
-						{t("mobile.getApp")}
+						{"Get the app"}
 					</Button>
 					<button
 						type="button"
-						aria-label={showQR ? t("mobile.hideQR") : t("mobile.showQR")}
+						aria-label={showQR ? "Hide App Store QR code" : "Show App Store QR code"}
 						aria-expanded={showQR}
 						onClick={() => setShowQR((v) => !v)}
 						className={cn(
@@ -91,7 +89,7 @@ export function ConnectMobileGetApp() {
 						<div className="rounded-md border border-(--color-border-settings-input) bg-white p-2">
 							<QRCodeSVG value={IOS_APP_STORE_URL} size={STORE_QR_SIZE} className="block" />
 						</div>
-						<p className="mt-2 text-caption text-settings-muted">{t("mobile.qrHint")}</p>
+						<p className="mt-2 text-caption text-settings-muted">{"Scan to open the App Store on your phone"}</p>
 					</div>
 				</div>
 			</div>
@@ -99,19 +97,19 @@ export function ConnectMobileGetApp() {
 			{/* Android — available directly from Google Play. */}
 			<div className="flex items-center justify-between gap-3 px-3 py-3">
 				<div className="flex min-w-0 flex-col">
-					<span className="text-sm leading-5 text-settings-label">{t("mobile.android")}</span>
+					<span className="text-sm leading-5 text-settings-label">{"Android"}</span>
 					<span className="text-caption leading-(--leading-settings-mobile-hint) text-settings-muted">
-						{t("mobile.androidHint")}
+						{"Get Agent Orchestrator on Google Play"}
 					</span>
 				</div>
 				<Button
 					type="button"
 					variant="footer"
 					className="rounded-md"
-					aria-label={t("mobile.androidSignupAria")}
+					aria-label={"Open Agent Orchestrator on Google Play"}
 					onClick={() => void aoBridge.app.openExternal(ANDROID_PLAY_STORE_URL)}
 				>
-					{t("mobile.getApp")}
+					{"Get the app"}
 				</Button>
 			</div>
 		</div>

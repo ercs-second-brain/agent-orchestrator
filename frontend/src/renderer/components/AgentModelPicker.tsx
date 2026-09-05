@@ -1,7 +1,6 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
 import { useEffect } from "react";
-import { useTranslation } from "react-i18next";
 import {
 	agentModelsQueryKey,
 	agentModelsQueryOptions,
@@ -35,7 +34,6 @@ export function AgentModelPicker({
 	onModeChange,
 	onWarningChange,
 }: AgentModelPickerProps) {
-	const { t } = useTranslation();
 	const queryClient = useQueryClient();
 	const query = useQuery(agentModelsQueryOptions(agentId, projectId));
 	const catalog: AgentModelCatalog | undefined = query.data;
@@ -55,18 +53,18 @@ export function AgentModelPicker({
 		(revalidationQuery.isError
 			? revalidationQuery.error instanceof Error
 				? revalidationQuery.error.message
-				: t("settings.models.validateFailed")
+				: "Could not validate cached models."
 			: undefined) ??
 		catalog?.warning ??
-		(query.isError ? (query.error instanceof Error ? query.error.message : t("settings.models.loadFailed")) : undefined);
+		(query.isError ? (query.error instanceof Error ? query.error.message : "Could not load models.") : undefined);
 	useEffect(() => {
 		onWarningChange(warning);
 	}, [onWarningChange, warning]);
 	useEffect(() => () => onWarningChange(undefined), [onWarningChange]);
 
 	const noOverrideLabel = agentLabel
-		? t("newTask.letAgentChoose", { agent: agentLabel })
-		: t("settings.models.agentDefault");
+		? `Use ${agentLabel}'s default`
+		: "Agent default";
 	const catalogLoading = agentId !== "" && query.isFetching && catalog === undefined;
 	const refreshCatalog = async () => {
 		const refreshed = await refreshAgentModels(agentId, projectId);
@@ -78,11 +76,11 @@ export function AgentModelPicker({
 			<span
 				className="composer-chip composer-toolbar-option w-full cursor-not-allowed justify-start opacity-50"
 				role="status"
-				aria-label={t("settings.models.loading")}
+				aria-label={"Loading models…"}
 				aria-busy="true"
 			>
 				<Loader2 className="size-icon-sm shrink-0 animate-spin text-settings-muted" aria-hidden="true" />
-				<span className="truncate text-settings-muted">{t("settings.models.loading")}</span>
+				<span className="truncate text-settings-muted">{"Loading models…"}</span>
 			</span>
 		);
 	}
@@ -95,7 +93,7 @@ export function AgentModelPicker({
 		const visibleModeLabel = mode ? (options.find((option) => option.value === mode)?.label ?? mode) : noOverrideLabel;
 		return (
 			<SettingsOptionMenu
-				aria-label={t("newTask.model")}
+				aria-label={"Model"}
 				value={mode || "__default__"}
 				options={options}
 				disabled={disabled || agentId === "" || (query.isFetching && catalog === undefined)}
@@ -113,7 +111,7 @@ export function AgentModelPicker({
 
 	const customModelEntry = catalog?.customModelEntry ?? (catalog?.allowCustom ? "direct" : "none");
 	const displayModels = (catalog?.models ?? []).map((item) =>
-		item.id === "auto" ? { ...item, label: t("settings.models.autoRouteLabel") } : item,
+		item.id === "auto" ? { ...item, label: "Auto (routes automatically)" } : item,
 	);
 	const selectCatalogModel = (nextModel: string) => {
 		onModelChange(nextModel);
@@ -125,7 +123,7 @@ export function AgentModelPicker({
 	return (
 		<AgentModelCombobox
 			key={agentId}
-			aria-label={t("newTask.model")}
+			aria-label={"Model"}
 			value={value}
 			models={displayModels}
 			allowCustom={catalog?.allowCustom}
@@ -133,7 +131,7 @@ export function AgentModelPicker({
 			agentLabel={agentLabel}
 			onRefresh={refreshCatalog}
 			disabled={disabled || agentId === ""}
-			emptyLabel={query.isFetching ? t("settings.models.loading") : noOverrideLabel}
+			emptyLabel={query.isFetching ? "Loading models…" : noOverrideLabel}
 			onChange={selectCatalogModel}
 			onCustom={selectCustomModel}
 			compact

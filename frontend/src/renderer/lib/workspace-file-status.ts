@@ -13,6 +13,14 @@ export const statusLabel: Record<WorkspaceFileStatus, string> = {
 	unmodified: "",
 };
 
+export const statusText: Record<WorkspaceFileStatus, string> = {
+	added: "Added",
+	deleted: "Deleted",
+	modified: "Modified",
+	renamed: "Renamed",
+	unmodified: "",
+};
+
 export const statusTone: Record<WorkspaceFileStatus, string> = {
 	added: "text-success",
 	deleted: "text-error",

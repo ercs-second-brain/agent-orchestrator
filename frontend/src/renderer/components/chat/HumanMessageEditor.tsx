@@ -1,6 +1,5 @@
 import { useEffect, useId, useRef, useState, type KeyboardEvent } from "react";
 import { ArrowUp, Loader2, X } from "lucide-react";
-import { useTranslation } from "react-i18next";
 import type { ConversationContentSummary } from "../../types/conversation";
 import { cn } from "../../lib/utils";
 import { Button } from "../ui/button";
@@ -30,12 +29,11 @@ export function HumanMessageEditor({
 	onCancel,
 	onSend,
 }: HumanMessageEditorProps) {
-	const { t } = useTranslation();
 	const [draft, setDraft] = useState(text);
 	const textarea = useRef<HTMLTextAreaElement>(null);
 	const reconstructedContextId = useId();
 	const sendDisabled = pending || busy || draft.trim().length === 0;
-	const busyMessage = busy ? t("chat.edit.stopCurrentTurn") : undefined;
+	const busyMessage = busy ? "Stop the current turn before branching" : undefined;
 
 	useEffect(() => {
 		const node = textarea.current;
@@ -71,7 +69,7 @@ export function HumanMessageEditor({
 				onDraftChange?.(event.target.value);
 			}}
 			onKeyDown={onKeyDown}
-			aria-label={t("chat.edit.label")}
+			aria-label={"Edit message"}
 			aria-describedby={reconstructedContext ? reconstructedContextId : undefined}
 			autoFocus
 			rows={2}
@@ -79,13 +77,13 @@ export function HumanMessageEditor({
 		/>
 		<ConversationContentItems
 			content={content}
-			ariaLabel={t("chat.edit.preservedContent")}
-			imageLabel={t("chat.edit.image")}
+			ariaLabel={"Preserved message content"}
+			imageLabel={"Image"}
 			className="mt-2"
 		/>
 		{reconstructedContext ? (
 			<p id={reconstructedContextId} className="px-1.5 text-pretty text-[11px] text-muted-foreground">
-				{t("chat.edit.reconstructedContext")}
+				{"Reconstructed context: text messages will be replayed into a new agent session. Tool calls, approvals, and workspace history will not be replayed; current worktree files stay as they are."}
 			</p>
 		) : null}
 		<div className="mt-2 flex min-h-7 items-center justify-end gap-1.5">
@@ -105,14 +103,14 @@ export function HumanMessageEditor({
 							variant="ghost"
 							onClick={onCancel}
 							disabled={pending}
-							aria-label={t("chat.edit.cancel")}
+							aria-label={"Cancel edit"}
 							className="size-7"
 						>
 							<X aria-hidden="true" className="size-3.5" />
 						</Button>
 					</span>
 				</TooltipTrigger>
-				<TooltipContent side="bottom">{t("chat.edit.cancel")}</TooltipContent>
+				<TooltipContent side="bottom">{"Cancel edit"}</TooltipContent>
 			</Tooltip>
 			<Tooltip>
 				<TooltipTrigger asChild>
@@ -123,7 +121,7 @@ export function HumanMessageEditor({
 							size="icon-sm"
 							onClick={submit}
 							disabled={sendDisabled}
-							aria-label={t("chat.edit.send")}
+							aria-label={"Send edited message"}
 							className={cn(
 								"size-7 rounded-full border-transparent",
 								sendDisabled
@@ -135,7 +133,7 @@ export function HumanMessageEditor({
 						</Button>
 					</span>
 				</TooltipTrigger>
-				<TooltipContent side="bottom">{busyMessage ?? t("chat.edit.sendShortcut")}</TooltipContent>
+				<TooltipContent side="bottom">{busyMessage ?? "Send edited message (⌘/Ctrl+Enter)"}</TooltipContent>
 			</Tooltip>
 		</div>
 	</div>

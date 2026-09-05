@@ -1,7 +1,6 @@
 import * as Dialog from "@radix-ui/react-dialog";
 import { ChevronLeft, X } from "lucide-react";
 import { type FormEvent, useState } from "react";
-import { useTranslation } from "react-i18next";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
@@ -40,9 +39,8 @@ export default function CreateRepositoryDialog({
 	open: boolean;
 	value: CreateRepositoryDetails;
 }) {
-	const { t } = useTranslation();
 	const [submitted, setSubmitted] = useState(false);
-	const nameError = submitted && !isCreateRepositoryName(value.name) ? t("createProject.createRepoInvalidName") : null;
+	const nameError = submitted && !isCreateRepositoryName(value.name) ? "Enter a repository name using letters, numbers, dots, hyphens, or underscores. An owner/name pair is also allowed." : null;
 
 	const submit = (event: FormEvent<HTMLFormElement>) => {
 		event.preventDefault();
@@ -61,7 +59,7 @@ export default function CreateRepositoryDialog({
 							type="button"
 							variant="outline"
 							size="icon"
-							aria-label={t("createProject.createRepoBack")}
+							aria-label={"Back to code source"}
 							disabled={disabled}
 							onClick={onBack}
 						>
@@ -69,14 +67,14 @@ export default function CreateRepositoryDialog({
 						</Button>
 						<div className="min-w-0 flex-1 pr-8">
 							<Dialog.Title className="text-balance text-[18px] font-semibold text-[var(--color-text-import-title)]">
-								{t("createProject.createRepoTitle")}
+								{"Create a Git repository"}
 							</Dialog.Title>
-							<Dialog.Description className="sr-only">{t("createProject.createRepoDescription")}</Dialog.Description>
+							<Dialog.Description className="sr-only">{"Name the repository. AO creates it on GitHub and checks it out on the connected server."}</Dialog.Description>
 						</div>
 						<button
 							type="button"
 							className="settings-close-button"
-							aria-label={t("createProject.createRepoClose")}
+							aria-label={"Close create repository dialog"}
 							disabled={disabled}
 							onClick={onClose}
 						>
@@ -94,7 +92,7 @@ export default function CreateRepositoryDialog({
 
 							<div className="space-y-2">
 								<Label htmlFor="createRepositoryName" className="text-[13px] font-semibold text-[var(--color-text-import-title)]">
-									{t("createProject.createRepoName")}
+									{"Repository name"}
 								</Label>
 								<Input
 									id="createRepositoryName"
@@ -105,7 +103,7 @@ export default function CreateRepositoryDialog({
 									aria-invalid={nameError ? true : undefined}
 									className="bg-[var(--color-bg-import-card)] font-mono text-[13px]"
 									disabled={disabled}
-									placeholder={t("createProject.createRepoNamePlaceholder")}
+									placeholder={"my-project"}
 									spellCheck={false}
 									value={value.name}
 									onChange={(event) => onChange({ ...value, name: event.target.value })}
@@ -116,7 +114,7 @@ export default function CreateRepositoryDialog({
 									</p>
 								) : (
 									<p id="createRepositoryNameHelp" className="text-pretty text-[12px] leading-5 text-muted-foreground">
-										{t("createProject.createRepoNameHelp")}
+										{"Created under your signed-in GitHub account. Use owner/name to put it in an organization."}
 									</p>
 								)}
 							</div>
@@ -129,13 +127,13 @@ export default function CreateRepositoryDialog({
 									disabled={disabled}
 									onChange={(event) => onChange({ ...value, private: event.target.checked })}
 								/>
-								{t("createProject.createRepoPrivate")}
+								{"Create as a private repository"}
 							</label>
 						</div>
 
 						<div className="flex justify-end gap-2 px-4 py-3">
 							<Button type="submit" disabled={disabled}>
-								{t("createProject.cloneContinue")}
+								{"Continue"}
 							</Button>
 						</div>
 					</form>

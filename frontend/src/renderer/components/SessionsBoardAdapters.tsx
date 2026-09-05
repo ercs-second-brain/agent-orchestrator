@@ -1,7 +1,5 @@
 import { memo, useEffect, useRef, useState, type MouseEvent, type ReactNode } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { useTranslation } from "react-i18next";
-import type { TFunction } from "i18next";
 import {
 	SessionCardView,
 	SessionUsageMetricView,
@@ -9,10 +7,8 @@ import {
 	type BoardSessionPresentation,
 	type BoardColumnLabels,
 	type BoardUsagePresentation,
-	type ProductUITranslator,
 } from "@ercs-second-brain/product-ui";
 import { Check, Copy, GitBranch, LoaderCircle, RotateCcw, Trash2 } from "lucide-react";
-import type { MessageKey } from "../i18n";
 import { aoBridge } from "../lib/bridge";
 import { formatTimeCompact } from "../lib/format-time";
 import { formatTokenCount } from "../lib/format-token-count";
@@ -35,10 +31,7 @@ import { ProductExternalLink } from "./ProductExternalLink";
 import { SessionTerminationPopover } from "./SessionTerminationPopover";
 import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip";
 
-export function toBoardSessionPresentation(
-	session: WorkspaceSession,
-	t?: TFunction,
-): BoardSessionPresentation {
+export function toBoardSessionPresentation(session: WorkspaceSession): BoardSessionPresentation {
 	const switchPresentation = deriveSessionAgentSwitchPresentation(session);
 	const switchVisual = switchPresentation ? agentSwitchStatusVisual(switchPresentation) : undefined;
 	return {
@@ -50,11 +43,11 @@ export function toBoardSessionPresentation(
 		provider: session.provider,
 		status: session.status,
 		statusPresentation:
-			t && switchPresentation && switchVisual
+			switchPresentation && switchVisual
 				? {
 						className: switchVisual.className,
 						indicatorClassName: `${switchVisual.indicatorClassName}${switchVisual.breathe ? " animate-status-pulse" : ""}`,
-						label: t(switchPresentation.compactLabelKey, switchPresentation.values),
+						label: switchPresentation.compactLabel,
 						tone: switchVisual.tone,
 					}
 				: undefined,
@@ -65,9 +58,9 @@ export function toBoardSessionPresentation(
 	};
 }
 
-export function sessionsBoardLabels(t: TFunction): BoardColumnLabels {
+export function sessionsBoardLabels(): BoardColumnLabels {
 	return {
-		columnAria: (label) => t("shell.sessionsAria", { label }),
+		columnAria: (label) => `${label} sessions`,
 	};
 }
 
@@ -146,15 +139,13 @@ const DesktopSessionCard = memo(function DesktopSessionCard({
 	session: WorkspaceSession;
 	usage?: SessionUsageSummary;
 }) {
-	const { t } = useTranslation();
 	const queryClient = useQueryClient();
 	const [confirmOpen, setConfirmOpen] = useState(false);
 	const summaries = sessionPRDisplaySummaries(session, useSessionScmSummary(session.id).data);
 	const termination = useTerminateSessionState(session.id);
 	const showTerminate = interactive && session.isTerminated !== true && onTerminate;
 	const keepTerminateVisible = session.status === "merged";
-	const usagePresentation = toUsagePresentation(usage, t);
-	const translate: ProductUITranslator = (key, values) => t(key as MessageKey, values);
+	const usagePresentation = toUsagePresentation(usage);
 
 	const terminationOverlay = showTerminate ? (
 		<Tooltip>
@@ -172,8 +163,8 @@ const DesktopSessionCard = memo(function DesktopSessionCard({
 							<button
 								aria-label={
 									termination.isPending
-										? t("shell.killingNamedAria", { title: session.title })
-										: t("shell.terminateNamed", { title: session.title })
+										? `Killing ${session.title}`
+										: `Terminate ${session.title}`
 								}
 								className={cn(
 									"inline-flex size-control-md items-center justify-center rounded-sm text-passive transition-[color,background-color,opacity] hover:bg-error/10 hover:text-error focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60",
@@ -199,7 +190,7 @@ const DesktopSessionCard = memo(function DesktopSessionCard({
 				</span>
 			</TooltipTrigger>
 			<TooltipContent side="bottom">
-				{termination.isPending ? t("shell.killingSession") : t("shell.terminateSession")}
+				{termination.isPending ? "Killing session" : "Terminate session"}
 			</TooltipContent>
 		</Tooltip>
 	) : undefined;
@@ -215,10 +206,10 @@ const DesktopSessionCard = memo(function DesktopSessionCard({
 			interactive={interactive}
 			labels={{
 				formatTime: formatTimeCompact,
-				intakeIssue: (id) => t("shell.intakeIssue", { id }),
-				pr: pullRequestLabels(t),
+				intakeIssue: (id) => `Intake issue: ${id}`,
+				pr: pullRequestLabels(),
 				updatedAt: (timestamp: string) =>
-					t("shell.lastMessageAt", { time: formatTimeCompact(timestamp) }),
+					`Last message ${formatTimeCompact(timestamp)}`,
 			}}
 			onOpen={onOpen}
 			overlay={terminationOverlay}
@@ -233,8 +224,7 @@ const DesktopSessionCard = memo(function DesktopSessionCard({
 				url: prBrowserUrl(pr),
 			}))}
 			renderAvatar={(provider) => <AgentAvatar provider={provider} />}
-			session={toBoardSessionPresentation(session, t)}
-			translate={translate}
+			session={toBoardSessionPresentation(session)}
 			renderUsage={(usage) => (
 				<Tooltip>
 					<TooltipTrigger asChild>
@@ -248,14 +238,14 @@ const DesktopSessionCard = memo(function DesktopSessionCard({
 	);
 });
 
-function pullRequestLabels(t: TFunction): BoardPullRequestLabels {
+function pullRequestLabels(): BoardPullRequestLabels {
 	return {
-		short: t("pr.short"),
+		short: "PR",
 		states: {
-			closed: t("pr.state.closed"),
-			draft: t("pr.state.draft"),
-			merged: t("pr.state.merged"),
-			open: t("pr.state.open"),
+			closed: "closed",
+			draft: "draft",
+			merged: "merged",
+			open: "open",
 		},
 	};
 }
@@ -276,10 +266,7 @@ function reviewerAvatarUrl(pr: SessionPRSummary, reviewerId: string): string | u
 
 // Keep the board metric token-only. The token count remains in the tooltip
 // summary for screen readers.
-function toUsagePresentation(
-	usage: SessionUsageSummary | undefined,
-	t: TFunction,
-): BoardUsagePresentation | undefined {
+function toUsagePresentation(usage: SessionUsageSummary | undefined): BoardUsagePresentation | undefined {
 	const processedTokens = usage?.processedTokens ?? null;
 	if (!usage) {
 		return undefined;
@@ -288,9 +275,7 @@ function toUsagePresentation(
 		return undefined;
 	}
 	const compactTokens = formatTokenCount(processedTokens).replace(/ tok$/, "");
-	const accessibleTokens = t("shell.usageTokens", {
-		count: processedTokens.toLocaleString("en-US"),
-	});
+	const accessibleTokens = `${processedTokens.toLocaleString("en-US")} tokens`;
 	return {
 		accessibleLabel: accessibleTokens,
 		compactLabel: compactTokens,
@@ -308,7 +293,6 @@ function ArchiveRestoreButton({
 	isRestoring: boolean;
 	isDisabled: boolean;
 }) {
-	const { t } = useTranslation();
 	return (
 		<Tooltip>
 			<TooltipTrigger asChild>
@@ -325,7 +309,7 @@ function ArchiveRestoreButton({
 				</span>
 			</TooltipTrigger>
 			<TooltipContent side="top">
-				{isRestoring ? t("shell.restoringSession") : t("shell.restoreSession")}
+				{isRestoring ? "Restoring session" : "Restore session"}
 			</TooltipContent>
 		</Tooltip>
 	);

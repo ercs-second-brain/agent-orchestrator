@@ -1,6 +1,5 @@
 import { Check, Eraser, Import, Pencil, Plus, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
-import { useTranslation } from "react-i18next";
 import type { AoBridge } from "../../../preload";
 import { aoBridge } from "../../lib/bridge";
 import { cn } from "../../lib/utils";
@@ -16,7 +15,6 @@ type Profile = Awaited<ReturnType<ProfileBridge["list"]>>["profiles"][number];
 type DestructiveAction = { kind: "clear" | "delete"; profile: Profile };
 
 export function BrowserProfilesSection({ titleHidden }: { titleHidden?: boolean }) {
-	const { t } = useTranslation();
 	const bridge = (aoBridge as Partial<AoBridge>).browserProfiles as ProfileBridge | undefined;
 	const [profiles, setProfiles] = useState<Awaited<ReturnType<ProfileBridge["list"]>>["profiles"]>([]);
 	const [loading, setLoading] = useState(Boolean(bridge));
@@ -36,7 +34,7 @@ export function BrowserProfilesSection({ titleHidden }: { titleHidden?: boolean 
 			setProfiles(result.profiles);
 			setError(result.error?.message ?? "");
 		} catch (reason) {
-			setError(reason instanceof Error ? reason.message : t("settings.browserProfiles.loadFailed"));
+			setError(reason instanceof Error ? reason.message : "Could not load browser profiles.");
 		} finally {
 			setLoading(false);
 		}
@@ -57,7 +55,7 @@ export function BrowserProfilesSection({ titleHidden }: { titleHidden?: boolean 
 			setName("");
 			setError("");
 		} catch (reason) {
-			setError(reason instanceof Error ? reason.message : t("settings.browserProfiles.saveFailed"));
+			setError(reason instanceof Error ? reason.message : "Could not save browser profile.");
 		}
 	};
 
@@ -75,7 +73,7 @@ export function BrowserProfilesSection({ titleHidden }: { titleHidden?: boolean 
 			});
 			setError("");
 		} catch (reason) {
-			setError(reason instanceof Error ? reason.message : t("settings.browserProfiles.saveFailed"));
+			setError(reason instanceof Error ? reason.message : "Could not save browser profile.");
 		}
 	};
 
@@ -96,11 +94,7 @@ export function BrowserProfilesSection({ titleHidden }: { titleHidden?: boolean 
 			setActionError(
 				reason instanceof Error
 					? reason.message
-					: t(
-							pendingAction.kind === "clear"
-								? "settings.browserProfiles.clearFailed"
-								: "settings.browserProfiles.deleteFailed",
-						),
+					: (pendingAction.kind === "clear" ? "Could not clear browser profile data." : "Could not delete browser profile."),
 			);
 		} finally {
 			setActionBusy(false);
@@ -110,21 +104,21 @@ export function BrowserProfilesSection({ titleHidden }: { titleHidden?: boolean 
 	return (
 		<>
 			<SettingsSection
-				title={t("settings.browserProfiles")}
+				title={"Browser"}
 				sectionId="browserProfiles"
 				titleHidden={titleHidden}
 				grouped
 			>
 			<p className="px-3 text-xs leading-relaxed text-muted-foreground">
-				{t("settings.browserProfiles.description")}
+				{"Temporary is isolated per worker and discarded. Named profiles retain sign-ins and site state and are shared only by workers you explicitly bind to the same profile."}
 			</p>
-			<SettingsRow label={t("settings.browserImport.rowLabel")}>
+			<SettingsRow label={"Bring over browser data"}>
 				<Button disabled={!bridge} onClick={() => setImportOpen(true)} size="sm" type="button" variant="outline">
 					<Import aria-hidden="true" className="size-icon-base" />
-					{t("settings.browserImport.action")}
+					{"Import browser data"}
 				</Button>
 			</SettingsRow>
-			<SettingsRow label={t("settings.browserProfiles.create")}>
+			<SettingsRow label={"Create profile"}>
 				<form
 					className="flex min-w-0 max-w-full items-center gap-1.5"
 					onSubmit={(event) => {
@@ -133,36 +127,36 @@ export function BrowserProfilesSection({ titleHidden }: { titleHidden?: boolean 
 					}}
 				>
 					<Input
-						aria-label={t("settings.browserProfiles.name")}
+						aria-label={"Profile name"}
 						className="h-control-md w-36"
 						disabled={!bridge || loading}
 						maxLength={64}
 						onChange={(event) => setName(event.target.value)}
-						placeholder={t("settings.browserProfiles.namePlaceholder")}
+						placeholder={"Work"}
 						value={name}
 					/>
-					<Button aria-label={t("settings.browserProfiles.create")} disabled={!name.trim() || !bridge || loading} size="icon-sm" type="submit" variant="outline">
+					<Button aria-label={"Create profile"} disabled={!name.trim() || !bridge || loading} size="icon-sm" type="submit" variant="outline">
 						<Plus aria-hidden="true" className="size-icon-base" />
 					</Button>
 				</form>
 			</SettingsRow>
 			{loading ? (
-				<p className="px-3 py-3 text-xs text-muted-foreground">{t("settings.browserProfiles.loading")}</p>
+				<p className="px-3 py-3 text-xs text-muted-foreground">{"Loading browser profiles…"}</p>
 			) : profiles.length === 0 ? (
-				<p className="px-3 py-3 text-xs text-muted-foreground">{t("settings.browserProfiles.empty")}</p>
+				<p className="px-3 py-3 text-xs text-muted-foreground">{"No named browser profiles yet."}</p>
 			) : (
 				profiles.map((profile) => (
 					<SettingsRow key={profile.id} label={profile.name}>
 						<div className="flex min-w-0 items-center gap-1.5">
 							<Input
-								aria-label={t("settings.browserProfiles.renameInput", { profile: profile.name })}
+								aria-label={`New name for ${profile.name}`}
 								className={cn("h-control-md w-36", !editing[profile.id] && "hidden")}
 								maxLength={64}
 								onChange={(event) => setEditing((current) => ({ ...current, [profile.id]: event.target.value }))}
 								value={editing[profile.id] ?? profile.name}
 							/>
 							<Button
-								aria-label={t("settings.browserProfiles.rename", { profile: profile.name })}
+								aria-label={`Rename ${profile.name}`}
 								onClick={() => {
 									if (editing[profile.id] === undefined) setEditing((current) => ({ ...current, [profile.id]: profile.name }));
 									else void rename(profile.id);
@@ -173,13 +167,13 @@ export function BrowserProfilesSection({ titleHidden }: { titleHidden?: boolean 
 							>
 								{editing[profile.id] === undefined ? <Pencil aria-hidden="true" className="size-icon-base" /> : <Check aria-hidden="true" className="size-icon-base" />}
 							</Button>
-							<Button aria-label={t("settings.browserProfiles.clear", { profile: profile.name })} onClick={() => {
+							<Button aria-label={`Clear data for ${profile.name}`} onClick={() => {
 								setActionError("");
 								setPendingAction({ kind: "clear", profile });
 							}} size="icon-sm" type="button" variant="ghost">
 								<Eraser aria-hidden="true" className="size-icon-base" />
 							</Button>
-							<Button aria-label={t("settings.browserProfiles.delete", { profile: profile.name })} onClick={() => {
+							<Button aria-label={`Delete ${profile.name}`} onClick={() => {
 								setActionError("");
 								setPendingAction({ kind: "delete", profile });
 							}} size="icon-sm" type="button" variant="ghost">
@@ -199,23 +193,16 @@ export function BrowserProfilesSection({ titleHidden }: { titleHidden?: boolean 
 					setActionError("");
 				}}
 				title={pendingAction
-					? t(
-							pendingAction.kind === "clear"
-								? "settings.browserProfiles.clearTitle"
-								: "settings.browserProfiles.deleteTitle",
-							{ profile: pendingAction.profile.name },
-						)
+					? pendingAction.kind === "clear"
+						? `Clear data for ${pendingAction.profile.name}?`
+						: `Delete ${pendingAction.profile.name}?`
 					: ""}
 				description={pendingAction
-					? t(
-							pendingAction.kind === "clear"
-								? "settings.browserProfiles.clearDescription"
-								: "settings.browserProfiles.deleteDescription",
-						)
+					? (pendingAction.kind === "clear" ? "This removes saved sign-ins and site data from this profile. This cannot be undone." : "This clears all saved sign-ins and site data, deletes the profile, and removes its worker bindings. This cannot be undone.")
 					: ""}
 				confirmLabel={pendingAction?.kind === "clear"
-					? t("settings.browserProfiles.clearConfirm")
-					: t("settings.browserProfiles.deleteConfirm")}
+					? "Clear data"
+					: "Delete profile"}
 				destructive
 				busy={actionBusy}
 				error={actionError || null}

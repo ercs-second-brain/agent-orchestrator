@@ -1,7 +1,30 @@
-import { agentSwitchErrorLabelKeys, type AgentSwitchErrorCode } from "../i18n/key-maps";
-import type { MessageKey } from "../i18n/messages";
+import type { components } from "../../api/schema";
 import type { AgentSwitchSummary, WorkspaceSession } from "../types/workspace";
 import { agentLabel } from "./agent-options";
+
+export type AgentSwitchErrorCode = NonNullable<components["schemas"]["AgentSwitch"]["errorCode"]>;
+
+/** English labels for known switch error codes; newer daemons fall back to a generic label. */
+const agentSwitchErrorLabels: Record<AgentSwitchErrorCode, string> = {
+	daemon_restart_pre_stop: "Recovery failed before source shutdown",
+	daemon_restart_post_stop: "Recovery failed after source shutdown",
+	daemon_restart_unrecoverable_target: "Target agent could not be recovered",
+	daemon_restart_before_delivery: "Recovery failed before context delivery",
+	delivery_unconfirmed: "Delivery unconfirmed",
+	source_session_terminated: "Source session was terminated",
+	source_stop_unconfirmed: "Source shutdown unconfirmed",
+	target_binary_missing: "Target agent is not installed",
+	target_agent_unauthorized: "Target agent is not authenticated",
+	request_cancelled: "Switch request was interrupted",
+	source_blocked: "Source agent needs attention",
+	failed_pre_stop: "Switch failed before source shutdown",
+	failed_post_stop: "Switch failed after source shutdown",
+	target_ready_failed: "Target agent did not become ready",
+	delivery_failed: "Context delivery failed",
+	switch_failed: "Switch failed",
+	target_start_unconfirmed: "Target startup unconfirmed",
+	source_restore_unconfirmed: "The switch failed, and AO could not restore {{source}}. Terminal input remains locked until AO verifies one active owner.",
+};
 
 export type AgentSwitchPresentation = {
 	stage:
@@ -12,13 +35,9 @@ export type AgentSwitchPresentation = {
 		| "needs_attention"
 		| null;
 	outcome: "in_progress" | "success" | "failure" | "recovery";
-	compactLabelKey: MessageKey;
-	titleKey: MessageKey;
-	descriptionKey: MessageKey;
-	values: {
-		source: string;
-		target: string;
-	};
+	compactLabel: string;
+	title: string;
+	description: string;
 	tone: "working" | "success" | "warning" | "danger";
 	animate: boolean;
 	lockAgentTerminal: boolean;
@@ -48,18 +67,18 @@ export type AgentSwitchStatusVisual = {
 	breathe: boolean;
 };
 
-const inProgressDescriptions: Partial<Record<string, MessageKey>> = {
-	preparing_handoff: "switchAgent.state.preparingHandoff",
-	stopping_source: "switchAgent.state.stoppingSource",
-	source_stopped: "switchAgent.state.sourceStopped",
-	starting_target: "switchAgent.state.startingTarget",
-	target_ready: "switchAgent.state.targetReady",
-	delivering_context: "switchAgent.state.deliveringContext",
+const inProgressDescriptions: Partial<Record<string, string>> = {
+	preparing_handoff: "Preparing handoff",
+	stopping_source: "Stopping source agent",
+	source_stopped: "Source stopped",
+	starting_target: "Starting target agent",
+	target_ready: "Target ready",
+	delivering_context: "Delivering context",
 };
 
-function failureDescriptionKey(errorCode?: string): MessageKey {
-	if (!errorCode) return "switchAgent.state.failed";
-	return agentSwitchErrorLabelKeys[errorCode as AgentSwitchErrorCode] ?? "switchAgent.state.failed";
+function failureDescription(errorCode?: string): string {
+	if (!errorCode) return "Failed";
+	return agentSwitchErrorLabels[errorCode as AgentSwitchErrorCode] ?? "Failed";
 }
 
 export function deriveAgentSwitchPresentation({
@@ -78,10 +97,9 @@ export function deriveAgentSwitchPresentation({
 		return {
 			stage: "needs_attention",
 			outcome: "recovery",
-			compactLabelKey: "switchAgent.recovery.compact",
-			titleKey: "switchAgent.sourceStopRecovery.title",
-			descriptionKey: "switchAgent.sourceStopRecovery.description",
-			values,
+			compactLabel: "Agent switch needs recovery",
+			title: `${values.source} status could not be confirmed`,
+			description: `AO could not confirm whether ${values.source} stopped. Check the session before continuing.`,
 			tone: "warning",
 			animate: false,
 			lockAgentTerminal: true,
@@ -96,10 +114,9 @@ export function deriveAgentSwitchPresentation({
 		return {
 			stage: "needs_attention",
 			outcome: "recovery",
-			compactLabelKey: "switchAgent.sourceRecovery.compact",
-			titleKey: "switchAgent.sourceRecovery.title",
-			descriptionKey: "switchAgent.sourceRecovery.description",
-			values,
+			compactLabel: `${values.source} needs restoration`,
+			title: `${values.source} could not be restored`,
+			description: `The switch failed, and AO could not restore ${values.source}. Terminal input remains locked until AO verifies one active owner.`,
 			tone: "warning",
 			animate: false,
 			lockAgentTerminal: true,
@@ -111,10 +128,9 @@ export function deriveAgentSwitchPresentation({
 		return {
 			stage: "needs_attention",
 			outcome: "recovery",
-			compactLabelKey: "switchAgent.recovery.compact",
-			titleKey: "switchAgent.recovery.title",
-			descriptionKey: "switchAgent.recovery.description",
-			values,
+			compactLabel: "Agent switch needs recovery",
+			title: "Target startup could not be confirmed",
+			description: "AO could not confirm whether the target agent started. Terminal input remains locked to prevent two agents from owning the session.",
 			tone: "warning",
 			animate: false,
 			lockAgentTerminal: true,
@@ -126,10 +142,9 @@ export function deriveAgentSwitchPresentation({
 		return {
 			stage: "needs_attention",
 			outcome: "failure",
-			compactLabelKey: "switchAgent.failure.compact",
-			titleKey: "switchAgent.state.failed",
-			descriptionKey: failureDescriptionKey(agentSwitch.errorCode),
-			values,
+			compactLabel: "Agent switch failed",
+			title: "Failed",
+			description: failureDescription(agentSwitch.errorCode),
 			tone: "danger",
 			animate: false,
 			lockAgentTerminal: false,
@@ -145,10 +160,9 @@ export function deriveAgentSwitchPresentation({
 		return {
 			stage: settled ? null : "confirming_takeover",
 			outcome: settled ? "success" : "in_progress",
-			compactLabelKey: settled ? "switchAgent.success.compact" : "switchAgent.compact.switching",
-			titleKey: settled ? "switchAgent.success.compact" : "switchAgent.progressTitle",
-			descriptionKey: "switchAgent.state.completed",
-			values,
+			compactLabel: settled ? `Switched to ${values.target}` : `Switching to ${values.target}`,
+			title: settled ? `Switched to ${values.target}` : `Switching from ${values.source} to ${values.target}`,
+			description: "Completed",
 			tone: settled ? "success" : "working",
 			animate: !settled,
 			lockAgentTerminal: !settled,
@@ -161,12 +175,11 @@ export function deriveAgentSwitchPresentation({
 		return {
 			stage: "preparing",
 			outcome: "in_progress",
-			compactLabelKey: allowSourceInput ? "switchAgent.sourceInput.compact" : "switchAgent.compact.switching",
-			titleKey: "switchAgent.progressTitle",
-			descriptionKey: allowSourceInput
-				? "switchAgent.sourceInput.description"
-				: "switchAgent.state.preparingHandoff",
-			values,
+			compactLabel: allowSourceInput ? "Source agent needs input" : `Switching to ${values.target}`,
+			title: `Switching from ${values.source} to ${values.target}`,
+			description: allowSourceInput
+				? "The source agent needs input. Review the terminal prompt to continue the handoff."
+				: "Preparing handoff",
 			tone: allowSourceInput ? "warning" : "working",
 			animate: true,
 			lockAgentTerminal: !allowSourceInput,
@@ -196,10 +209,9 @@ export function deriveAgentSwitchPresentation({
 		return {
 			stage,
 			outcome: "in_progress",
-			compactLabelKey: "switchAgent.compact.switching",
-			titleKey: "switchAgent.progressTitle",
-			descriptionKey: inProgressDescriptions[agentSwitch.state] ?? "switchAgent.checkingStatus",
-			values,
+			compactLabel: `Switching to ${values.target}`,
+			title: `Switching from ${values.source} to ${values.target}`,
+			description: inProgressDescriptions[agentSwitch.state] ?? "Checking switch status…",
 			tone: "working",
 			animate: true,
 			lockAgentTerminal: true,
@@ -210,10 +222,9 @@ export function deriveAgentSwitchPresentation({
 	return {
 		stage: "preparing",
 		outcome: "in_progress",
-		compactLabelKey: "switchAgent.refreshOnly.compact",
-		titleKey: "switchAgent.checkingStatus",
-		descriptionKey: "switchAgent.checkingStatus",
-		values,
+		compactLabel: "Checking switch status",
+		title: "Checking switch status…",
+		description: "Checking switch status…",
 		tone: "working",
 		animate: true,
 		lockAgentTerminal: true,

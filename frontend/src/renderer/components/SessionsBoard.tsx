@@ -1,5 +1,4 @@
 import { memo, useCallback, useEffect, useRef, useState, type MouseEvent } from "react";
-import { useTranslation } from "react-i18next";
 import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import {
@@ -81,13 +80,12 @@ const dragStyle = isMac ? ({ WebkitAppRegion: "drag" } as React.CSSProperties) :
 const noDragStyle = isMac ? ({ WebkitAppRegion: "no-drag" } as React.CSSProperties) : undefined;
 
 export function SessionsBoard({ projectId }: SessionsBoardProps) {
-	const { t } = useTranslation();
 	const navigate = useNavigate();
 	const queryClient = useQueryClient();
 	// Lanes follow the daemon's delivery order: building -> validating ->
 	// in review -> ready. The middle two are one review-feedback loop, split by
 	// whose turn it is.
-	const columns: KanbanColumnView[] = boardKanbanColumnOrder.map((column) => getKanbanColumnView(column, t));
+	const columns: KanbanColumnView[] = boardKanbanColumnOrder.map((column) => getKanbanColumnView(column));
 	const workspaceQuery = useWorkspaceQuery();
 	const shell = useShellMaybe();
 	const liveUsageBySession = useSessionUsageSummaries(projectId).data ?? emptyUsageBySession;
@@ -99,7 +97,7 @@ export function SessionsBoard({ projectId }: SessionsBoardProps) {
 	const workspaces = projectId ? all.filter((workspace) => workspace.id === projectId) : all;
 	const workspace = projectId ? workspaces[0] : undefined;
 	// Board chrome stays route-oriented; project context remains in the sidebar.
-	const boardLabel = t("shell.board");
+	const boardLabel = "Board";
 	const liveSessions = workspaces.flatMap((workspace) => workerSessions(workspace.sessions));
 	const demoWorkspaceId = projectId ?? workspaces[0]?.id;
 	const sessions = usesPreviewWorkspaceData && demoWorkspaceId && liveSessions.length === 0
@@ -119,7 +117,7 @@ export function SessionsBoard({ projectId }: SessionsBoardProps) {
 			)
 		: liveUsageBySession;
 	const orchestrator = projectId ? newestActiveOrchestrator(workspaces[0]?.sessions ?? []) : undefined;
-	const orchestratorActivityLabel = orchestrator ? getAgentActivityView(orchestrator.activity, t).label : undefined;
+	const orchestratorActivityLabel = orchestrator ? getAgentActivityView(orchestrator.activity).label : undefined;
 	const [isSpawning, setIsSpawning] = useState(false);
 	const [spawnError, setSpawnError] = useState<string | null>(null);
 	const [canCreateAsTui, setCanCreateAsTui] = useState(false);
@@ -159,7 +157,7 @@ export function SessionsBoard({ projectId }: SessionsBoardProps) {
 		.filter(isArchivedSession)
 		.sort((left, right) => right.updatedAt.localeCompare(left.updatedAt));
 	const activeSessions = sessions.filter((candidate) => !isArchivedSession(candidate));
-	const boardLabels = sessionsBoardLabels(t);
+	const boardLabels = sessionsBoardLabels();
 	// First-run orientation replaces the empty column shells (only once the
 	// query has resolved, so the welcome never flashes over real data): the
 	// global board teaches the app before any project exists, and a fresh
@@ -232,7 +230,7 @@ export function SessionsBoard({ projectId }: SessionsBoardProps) {
 			// Never fail silently: the daemon's message (e.g. a worktree/branch
 			// conflict) is the only actionable signal the user gets.
 			console.error("Failed to spawn orchestrator:", error);
-			setSpawnError(formatOrchestratorStartupError(error instanceof Error ? error.message : t("shell.couldNotSpawn")));
+			setSpawnError(formatOrchestratorStartupError(error instanceof Error ? error.message : "Could not spawn orchestrator"));
 			setCanCreateAsTui(isChatPreflightError(error));
 		} finally {
 			setIsSpawning(false);
@@ -259,14 +257,14 @@ export function SessionsBoard({ projectId }: SessionsBoardProps) {
 			)}
 			{visibleSpawnError && canCreateAsTui && !showProjectEmpty ? (
 				<TopbarButton disabled={isSpawning || isProjectRestarting} onClick={() => void openOrchestrator("tui")}>
-					{t("newTask.createAsTui")}
+					{"Create as Terminal UI"}
 				</TopbarButton>
 			) : null}
 			<Tooltip>
 				<TooltipTrigger asChild>
 					<span className="inline-flex">
 						<TopbarButton
-							aria-label={t("shell.newTask")}
+							aria-label={"New task"}
 							className="topbar-control--labeled"
 							data-priority="primary"
 							disabled={isProjectRestarting}
@@ -274,11 +272,11 @@ export function SessionsBoard({ projectId }: SessionsBoardProps) {
 							variant="accent"
 						>
 							<Plus className="size-icon-md" aria-hidden="true" />
-							<span data-compact-label>{t("newTask.task")}</span>
+							<span data-compact-label>{"Task"}</span>
 						</TopbarButton>
 					</span>
 				</TooltipTrigger>
-				<TooltipContent side="bottom">{t("shell.newTask")}</TooltipContent>
+				<TooltipContent side="bottom">{"New task"}</TooltipContent>
 			</Tooltip>
 			<Tooltip>
 				<TooltipTrigger asChild>
@@ -286,8 +284,8 @@ export function SessionsBoard({ projectId }: SessionsBoardProps) {
 						<TopbarButton
 							aria-label={
 								orchestratorActivityLabel
-									? t("shell.orchestratorWithActivity", { activity: orchestratorActivityLabel })
-									: t("shell.spawnOrchestrator")
+									? `Orchestrator, ${orchestratorActivityLabel}`
+									: "Spawn Orchestrator"
 							}
 							className="topbar-control--labeled"
 							data-priority="secondary"
@@ -296,19 +294,19 @@ export function SessionsBoard({ projectId }: SessionsBoardProps) {
 							variant="primary"
 						>
 							<OrchestratorIcon className="size-icon-md" aria-hidden="true" />
-							<span data-compact-label>{t("shell.orchestrator")}</span>
+							<span data-compact-label>{"Orchestrator"}</span>
 							{orchestrator ? <OrchestratorActivityIndicator session={orchestrator} /> : null}
 						</TopbarButton>
 					</span>
 				</TooltipTrigger>
 				<TooltipContent side="bottom">
 					{isProjectRestarting
-						? t("shell.restarting")
+						? "Restarting…"
 						: isSpawning
-							? t("shell.spawning")
+							? "Spawning…"
 							: orchestrator
-								? t("shell.openOrchestrator")
-								: t("shell.spawnOrchestrator")}
+								? "Open orchestrator"
+								: "Spawn Orchestrator"}
 				</TooltipContent>
 			</Tooltip>
 			{boardOwnsNotificationCenter ? (
@@ -361,7 +359,7 @@ export function SessionsBoard({ projectId }: SessionsBoardProps) {
 						{health.state === "restart_needed" || health.state === "duplicates" ? (
 							<TopbarButton disabled={isProjectRestarting} onClick={() => void restartOrchestrator()} variant="primary">
 								<RotateCw className="size-3.5" aria-hidden="true" />
-								{t("shell.restart")}
+								{"Restart"}
 							</TopbarButton>
 						) : null}
 					</div>
@@ -369,11 +367,11 @@ export function SessionsBoard({ projectId }: SessionsBoardProps) {
 				{workspace?.folderMissing ? (
 					<div className="mx-3 my-3 flex items-center gap-3 rounded-md border border-border bg-surface px-3 py-2 text-xs text-muted-foreground">
 						<AlertTriangle className="size-icon-base shrink-0 text-warning" aria-hidden="true" />
-						<span className="min-w-0 flex-1">{t("home.folderMissing")}</span>
+						<span className="min-w-0 flex-1">{"Folder missing"}</span>
 					</div>
 				) : null}
 				{workspaceStartupState === "error" || workspaceQuery.isError ? (
-					<p className="py-10 text-center text-xs text-passive">{t("shell.couldNotLoadSessions")}</p>
+					<p className="py-10 text-center text-xs text-passive">{"Could not load sessions."}</p>
 				) : showWelcome ? (
 					<BoardWelcome />
 				) : showProjectEmpty ? (
@@ -433,7 +431,6 @@ const BoardArchivePanel = memo(function BoardArchivePanel({
 	sessions: WorkspaceSession[];
 	usageBySession: UsageBySession;
 }) {
-	const { t } = useTranslation();
 	const navigate = useNavigate();
 	const queryClient = useQueryClient();
 	const restoreSessionById = useRestoreSession();
@@ -500,9 +497,9 @@ const BoardArchivePanel = memo(function BoardArchivePanel({
 		<>
 			<SessionsArchiveView
 				labels={{
-					archive: t("shell.archive"),
-					archiveAria: t("shell.archiveSessionsAria", { count: sessions.length }),
-					archivedSessions: t("shell.archivedSessions"),
+					archive: "Archive",
+					archiveAria: (sessions.length) === 1 ? `Archive, ${sessions.length} session` : `Archive, ${sessions.length} sessions`,
+					archivedSessions: "Archived sessions",
 				}}
 				renderSessionCard={(session) => (
 					<ArchivedSessionCardAdapter

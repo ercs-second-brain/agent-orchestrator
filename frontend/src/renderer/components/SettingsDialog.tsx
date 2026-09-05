@@ -1,6 +1,5 @@
 import { BadgeCheck, Bot, CircleHelp, GitBranch, Globe2, Inbox, Keyboard, MonitorCog, RefreshCw, Settings2, Smartphone, TriangleAlert, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { useTranslation } from "react-i18next";
 import { GlobalSettingsForm } from "./GlobalSettingsForm";
 import {
 	ProjectSettingsForm,
@@ -34,7 +33,6 @@ function initialProjectSaveState(): ProjectSettingsSaveState {
 }
 
 export function SettingsDialog() {
-	const { t } = useTranslation();
 	const settingsModal = useUiStore((state) => state.settingsModal);
 	const closeSettings = useUiStore((state) => state.closeSettings);
 	// Keep the last non-null settings so the content stays rendered during the
@@ -48,21 +46,21 @@ export function SettingsDialog() {
 	const displaySettings = lastSettingsRef.current;
 
 	const globalSections: Array<{ id: GlobalSettingsSection; label: string; icon: typeof Settings2 }> = [
-		{ id: "general", label: t("settings.general"), icon: Settings2 },
-		{ id: "harness", label: t("settings.harness"), icon: Bot },
-		{ id: "agents", label: t("settings.agents"), icon: BadgeCheck },
-		{ id: "browserProfiles", label: t("settings.browserProfiles"), icon: Globe2 },
-		{ id: "mobile", label: t("settings.mobile"), icon: Smartphone },
-		{ id: "shortcuts", label: t("settings.shortcuts"), icon: Keyboard },
-		{ id: "updates", label: t("settings.updates"), icon: RefreshCw },
-		{ id: "help", label: t("settings.help"), icon: CircleHelp },
+		{ id: "general", label: "General", icon: Settings2 },
+		{ id: "harness", label: "Harness", icon: Bot },
+		{ id: "agents", label: "Subscriptions", icon: BadgeCheck },
+		{ id: "browserProfiles", label: "Browser", icon: Globe2 },
+		{ id: "mobile", label: "Mobile", icon: Smartphone },
+		{ id: "shortcuts", label: "Shortcuts", icon: Keyboard },
+		{ id: "updates", label: "Updates", icon: RefreshCw },
+		{ id: "help", label: "Help", icon: CircleHelp },
 	];
 
 	const projectSections: Array<{ id: ProjectSettingsSection; label: string; icon: typeof Settings2 }> = [
-		{ id: "general", label: t("settings.project.identity"), icon: MonitorCog },
-		{ id: "agents", label: t("settings.project.agents"), icon: Bot },
-		{ id: "workflow", label: t("settings.project.workflow"), icon: GitBranch },
-		{ id: "intake", label: t("settings.project.intake"), icon: Inbox },
+		{ id: "general", label: "Identity", icon: MonitorCog },
+		{ id: "agents", label: "Agents", icon: Bot },
+		{ id: "workflow", label: "Workflow", icon: GitBranch },
+		{ id: "intake", label: "Intake", icon: Inbox },
 	];
 
 	const isProjectSettings = displaySettings?.scope === "project";
@@ -71,8 +69,8 @@ export function SettingsDialog() {
 	const [projectSaveState, setProjectSaveState] = useState<ProjectSettingsSaveState>(initialProjectSaveState);
 
 	const activeLabel = isProjectSettings
-		? (projectSections.find((s) => s.id === activeProjectSection)?.label ?? t("settings.project.identity"))
-		: (globalSections.find((section) => section.id === activeSection)?.label ?? t("settings.general"));
+		? (projectSections.find((s) => s.id === activeProjectSection)?.label ?? "Identity")
+		: (globalSections.find((section) => section.id === activeSection)?.label ?? "General");
 
 	const closeSettingsDialog = () => {
 		if (isProjectSettings && projectSaveState.isPending) return;
@@ -99,8 +97,8 @@ export function SettingsDialog() {
 				{displaySettings && (
 					<div className="flex h-full min-h-0">
 						<aside className="flex w-48 shrink-0 flex-col border-r border-(--color-border-settings-dialog-header) bg-card">
-						<p className="px-3 pb-1 pt-3 text-2xs font-semibold tracking-wider text-muted-foreground/60">{t("settings.title")}</p>
-						<nav aria-label={t("settings.navSectionsAria")} className="flex flex-col gap-0.5 p-2 pt-0">
+						<p className="px-3 pb-1 pt-3 text-2xs font-semibold tracking-wider text-muted-foreground/60">{"Settings"}</p>
+						<nav aria-label={"Settings sections"} className="flex flex-col gap-0.5 p-2 pt-0">
 							{isProjectSettings
 								? projectSections.map(({ id, label, icon }) => (
 										<SettingsNavItem
@@ -138,26 +136,26 @@ export function SettingsDialog() {
 										projectSaveState.validationError ??
 										projectSaveState.mutationError ??
 										(projectSaveState.replacementError
-											? t("settings.project.restartFailed", { error: projectSaveState.replacementError })
+											? `Orchestrator restart failed: ${projectSaveState.replacementError}`
 											: undefined)
 									}
 								>
 									{projectSaveState.showSaving ? (
-										t("settings.project.saving")
+										"Saving…"
 									) : projectSaveState.saved ? (
-										t("settings.project.saved")
+										"Saved."
 									) : projectSaveState.validationError || projectSaveState.mutationError ? (
 										<>
 											<TriangleAlert className="size-4" aria-hidden="true" />
-											{t("settings.project.saveFailed")}
+											{"Save failed"}
 										</>
 									) : (
-										t("settings.project.saveChanges")
+										"Save changes"
 									)}
 								</Button>
 								<span className="sr-only" role="status" aria-live="polite">
 									{projectSaveState.validationError ?? projectSaveState.mutationError ??
-										(projectSaveState.saved ? t("settings.project.saved") : "")}
+										(projectSaveState.saved ? "Saved." : "")}
 								</span>
 							</div>
 						)}
@@ -168,10 +166,10 @@ export function SettingsDialog() {
 						<DialogHeader className={cn(settingsDialogHeaderClass, "flex h-auto shrink-0 flex-row items-center justify-between border-b-0")}>
 							<DialogTitle className="text-2xl font-bold text-foreground">{activeLabel}</DialogTitle>
 							<DialogDescription className="sr-only">
-								{isProjectSettings ? t("settings.project.dialogDescription") : t("settings.dialogDescription", { section: activeLabel.toLowerCase() })}
+								{isProjectSettings ? "Manage this project's settings." : `Manage ${activeLabel.toLowerCase()} settings.`}
 							</DialogDescription>
 							<DialogClose
-								aria-label={t("settings.close")}
+								aria-label={"Close settings"}
 								className="settings-close-button border border-transparent transition-colors hover:border-(--color-border-settings-input) hover:bg-[var(--color-bg-settings-input)]"
 								disabled={isProjectSettings && projectSaveState.isPending}
 							>

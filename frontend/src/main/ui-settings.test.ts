@@ -24,20 +24,17 @@ describe("ui-settings", () => {
 		expect(await readUiSettings(dir)).toEqual(DEFAULT_UI_SETTINGS);
 	});
 
-	it("round-trips written locale", async () => {
-		await writeUiSettings(dir, { locale: "zh-CN" });
-		expect(await readUiSettings(dir)).toEqual({ ...DEFAULT_UI_SETTINGS, locale: "zh-CN" });
-		await writeUiSettings(dir, { locale: "en" });
+	it("ignores a persisted locale key left over from earlier versions", async () => {
+		await writeFile(path.join(dir, UI_SETTINGS_FILE_NAME), JSON.stringify({ locale: "zh-CN" }), "utf8");
 		expect(await readUiSettings(dir)).toEqual(DEFAULT_UI_SETTINGS);
 	});
 
 	it("merges a partial write with previously persisted settings instead of replacing them", async () => {
-		await writeUiSettings(dir, { locale: "zh-CN" });
 		await writeUiSettings(dir, { soundNotificationsEnabled: false });
-		expect(await readUiSettings(dir)).toEqual({ ...DEFAULT_UI_SETTINGS, locale: "zh-CN", soundNotificationsEnabled: false });
+		expect(await readUiSettings(dir)).toEqual({ ...DEFAULT_UI_SETTINGS, soundNotificationsEnabled: false });
 
-		await writeUiSettings(dir, { locale: "ja" });
-		expect(await readUiSettings(dir)).toEqual({ ...DEFAULT_UI_SETTINGS, locale: "ja", soundNotificationsEnabled: false });
+		await writeUiSettings(dir, { soundNotificationsEnabled: true });
+		expect(await readUiSettings(dir)).toEqual({ ...DEFAULT_UI_SETTINGS, soundNotificationsEnabled: true });
 	});
 
 	it("falls back to defaults on garbage", async () => {
@@ -45,28 +42,23 @@ describe("ui-settings", () => {
 		expect(await readUiSettings(dir)).toEqual(DEFAULT_UI_SETTINGS);
 	});
 
-	it("coerces unknown locale to en and accepts supported locales", () => {
+	it("ignores unknown fields instead of erroring", () => {
 		expect(coerceUiSettings({ locale: "xx" })).toEqual(DEFAULT_UI_SETTINGS);
-		expect(coerceUiSettings({ locale: "zh" })).toEqual(DEFAULT_UI_SETTINGS);
 		expect(coerceUiSettings({})).toEqual(DEFAULT_UI_SETTINGS);
 		expect(coerceUiSettings(null)).toEqual(DEFAULT_UI_SETTINGS);
-		expect(coerceUiSettings({ locale: "zh-CN" })).toEqual({ ...DEFAULT_UI_SETTINGS, locale: "zh-CN" });
-		expect(coerceUiSettings({ locale: "fr" })).toEqual({ ...DEFAULT_UI_SETTINGS, locale: "fr" });
-		expect(coerceUiSettings({ locale: "pt-BR" })).toEqual({ ...DEFAULT_UI_SETTINGS, locale: "pt-BR" });
 	});
 
 	it("merges the terminal shell without resetting other UI settings", async () => {
-		await writeUiSettings(dir, { locale: "ja", soundNotificationsEnabled: false });
+		await writeUiSettings(dir, { soundNotificationsEnabled: false });
 		await writeUiSettings(dir, { terminalShell: { kind: "git-bash" } });
 		expect(await readUiSettings(dir)).toEqual({
-			locale: "ja",
 			soundNotificationsEnabled: false,
 			terminalShell: { kind: "git-bash" },
 		});
 	});
 
 	it("atomic write leaves no temp file behind", async () => {
-		await writeUiSettings(dir, { locale: "zh-CN" });
+		await writeUiSettings(dir, { soundNotificationsEnabled: true });
 		const entries = await readdir(dir);
 		expect(entries).toEqual([UI_SETTINGS_FILE_NAME]);
 	});

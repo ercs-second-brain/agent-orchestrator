@@ -1,7 +1,6 @@
 import { GITHUB_REPO_URL } from "../../shared/github-repo";
 import type { ProjectSource } from "./CreateProjectFlow";
 import { useNavigate } from "@tanstack/react-router";
-import { useTranslation } from "react-i18next";
 import { AlertTriangle, Folder, FolderPlus, Folders, FolderOpen, GitFork, Smartphone, Star } from "lucide-react";
 import { useMemo, useState, type ReactNode } from "react";
 import { useSystemRequirementsGate } from "../hooks/useSystemRequirementsGate";
@@ -53,7 +52,6 @@ function sortProjectsByActivity(projects: WorkspaceSummary[]): WorkspaceSummary[
 }
 
 function ProjectRow({ project, onClick, emptyTimeLabel, justNowLabel }: { project: WorkspaceSummary; onClick: () => void; emptyTimeLabel: string; justNowLabel: string }) {
-	const { t } = useTranslation();
 	const lastOpenedAt = getProjectLastOpenedAt(project.id);
 	const latestProjectFact = latestProjectTimestamp(project) || lastOpenedAt;
 
@@ -70,7 +68,7 @@ function ProjectRow({ project, onClick, emptyTimeLabel, justNowLabel }: { projec
 				<span className="flex items-center gap-1.5">
 					<span className="block truncate font-medium text-[var(--color-text-import-title)]">{project.name}</span>
 					{project.folderMissing ? (
-						<Badge variant="warning" className="h-4 shrink-0 px-1.5 text-2xs">{t("home.folderMissing")}</Badge>
+						<Badge variant="warning" className="h-4 shrink-0 px-1.5 text-2xs">{"Folder missing"}</Badge>
 					) : null}
 				</span>
 				<span className="block truncate text-[13px] text-muted-foreground">{project.path}</span>
@@ -113,7 +111,6 @@ function HomeActionCard({
 
 export function HomePage() {
 	const navigate = useNavigate();
-	const { t } = useTranslation();
 	const openGlobalSettings = useUiStore((state) => state.openGlobalSettings);
 	const { cloneProject, createProject, createRepository, daemonStatus, initializeProjectRepository, workspaceStartupState } =
 		useShell();
@@ -146,7 +143,7 @@ export function HomePage() {
 	if (workspaceStartupState === "error" || workspaceQuery.isError) {
 		return (
 			<div className="flex min-h-full items-center justify-center px-6 py-16">
-				<p className="text-center text-xs text-passive">{t("shell.couldNotLoadProjects")}</p>
+				<p className="text-center text-xs text-passive">{"Could not load projects."}</p>
 			</div>
 		);
 	}
@@ -158,63 +155,63 @@ export function HomePage() {
 			<div className="w-full max-w-[640px] -translate-y-3">
 				<div className="space-y-6">
 					<div className="flex items-center justify-between gap-4 px-3">
-						<h1 className="text-[17px] font-medium tracking-[-0.01em] text-foreground/80">{t("home.jumpBack")}</h1>
+						<h1 className="text-[17px] font-medium tracking-[-0.01em] text-foreground/80">{"Jump back right in"}</h1>
 						<TopbarButton
 							className="!transition-none !border-0 shrink-0 font-mono text-[15px] tracking-[0.03em] hover:bg-interactive-hover hover:text-foreground active:bg-interactive-hover active:scale-[0.96]"
 							onClick={() => void aoBridge.app.openExternal(`${GITHUB_REPOSITORY_URL}/stargazers`)}
 							variant="accent"
 						>
 							<Star className="size-4" strokeWidth={1.8} aria-hidden="true" />
-							{t("home.starUs")}
+							{"Star Us"}
 						</TopbarButton>
 					</div>
 
 					<div className="-mt-3 grid grid-cols-2 gap-3 px-3">
 						<HomeActionCard
-							ariaLabel={t("createProject.createRepo")}
+							ariaLabel={"Create a new Git repository"}
 							icon={<FolderPlus className="size-4" aria-hidden="true" />}
-							label={t("createProject.createRepo")}
+							label={"Create a new Git repository"}
 							onClick={() => requestSource("create")}
 						/>
 						<HomeActionCard
-							ariaLabel={t("createProject.cloneFromGit")}
+							ariaLabel={"Clone from Git"}
 							icon={<GitFork className="size-4" aria-hidden="true" />}
-							label={t("createProject.cloneFromGit")}
+							label={"Clone from Git"}
 							onClick={() => requestSource("clone")}
 						/>
 						{!isRemote ? (
 							<>
 								<HomeActionCard
-									ariaLabel={t("createProject.openLocal")}
+									ariaLabel={"Import an existing project"}
 									icon={<FolderOpen className="size-4" aria-hidden="true" />}
-									label={t("createProject.openLocal")}
+									label={"Import an existing project"}
 									onClick={() => requestSource("local")}
 								/>
 								<HomeActionCard
-									ariaLabel={t("createProject.addWorkspace")}
+									ariaLabel={"Import a workspace folder"}
 									icon={<Folders className="size-4" aria-hidden="true" />}
-									label={t("createProject.addWorkspace")}
+									label={"Import a workspace folder"}
 									onClick={() => requestSource("workspace")}
 								/>
 							</>
 						) : null}
 						<HomeActionCard
-							ariaLabel={t("settings.connectMobile")}
+							ariaLabel={"Connect Mobile"}
 							icon={<Smartphone aria-hidden="true" />}
-							label={t("settings.connectMobile")}
+							label={"Connect Mobile"}
 							onClick={() => openGlobalSettings("mobile")}
 						/>
 					</div>
 
 					<div className="-mt-3 space-y-1 px-3">
-						<h2 className="text-[17px] font-medium tracking-[-0.01em] text-foreground/80">{t("home.recentProjects")}</h2>
+						<h2 className="text-[17px] font-medium tracking-[-0.01em] text-foreground/80">{"Recent projects"}</h2>
 						{recentProjects.map((project) => (
 							<ProjectRow
 								key={project.id}
 								project={project}
 								onClick={() => openProject(project.id)}
-								emptyTimeLabel={t("home.never")}
-								justNowLabel={t("time.justNow")}
+								emptyTimeLabel={"Never"}
+								justNowLabel={"just now"}
 							/>
 						))}
 					</div>

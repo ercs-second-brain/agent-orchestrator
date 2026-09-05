@@ -13,7 +13,6 @@ import {
 	chatFixtureSettled,
 	chatFixtureThreadError,
 } from "../../lib/chat-fixture";
-import { appI18n } from "../../i18n";
 import type { ConversationMessage, ConversationSnapshot } from "../../types/conversation";
 import { setApiBaseUrl } from "../../lib/api-client";
 import { useUiStore } from "../../stores/ui-store";
@@ -159,7 +158,7 @@ beforeEach(() => {
 
 afterEach(async () => {
 	setApiBaseUrl(null);
-	await appI18n.changeLanguage("en");
+	
 });
 
 function humanMessage(text: string): ConversationMessage {

@@ -1,7 +1,6 @@
 import * as Dialog from "@radix-ui/react-dialog";
 import { Loader2, X } from "lucide-react";
 import { useState } from "react";
-import { useTranslation } from "react-i18next";
 import { useWorkspaceScope } from "../hooks/useWorkspaceQuery";
 import { spawnOrchestrator } from "../lib/spawn-orchestrator";
 import { useUiStore } from "../stores/ui-store";
@@ -23,7 +22,6 @@ type RestoreUnavailableDialogProps = {
 };
 
 export function RestoreUnavailableDialog({ open, session, onOpenChange, onRecreated }: RestoreUnavailableDialogProps) {
-	const { t } = useTranslation();
 	const workspaceQuery = useWorkspaceScope(session.workspaceId);
 	const [busy, setBusy] = useState(false);
 	const [error, setError] = useState<string | undefined>();
@@ -46,7 +44,7 @@ export function RestoreUnavailableDialog({ open, session, onOpenChange, onRecrea
 			onOpenChange(false);
 			onRecreated(id);
 		} catch (err) {
-			setError(err instanceof Error ? err.message : t("restoreUnavailable.createFailed"));
+			setError(err instanceof Error ? err.message : "Failed to create orchestrator");
 		} finally {
 			setBusy(false);
 		}
@@ -62,16 +60,16 @@ export function RestoreUnavailableDialog({ open, session, onOpenChange, onRecrea
 					<button
 						type="button"
 						className="settings-dialog-close-button settings-close-button"
-						aria-label={t("common.close")}
+						aria-label={"Close"}
 						disabled={busy}
 						onClick={() => onOpenChange(false)}
 					>
 						<X className="size-5" aria-hidden="true" />
 					</button>
 					<div className={settingsDialogHeaderClass}>
-						<Dialog.Title className="settings-dialog-title">{t("restoreUnavailable.title")}</Dialog.Title>
+						<Dialog.Title className="settings-dialog-title">{"Session can no longer be restored"}</Dialog.Title>
 						<Dialog.Description className="text-control text-settings-muted">
-							{orchestrator ? t("restoreUnavailable.orchestratorBody") : t("restoreUnavailable.sessionBody")}
+							{orchestrator ? "This orchestrator has no saved agent session to resume. You can create a new orchestrator while AO preserves any workspace data it cannot safely clean." : "This session has no saved agent session or prompt to resume from."}
 						</Dialog.Description>
 					</div>
 					{error ? (
@@ -81,7 +79,7 @@ export function RestoreUnavailableDialog({ open, session, onOpenChange, onRecrea
 					) : null}
 					<div className={settingsDialogFooterClass}>
 						<Button type="button" variant="footer" onClick={() => onOpenChange(false)} disabled={busy}>
-							{orchestrator ? t("confirm.cancel") : t("restoreUnavailable.close")}
+							{orchestrator ? "Cancel" : "Close"}
 						</Button>
 						{orchestrator ? (
 							<Button
@@ -92,10 +90,10 @@ export function RestoreUnavailableDialog({ open, session, onOpenChange, onRecrea
 							>
 								{busy ? <Loader2 className="size-icon-base animate-spin" aria-hidden="true" /> : null}
 								{checkingProject
-									? t("restoreUnavailable.checkingProject")
+									? "Checking project…"
 									: hasOrchestratorAgent
-										? t("restoreUnavailable.createOrchestrator")
-										: t("restoreUnavailable.configureOrchestrator")}
+										? "Create new orchestrator"
+										: "Configure orchestrator agent"}
 							</Button>
 						) : null}
 					</div>

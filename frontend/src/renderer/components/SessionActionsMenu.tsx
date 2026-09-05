@@ -1,6 +1,5 @@
 import { MoreVertical } from "lucide-react";
 import { Children, type ReactNode } from "react";
-import { useTranslation } from "react-i18next";
 import { TopbarButton } from "./TopbarButton";
 import {
 	DropdownMenu,
@@ -15,7 +14,6 @@ export function SessionActionsMenu({
 	children?: ReactNode;
 	inlineStatus?: ReactNode;
 }) {
-	const { t } = useTranslation();
 	const menuItems = Children.toArray(children).filter(Boolean);
 	if (menuItems.length === 0 && !inlineStatus) return null;
 
@@ -26,10 +24,10 @@ export function SessionActionsMenu({
 				<DropdownMenu>
 					<DropdownMenuTrigger asChild>
 						<TopbarButton
-							aria-label={t("session.actionsMenu")}
+							aria-label={"Session actions"}
 							className="size-7 !bg-transparent text-muted-foreground hover:!bg-transparent active:!bg-transparent focus:!bg-transparent data-[state=open]:!bg-transparent hover:text-foreground"
 							data-session-actions-trigger
-							title={t("session.actionsMenu")}
+							title={"Session actions"}
 							type="button"
 							variant="icon"
 						>

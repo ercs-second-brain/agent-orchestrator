@@ -1,6 +1,5 @@
 import { SquareTerminal, X } from "lucide-react";
 import { type MouseEvent, useEffect, useRef, useState } from "react";
-import { useTranslation } from "react-i18next";
 import { useTruncatedText } from "../hooks/useTruncatedText";
 import type { ShellTerminal } from "../hooks/useShellTerminals";
 import { isWindowsPlatform } from "../lib/platform";
@@ -39,7 +38,6 @@ export function ShellTerminalTab({
 	appearance = "pill",
 	onRename,
 }: ShellTerminalTabProps) {
-	const { t } = useTranslation();
 	const title = shell.title;
 	const { ref, isTruncated } = useTruncatedText<HTMLButtonElement>(title);
 	const [isEditing, setIsEditing] = useState(false);
@@ -107,7 +105,7 @@ export function ShellTerminalTab({
 	};
 
 	const closeControl = {
-		"aria-label": t("terminal.closeNamed", { title }),
+		"aria-label": `Close terminal ${title}`,
 		"data-terminal-tab-action": true,
 		onClick: (event: MouseEvent) => {
 			event.stopPropagation();
@@ -131,12 +129,12 @@ export function ShellTerminalTab({
 						<X aria-hidden="true" className="size-icon-sm translate-y-px" />
 					</button>
 				</TooltipTrigger>
-				<TooltipContent side="bottom">{t("terminal.closeNamed", { title })}</TooltipContent>
+				<TooltipContent side="bottom">{`Close terminal ${title}`}</TooltipContent>
 			</Tooltip>
 		);
 		const editingContent = isEditing ? (
 			<input
-				aria-label={t("terminal.rename", { title })}
+				aria-label={`Rename terminal ${title}`}
 				className="min-w-0 w-full rounded-sm border border-accent bg-background px-1 font-mono text-control font-semibold text-foreground shadow-sm outline-none ring-1 ring-accent"
 				onBlur={commit}
 				onChange={(event) => setDraft(event.target.value)}
@@ -166,9 +164,9 @@ export function ShellTerminalTab({
 					tabIndex: isActive ? 0 : -1,
 					title: isTruncated
 						? title
-						: t(renameViaRightClick ? "terminal.renameHintRightClick" : "terminal.renameHintDoubleClick", {
-								workingDir: shell.workingDir,
-							}),
+						: renameViaRightClick
+							? `${shell.workingDir} (right-click to rename)`
+							: `${shell.workingDir} (double-click to rename)`,
 					type: "button",
 				}}
 				buttonRef={ref}
@@ -209,7 +207,7 @@ export function ShellTerminalTab({
 			) : null}
 			{isEditing ? (
 				<input
-					aria-label={t("terminal.rename", { title })}
+					aria-label={`Rename terminal ${title}`}
 					className={cn(
 						"rounded-sm border border-accent bg-background px-1 font-mono text-control font-semibold text-foreground shadow-sm outline-none ring-1 ring-accent",
 						isConnected ? "min-w-0 w-full text-left" : "min-w-flex-min max-w-shell-tab-max",
@@ -247,9 +245,9 @@ export function ShellTerminalTab({
 					title={
 						isTruncated
 							? title
-							: t(renameViaRightClick ? "terminal.renameHintRightClick" : "terminal.renameHintDoubleClick", {
-									workingDir: shell.workingDir,
-								})
+							: renameViaRightClick
+								? `${shell.workingDir} (right-click to rename)`
+								: `${shell.workingDir} (double-click to rename)`
 					}
 					type="button"
 				>
@@ -285,7 +283,7 @@ export function ShellTerminalTab({
 							/>
 						</button>
 					</TooltipTrigger>
-					<TooltipContent side="bottom">{t("terminal.closeNamed", { title })}</TooltipContent>
+					<TooltipContent side="bottom">{`Close terminal ${title}`}</TooltipContent>
 				</Tooltip>
 			)}
 		</span>

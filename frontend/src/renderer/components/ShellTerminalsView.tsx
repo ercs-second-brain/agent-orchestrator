@@ -1,6 +1,5 @@
 import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
 import { useCallback, useEffect } from "react";
-import { Trans, useTranslation } from "react-i18next";
 import { defaultShortcutBindings, shortcutBindingLabel } from "../../shared/shortcuts";
 import { useOverflowScroll } from "../hooks/useOverflowScroll";
 import { useCloseShellTerminal, useRenameShellTerminal, useShellTerminals } from "../hooks/useShellTerminals";
@@ -25,7 +24,6 @@ const isMac = isMacPlatform();
 const newTerminalShortcutLabel = shortcutBindingLabel(defaultShortcutBindings("new-shell-terminal", isMac)[0], isMac);
 
 export function ShellTerminalsView() {
-	const { t } = useTranslation();
 	const { daemonStatus } = useShell();
 	const theme = useResolvedTheme();
 	// The standalone screen shows only session-less shells; a session's own
@@ -86,13 +84,13 @@ export function ShellTerminalsView() {
 		<div className="flex h-full min-h-0 flex-col text-foreground">
 			<div className="flex h-inspector-tabs shrink-0 items-center gap-3 border-b border-border px-5">
 				<span className="shrink-0 font-mono text-caption font-semibold uppercase tracking-wide-lg text-muted-foreground">
-					{t("workbench.terminals")}
+					{"Terminals"}
 				</span>
 				<Tooltip>
 					<TooltipTrigger asChild>
 						<span className="inline-flex">
 							<button
-								aria-label={t("terminal.scrollTabsLeft")}
+								aria-label={"Scroll tabs left"}
 								className={cn(
 									"inline-flex size-control-sm shrink-0 items-center justify-center rounded-sm text-muted-foreground transition-colors hover:bg-interactive-hover hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent/50 disabled:pointer-events-none disabled:opacity-0",
 									!tabsOverflow.canScrollLeft && "invisible",
@@ -105,13 +103,13 @@ export function ShellTerminalsView() {
 							</button>
 						</span>
 					</TooltipTrigger>
-					<TooltipContent side="bottom">{t("terminal.scrollTabsLeft")}</TooltipContent>
+					<TooltipContent side="bottom">{"Scroll tabs left"}</TooltipContent>
 				</Tooltip>
 				{/* Tabs shrink and truncate down to a minimum width; beyond that the
 				    strip scrolls and edge chevrons reveal the overflow. */}
 				<div
 					ref={tabsOverflow.ref}
-					aria-label={t("terminal.tabsAria")}
+					aria-label={"Open terminals"}
 					className="scrollbar-none flex min-w-flex-min flex-1 items-center gap-3 overflow-x-auto"
 					onKeyDown={handleTerminalTabListKeyDown}
 					role="tablist"
@@ -134,7 +132,7 @@ export function ShellTerminalsView() {
 					<TooltipTrigger asChild>
 						<span className="inline-flex">
 							<button
-								aria-label={t("terminal.scrollTabsRight")}
+								aria-label={"Scroll tabs right"}
 								className={cn(
 									"inline-flex size-control-sm shrink-0 items-center justify-center rounded-sm text-muted-foreground transition-colors hover:bg-interactive-hover hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent/50 disabled:pointer-events-none disabled:opacity-0",
 									!tabsOverflow.canScrollRight && "invisible",
@@ -147,12 +145,12 @@ export function ShellTerminalsView() {
 							</button>
 						</span>
 					</TooltipTrigger>
-					<TooltipContent side="bottom">{t("terminal.scrollTabsRight")}</TooltipContent>
+					<TooltipContent side="bottom">{"Scroll tabs right"}</TooltipContent>
 				</Tooltip>
 				<Tooltip>
 					<TooltipTrigger asChild>
 						<button
-							aria-label={t("shortcut.new-shell-terminal")}
+							aria-label={"New terminal"}
 							className="ml-auto inline-flex size-control-sm shrink-0 items-center justify-center rounded-sm text-muted-foreground transition-colors hover:bg-interactive-hover hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent/50"
 							onClick={requestNewShellTerminal}
 							type="button"
@@ -160,7 +158,7 @@ export function ShellTerminalsView() {
 							<Plus aria-hidden="true" className="size-icon-md" />
 						</button>
 					</TooltipTrigger>
-					<TooltipContent side="bottom">{t("terminal.newWithShortcut", { shortcut: newTerminalShortcutLabel })}</TooltipContent>
+					<TooltipContent side="bottom">{`New terminal (${newTerminalShortcutLabel})`}</TooltipContent>
 				</Tooltip>
 			</div>
 			<div className="min-h-0 flex-1">
@@ -180,13 +178,11 @@ export function ShellTerminalsView() {
 				) : (
 					<div className="grid h-full place-items-center bg-terminal font-mono text-control">
 						<div className="text-center">
-							<div className="text-terminal">{t("terminal.emptyTitle")}</div>
+							<div className="text-terminal">{"No terminals open"}</div>
 							<div className="mt-2 text-terminal-dim">
-								<Trans
-									components={{ shortcut: <span className="text-terminal" /> }}
-									i18nKey="terminal.emptyHint"
-									values={{ shortcut: newTerminalShortcutLabel }}
-								/>
+								{"Press "}
+								<span className="text-terminal">{newTerminalShortcutLabel}</span>
+								{" or use the + button to open one."}
 							</div>
 						</div>
 					</div>

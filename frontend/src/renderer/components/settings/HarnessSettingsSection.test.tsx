@@ -3,7 +3,6 @@ import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { apiClient } from "../../lib/api-client";
-import { appI18n } from "../../i18n";
 import { useUiStore } from "../../stores/ui-store";
 import { HarnessSettingsSection } from "./HarnessSettingsSection";
 
@@ -108,7 +107,7 @@ function renderSection() {
 
 describe("HarnessSettingsSection", () => {
 	beforeEach(async () => {
-		await appI18n.changeLanguage("en");
+		
 		window.ao!.clipboard.writeText = vi.fn().mockResolvedValue(undefined);
 		terminalMock.onStateChange = null;
 		terminalMock.onInputRequestResult = null;

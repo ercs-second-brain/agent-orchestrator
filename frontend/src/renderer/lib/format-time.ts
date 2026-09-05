@@ -1,10 +1,7 @@
 import { formatTimeCompact as formatPortableTimeCompact } from "@ercs-second-brain/product-ui";
-import { appI18n, type MessageKey } from "../i18n";
 
 export function formatTimeCompact(isoDate: string | null | undefined): string {
-	return formatPortableTimeCompact(isoDate, {
-		translate: (key, values) => appI18n.t(key as MessageKey, values),
-	});
+	return formatPortableTimeCompact(isoDate);
 }
 
 /** Extra-terse relative time for space-constrained navigation rows. */
