@@ -591,14 +591,9 @@ func (m *Manager) ApplyActivitySignal(ctx context.Context, id domain.SessionID, 
 	if sameState && !rec.FirstSignalAt.IsZero() {
 		if metadataChanged || s.Event == "user-prompt-submit" {
 			rec.UpdatedAt = now
-			applied, err := m.store.UpdateSessionFromActivitySignal(ctx, rec)
+			_, err := m.store.UpdateSessionFromActivitySignal(ctx, rec)
 			m.mu.Unlock()
-			if err != nil {
-				return err
-			}
-			if !applied {
-				return nil
-			}
+			return err
 		}
 		m.mu.Unlock()
 		return nil
@@ -1145,8 +1140,6 @@ func (m *Manager) CommitControllerEpoch(
 	m.resolveNotifications(ctx, resolutions...)
 	return true, nil
 }
-
-
 
 // MarkTerminated marks a session terminated. Runtime/workspace teardown is the
 // caller's responsibility (see session_manager.Manager.Kill); this also reaps the

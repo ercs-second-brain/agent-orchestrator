@@ -86,20 +86,20 @@ type Deps struct {
 // DefaultDeps returns production dependencies.
 func DefaultDeps() Deps {
 	return Deps{
-		In:                    os.Stdin,
-		Out:                   os.Stdout,
-		Err:                   os.Stderr,
-		HTTPClient:            &http.Client{Timeout: 2 * time.Second},
-		Executable:            os.Executable,
-		StartProcess:          startProcess,
-		ProcessAlive:          processalive.Alive,
-		LookPath:              exec.LookPath,
-		CommandOutput:         commandOutput,
-		CommandOutputInDir:    commandOutputInDir,
-		DoctorGitHubRESTBase:  defaultDoctorGitHubRESTBase,
-		DoctorGitLabRESTBase:  defaultDoctorGitLabRESTBase,
-		Now:                   time.Now,
-		Sleep:                 time.Sleep,
+		In:                   os.Stdin,
+		Out:                  os.Stdout,
+		Err:                  os.Stderr,
+		HTTPClient:           &http.Client{Timeout: 2 * time.Second},
+		Executable:           os.Executable,
+		StartProcess:         startProcess,
+		ProcessAlive:         processalive.Alive,
+		LookPath:             exec.LookPath,
+		CommandOutput:        commandOutput,
+		CommandOutputInDir:   commandOutputInDir,
+		DoctorGitHubRESTBase: defaultDoctorGitHubRESTBase,
+		DoctorGitLabRESTBase: defaultDoctorGitLabRESTBase,
+		Now:                  time.Now,
+		Sleep:                time.Sleep,
 	}
 }
 

@@ -81,17 +81,17 @@ type fakeStore struct {
 
 func newFakeStore() *fakeStore {
 	return &fakeStore{
-		sessions:       map[domain.SessionID]domain.SessionRecord{},
-		pr:             map[domain.SessionID]domain.PRFacts{},
-		prFacts:        map[domain.SessionID][]domain.PRFacts{},
-		prs:            map[domain.SessionID][]domain.PullRequest{},
-		projects:       map[string]domain.ProjectRecord{},
-		worktrees:      map[domain.SessionID][]domain.SessionWorktreeRecord{},
-		checks:         map[string][]domain.PullRequestCheck{},
-		reviews:        map[string][]domain.PullRequestReview{},
-		threads:        map[string][]domain.PullRequestReviewThread{},
-		comments:       map[string][]domain.PullRequestComment{},
-		reviewRuns:     map[domain.SessionID][]domain.CurrentHeadReviewRun{},
+		sessions:   map[domain.SessionID]domain.SessionRecord{},
+		pr:         map[domain.SessionID]domain.PRFacts{},
+		prFacts:    map[domain.SessionID][]domain.PRFacts{},
+		prs:        map[domain.SessionID][]domain.PullRequest{},
+		projects:   map[string]domain.ProjectRecord{},
+		worktrees:  map[domain.SessionID][]domain.SessionWorktreeRecord{},
+		checks:     map[string][]domain.PullRequestCheck{},
+		reviews:    map[string][]domain.PullRequestReview{},
+		threads:    map[string][]domain.PullRequestReviewThread{},
+		comments:   map[string][]domain.PullRequestComment{},
+		reviewRuns: map[domain.SessionID][]domain.CurrentHeadReviewRun{},
 	}
 }
 

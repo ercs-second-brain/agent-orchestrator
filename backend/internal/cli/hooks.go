@@ -41,13 +41,13 @@ const (
 // native payload when present. All four are optional: an old daemon decodes
 // the body leniently and simply ignores them.
 type setActivityAPIRequest struct {
-	State                 string             `json:"state,omitempty"`
-	Event                 string             `json:"event,omitempty"`
-	ToolName              string             `json:"toolName,omitempty"`
-	ToolUseID             string             `json:"toolUseId,omitempty"`
-	AgentSessionID        string `json:"agentSessionId,omitempty"`
-	LaunchID              string `json:"launchId,omitempty"`
-	Usage                 *usageHookMetadata `json:"usage,omitempty"`
+	State          string             `json:"state,omitempty"`
+	Event          string             `json:"event,omitempty"`
+	ToolName       string             `json:"toolName,omitempty"`
+	ToolUseID      string             `json:"toolUseId,omitempty"`
+	AgentSessionID string             `json:"agentSessionId,omitempty"`
+	LaunchID       string             `json:"launchId,omitempty"`
+	Usage          *usageHookMetadata `json:"usage,omitempty"`
 }
 
 type usageHookMetadata struct {

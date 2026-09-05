@@ -280,12 +280,12 @@ type Store interface {
 // Manager coordinates internal session spawn, restore, kill, and cleanup over
 // the outbound ports. User-facing read-model assembly lives in the service package.
 type Manager struct {
-	runtime   runtimeController
-	agents    ports.AgentResolver
-	workspace ports.Workspace
-	store     Store
-	daemonRunID          string
-	agentReadiness       ports.AgentReadinessProvider
+	runtime        runtimeController
+	agents         ports.AgentResolver
+	workspace      ports.Workspace
+	store          Store
+	daemonRunID    string
+	agentReadiness ports.AgentReadinessProvider
 	// messenger is a sessionguard.Guard wrapping the raw messenger, so every
 	// pane write is guarded (re-read state, refuse a blocked session) without
 	// each call site re-deriving the check. Send/confirmActive use Deliver for
@@ -311,14 +311,14 @@ type Manager struct {
 	// executable resolves the daemon's own binary (os.Executable in
 	// production); its directory is prepended to spawned sessions' PATH so the
 	// workspace hook commands resolve back to this daemon. Tests inject a stub.
-	executable                      func() (string, error)
-	newLaunchID                     func() string
-	startupBackgroundReconcileDone  chan struct{}
-	startupBackgroundReconcileOnce  sync.Once
-	agentOpMu                       sync.Mutex
-	agentOperations                 map[domain.SessionID]agentOperationKind
-	inputLeases      map[domain.SessionID]int
-	inputDrained     map[domain.SessionID]chan struct{}
+	executable                     func() (string, error)
+	newLaunchID                    func() string
+	startupBackgroundReconcileDone chan struct{}
+	startupBackgroundReconcileOnce sync.Once
+	agentOpMu                      sync.Mutex
+	agentOperations                map[domain.SessionID]agentOperationKind
+	inputLeases                    map[domain.SessionID]int
+	inputDrained                   map[domain.SessionID]chan struct{}
 	// handoffWait bounds optional source-agent enrichment waits.
 	handoffWait time.Duration
 	// backgroundContext owns asynchronous work independently of the admitting
@@ -417,7 +417,6 @@ func (m *Manager) SetReviewerTerminator(terminator ReviewerTerminator) {
 	m.reviewers = terminator
 }
 
-
 func (m *Manager) terminateReviewer(ctx context.Context, id domain.SessionID, body string) error {
 	m.reviewersMu.Lock()
 	terminator := m.reviewers
@@ -476,13 +475,13 @@ const (
 
 // Deps are the collaborators a Session Manager needs; New wires them together.
 type Deps struct {
-	Runtime         runtimeController
-	Agents          ports.AgentResolver
-	Workspace       ports.Workspace
-	Store           Store
-	DaemonRunID     string
-	Messenger       ports.AgentMessenger
-	Lifecycle       lifecycleRecorder
+	Runtime     runtimeController
+	Agents      ports.AgentResolver
+	Workspace   ports.Workspace
+	Store       Store
+	DaemonRunID string
+	Messenger   ports.AgentMessenger
+	Lifecycle   lifecycleRecorder
 	// DataDir owns durable attachment storage and is exported to spawned agents
 	// as AO_DATA_DIR so their hook commands can open the same store.
 	DataDir string
