@@ -22,14 +22,13 @@ Start with [architecture.md](architecture.md) for the current backend model and
 | [stack.md](stack.md)                                   | Accepted library/runtime choices, pending stack decisions, and dependencies explicitly avoided for V1.                |
 | [release-repo.md](release-repo.md)                     | GitHub repo the updater and `ao start` use, and how the three URL sources stay in sync.                               |
 | [telemetry.md](telemetry.md)                           | Remote telemetry is off; local diagnostics stay on-device unless a key is set.                                        |
-| [daemon-environment.md](daemon-environment.md)         | Proposed fix for the GUI-launch PATH/credentials problem when the desktop app spawns the daemon.                      |
+| [daemon-environment.md](daemon-environment.md)         | How the desktop app resolves the user's login-shell environment before spawning the daemon (GUI-launch PATH/credentials fix). |
 
 ## Guides and runbooks
 
 | Doc                                                          | What it covers                                                                                             |
 | ------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------- |
 | [harnesses/pi.md](harnesses/pi.md)                           | Pi support: TUI spawning via the `pi` executable. Chat-mode (pi-acp) integration was removed by #39.          |
-| [harnesses/omp.md](harnesses/omp.md)                         | OMP support as an interactive Terminal UI harness. (Its former Chat-mode section is removed by #39.)          |
 | [runbooks/agent-switch-failure-points.md](runbooks/agent-switch-failure-points.md) | Failure-point runbook for the staged agent-switch production stream, with release gates.             |
 
 ## Decision records
@@ -38,9 +37,10 @@ Architecture decision records live in [adr/](adr/) and are permanent history:
 
 - [adr/0001-lan-listener-for-mobile.md](adr/0001-lan-listener-for-mobile.md) — opt-in LAN listener for the Connect Mobile feature
 - [adr/0002-secure-interactive-reviewer-gateway.md](adr/0002-secure-interactive-reviewer-gateway.md) — secure interactive reviewer gateway
-- [adr/0003-persistent-chat-provider-host.md](adr/0003-persistent-chat-provider-host.md) — persistent chat provider host
+- [adr/0003-persistent-chat-provider-host.md](adr/0003-persistent-chat-provider-host.md) — persistent chat provider host (superseded by [#39](https://github.com/ercs-second-brain/agent-orchestrator/issues/39), which removed the chat feature in full)
 - [adr/0003-unauthenticated-identity-probe.md](adr/0003-unauthenticated-identity-probe.md) — unauthenticated identity probe on the LAN listener
 - [adr/0004-cloudflare-tunnel-for-remote-mobile-access.md](adr/0004-cloudflare-tunnel-for-remote-mobile-access.md) — Cloudflare Tunnel for remote mobile access
+- [adr/0005-single-agent-consolidation.md](adr/0005-single-agent-consolidation.md) — single-agent consolidation: pi as a managed external dependency
 
 ## Mental model
 
