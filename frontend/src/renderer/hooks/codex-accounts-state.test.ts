@@ -68,7 +68,7 @@ it("shows active rollback as progress and exposes interrupted rollback recovery"
 		phase: "rollback_required", failureCode: "activation_unconfirmed", canRecover: false,
 		sessions: [], createdAt: "2026-09-02T00:00:00Z", updatedAt: "2026-09-02T00:01:00Z",
 	} satisfies CodexAccountSwitch);
-	expect(active.key).toBe("settings.codexAccounts.switch.rollback_required");
+	expect(active.key).toBe("Restoring the previous Codex account…");
 	expect(active.busy).toBe(true);
 	expect(active.mutationBlocked).toBe(true);
 	expect(active.canRecover).toBe(false);
@@ -89,8 +89,8 @@ it("maps every account reason to complete native locale copy with a safe unknown
 	const keys = [
 		...codexAccountReasonCodes.map(codexAccountReasonKey),
 		...switchKeys,
-		"settings.codexAccounts.switch.restored",
-		"settings.codexAccounts.retryRecovery",
+		"Account switch failed. Your previous Codex account was restored.",
+		"Retry recovery",
 	];
 	for (const locale of locales) {
 		const catalog = catalogFor(locale);
@@ -100,5 +100,5 @@ it("maps every account reason to complete native locale copy with a safe unknown
 			expect(value).not.toBe(key);
 		}
 	}
-	expect(codexAccountReasonKey("provider-private-message")).toBe("settings.codexAccounts.reason.unknown");
+	expect(codexAccountReasonKey("provider-private-message")).toBe("The current status is unavailable.");
 });

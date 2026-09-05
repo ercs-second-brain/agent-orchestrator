@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useRef, useState, type KeyboardEvent } from "react";
-import { useTranslation } from "react-i18next";
 import { formatDiffSelectionMessage, type DiffSelectionLine } from "../../shared/diff-selection";
 import { apiClient, apiErrorMessage } from "../lib/api-client";
 import { cn } from "../lib/utils";

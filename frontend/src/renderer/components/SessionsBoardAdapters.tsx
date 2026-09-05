@@ -1,6 +1,5 @@
 import { memo, useEffect, useRef, useState, type MouseEvent, type ReactNode } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { useTranslation } from "react-i18next";
 import {
 	SessionCardView,
 	SessionUsageMetricView,

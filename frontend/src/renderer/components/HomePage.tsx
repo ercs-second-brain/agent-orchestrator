@@ -1,7 +1,6 @@
 import { GITHUB_REPO_URL } from "../../shared/github-repo";
 import type { ProjectSource } from "./CreateProjectFlow";
 import { useNavigate } from "@tanstack/react-router";
-import { useTranslation } from "react-i18next";
 import { AlertTriangle, Folder, FolderPlus, Folders, FolderOpen, GitFork, Smartphone, Star } from "lucide-react";
 import { useMemo, useState, type ReactNode } from "react";
 import { useSystemRequirementsGate } from "../hooks/useSystemRequirementsGate";

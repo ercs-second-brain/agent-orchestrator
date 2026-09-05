@@ -17,7 +17,6 @@ import {
 	type WheelEvent as ReactWheelEvent,
 } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { useTranslation } from "react-i18next";
 import {
 	findActiveAgentSwitch,
 	selectDurableAgentSwitch,

@@ -1,5 +1,4 @@
 import type { ReactElement } from "react";
-import { useTranslation } from "react-i18next";
 import type { WorkspaceSession } from "../types/workspace";
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
 

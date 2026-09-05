@@ -1,5 +1,4 @@
 import * as Dialog from "@radix-ui/react-dialog";
-import { useTranslation } from "react-i18next";
 import {
 	CheckCircle2,
 	CircleDashed,

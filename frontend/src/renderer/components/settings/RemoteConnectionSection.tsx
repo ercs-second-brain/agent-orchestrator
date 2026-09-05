@@ -1,6 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { useTranslation } from "react-i18next";
 import { resolveRemotePairingInput } from "../../../shared/desktop-remote";
 import { aoBridge } from "../../lib/bridge";
 import { useRemoteConnection } from "../../hooks/useRemoteConnection";

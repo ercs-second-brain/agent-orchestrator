@@ -12,8 +12,6 @@ import {
 	type ReactNode,
 } from "react";
 import { createPortal } from "react-dom";
-import { useTranslation } from "react-i18next";
-import type { TFunction } from "i18next";
 import { terminalTargetBelongsToSession, type TerminalTarget } from "../types/terminal";
 import { sessionIsActive, type WorkspaceSession } from "../types/workspace";
 import type { Theme } from "../stores/ui-store";

@@ -143,24 +143,24 @@ export function CommandPalette() {
 				currentSessionId: params.sessionId,
 				restartingProjectIds,
 				reviewStatesBySessionId: reviewStatesSnapshot,
-			}, t),
-		[workspaces, currentProjectId, params.sessionId, restartingProjectIds, reviewStatesSnapshot, t, i18n.resolvedLanguage],
+			}),
+		[workspaces, currentProjectId, params.sessionId, restartingProjectIds, reviewStatesSnapshot, i18n.resolvedLanguage],
 	);
 	const scoped = useMemo(
 		() => (view.mode === "session-actions" ? findSession(workspaces, view.sessionId) : undefined),
 		[view, workspaces],
 	);
 	const sessionActionItems = useMemo(
-		() => (scoped ? buildSessionActions(scoped.workspace, scoped.session, t) : []),
-		[scoped, t],
+		() => (scoped ? buildSessionActions(scoped.workspace, scoped.session) : []),
+		[scoped],
 	);
 
 	const groups = useMemo(() => {
 		if (view.mode === "session-actions") {
 			return [{ id: "actions", label: "", items: filterCommands(sessionActionItems, query) }];
 		}
-		return displayGroups(rootItems, query, t);
-	}, [view.mode, rootItems, sessionActionItems, query, t, i18n.resolvedLanguage]);
+		return displayGroups(rootItems, query);
+	}, [view.mode, rootItems, sessionActionItems, query]);
 
 	const visibleItems = useMemo(() => groups.flatMap((group) => group.items), [groups]);
 	const value =

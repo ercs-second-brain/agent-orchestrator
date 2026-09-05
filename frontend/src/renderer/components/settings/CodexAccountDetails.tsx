@@ -1,28 +1,25 @@
 import { CircleAlert, LoaderCircle, RotateCcw } from "lucide-react";
-import type { TFunction } from "i18next";
-import { useTranslation } from "react-i18next";
 import type { CodexAccount } from "../../hooks/useCodexAccountsQuery";
 import { codexAccountReasonKey } from "../../hooks/codex-accounts-state";
 import { Button } from "../ui/button";
 
 export function CodexAccountDetails({ account, resetCreditSupported, mutationDisabled, resetBusy, onUseReset }: { account: CodexAccount; resetCreditSupported: boolean; mutationDisabled: boolean; resetBusy: boolean; onUseReset: () => void }) {
-	const { i18n } = useTranslation();
-	const plan = formatPlanLabel(account.capacity.plan, t);
+	const plan = formatPlanLabel(account.capacity.plan);
 	const hasOverall = Boolean(account.capacity.overall?.primary || account.capacity.overall?.secondary);
 	const additionalBuckets = account.capacity.additionalBuckets.filter((bucket) => bucket.primary || bucket.secondary);
 	const usage = account.usageSummary;
 	const hasUsage = Boolean(usage && (usage.lifetimeTokens != null || usage.peakDailyTokens != null || usage.longestRunningTurnSeconds != null || usage.currentStreakDays != null || usage.longestStreakDays != null));
 	const resetCredits = account.capacity.resetCredits;
 	const hasDetails = Boolean(plan || hasOverall || additionalBuckets.length > 0 || hasUsage || resetCredits);
-	const capacityNotice = capacityNoticeFor(account, t, i18n.language);
+	const capacityNotice = capacityNoticeFor(account);
 	return (
 		<div className="ml-9 mt-4 space-y-5 pb-1 text-xs">
 			{capacityNotice ? <CapacityNotice {...capacityNotice} /> : null}
-			{plan || resetCredits ? <PlanCard plan={plan} resetCredits={resetCredits} resetEnabled={resetCreditSupported && !mutationDisabled} resetBusy={resetBusy} locale={i18n.language} onUseReset={onUseReset} /> : null}
-			{hasUsage ? <AccountActivity usage={usage} locale={i18n.language} /> : null}
-			{hasOverall && account.capacity.overall ? <CapacityBucketGroup bucket={account.capacity.overall} title={"General usage limits"} locale={i18n.language} /> : null}
+			{plan || resetCredits ? <PlanCard plan={plan} resetCredits={resetCredits} resetEnabled={resetCreditSupported && !mutationDisabled} resetBusy={resetBusy} locale="en" onUseReset={onUseReset} /> : null}
+			{hasUsage ? <AccountActivity usage={usage} locale="en" /> : null}
+			{hasOverall && account.capacity.overall ? <CapacityBucketGroup bucket={account.capacity.overall} title={"General usage limits"} locale="en" /> : null}
 			{additionalBuckets.map((bucket, index) => (
-				<CapacityBucketGroup key={`${bucket.displayName ?? "additional"}-${index}`} bucket={bucket} title={bucket.displayName ? `${bucket.displayName} usage limits` : "Additional usage limits"} locale={i18n.language} />
+				<CapacityBucketGroup key={`${bucket.displayName ?? "additional"}-${index}`} bucket={bucket} title={bucket.displayName ? `${bucket.displayName} usage limits` : "Additional usage limits"} locale="en" />
 			))}
 			{!hasDetails && !capacityNotice ? <p className="text-muted-foreground">{"Usage details are not available for this account."}</p> : null}
 		</div>
@@ -36,7 +33,7 @@ type ResetCreditsValue = NonNullable<CodexAccount["capacity"]["resetCredits"]>;
 
 function CapacityBucketGroup({ bucket, title, locale }: { bucket: CapacityBucketValue; title: string; locale: string }) {
 	const windows = [bucket.primary, bucket.secondary].filter((window): window is CapacityWindowValue => Boolean(window));
-	return <section><h4 className="mb-2 font-medium text-foreground">{title}</h4><div className="divide-y divide-border/70 overflow-hidden rounded-md border border-border/70 bg-muted/15">{windows.map((window, index) => <CapacityWindowRow key={`${index}-${window.windowDurationMinutes ?? "unknown"}-${window.resetsAt ?? "never"}`} window={window} label={capacityWindowLabel(window.windowDurationMinutes, index, windows.length, t)} reached={bucket.reached === "reached"} locale={locale} />)}</div></section>;
+	return <section><h4 className="mb-2 font-medium text-foreground">{title}</h4><div className="divide-y divide-border/70 overflow-hidden rounded-md border border-border/70 bg-muted/15">{windows.map((window, index) => <CapacityWindowRow key={`${index}-${window.windowDurationMinutes ?? "unknown"}-${window.resetsAt ?? "never"}`} window={window} label={capacityWindowLabel(window.windowDurationMinutes, index, windows.length)} reached={bucket.reached === "reached"} locale={locale} />)}</div></section>;
 }
 
 function CapacityWindowRow({ window, label, reached, locale }: { window: CapacityWindowValue; label: string; reached: boolean; locale: string }) {
@@ -71,19 +68,19 @@ function CapacityNotice({ reason, tone, checking }: { reason: string; tone: "war
 	return <p className={`flex items-start gap-2 rounded-md border px-3 py-2.5 leading-5 ${color}`} role={tone === "error" ? "alert" : "status"}>{checking ? <LoaderCircle className="mt-0.5 size-3.5 shrink-0 animate-spin" aria-label={"Checking"} /> : <CircleAlert className="mt-0.5 size-3.5 shrink-0" aria-hidden="true" />}<span>{reason}</span></p>;
 }
 
-function capacityNoticeFor(account: CodexAccount, t: TFunction, locale: string): { reason: string; tone: "warning" | "error" | "muted"; checking?: boolean } | null {
-	if (account.status === "broken") return { reason: t(codexAccountReasonKey(account.reasonCode)), tone: "error" };
-	if (account.authentication.state === "unauthorized") return { reason: t(codexAccountReasonKey(account.authentication.reasonCode)), tone: "warning" };
-	if (account.capacity.freshness === "checking") return { reason: t(codexAccountReasonKey(account.capacity.reasonCode)), tone: "muted", checking: true };
+function capacityNoticeFor(account: CodexAccount): { reason: string; tone: "warning" | "error" | "muted"; checking?: boolean } | null {
+	if (account.status === "broken") return { reason: codexAccountReasonKey(account.reasonCode), tone: "error" };
+	if (account.authentication.state === "unauthorized") return { reason: codexAccountReasonKey(account.authentication.reasonCode), tone: "warning" };
+	if (account.capacity.freshness === "checking") return { reason: codexAccountReasonKey(account.capacity.reasonCode), tone: "muted", checking: true };
 	if (account.capacity.freshness === "stale") {
-		const checked = account.capacity.checkedAt ? formatObservedTime(account.capacity.checkedAt, locale) : null;
+		const checked = account.capacity.checkedAt ? formatObservedTime(account.capacity.checkedAt, "en") : null;
 		return { reason: checked ? `Usage information may be out of date. Last checked ${checked}.` : "Usage information may be out of date.", tone: "warning" };
 	}
-	if (account.capacity.state === "unknown" || account.capacity.state === "unsupported") return { reason: t(codexAccountReasonKey(account.capacity.reasonCode)), tone: "muted" };
+	if (account.capacity.state === "unknown" || account.capacity.state === "unsupported") return { reason: codexAccountReasonKey(account.capacity.reasonCode), tone: "muted" };
 	return null;
 }
 
-function capacityWindowLabel(minutes: number | null | undefined, index: number, count: number, t: TFunction): string {
+function capacityWindowLabel(minutes: number | null | undefined, index: number, count: number): string {
 	if (minutes === 300) return "5-hour usage limit";
 	if (minutes === 10080) return "Weekly usage limit";
 	if (minutes && minutes > 0 && minutes % 1440 === 0) return (minutes / 1440) === 1 ? `${minutes / 1440}-day usage limit` : `${minutes / 1440}-day usage limit`;
@@ -95,7 +92,7 @@ function capacityWindowLabel(minutes: number | null | undefined, index: number, 
 
 export function formatAuthMethod(method: CodexAccount["authMethod"]): string | null { return method === "chatgpt" ? "ChatGPT" : method === "api_key" ? "API key" : method === "other" ? "Codex" : null; }
 export function formatPlanName(plan: string | null | undefined): string | null { const value = plan?.trim(); if (!value) return null; const known: Record<string, string> = { free: "Free", plus: "Plus", pro: "Pro", team: "Team", business: "Business", enterprise: "Enterprise" }; return known[value.toLowerCase()] ?? value; }
-function formatPlanLabel(plan: string | null | undefined, t: TFunction): string | null { const name = formatPlanName(plan); return name ? (/\bplan$/i.test(name) ? name : `${name} plan`) : null; }
+function formatPlanLabel(plan: string | null | undefined): string | null { const name = formatPlanName(plan); return name ? (/\bplan$/i.test(name) ? name : `${name} plan`) : null; }
 export function formatPercentage(value: number, locale?: string): string { return `${new Intl.NumberFormat(locale, { maximumFractionDigits: 1 }).format(value)}%`; }
 function formatResetTime(value: string | null | undefined, locale: string): { visible: string; full: string } | null { if (!value) return null; const date = new Date(value); if (Number.isNaN(date.getTime())) return null; const now = new Date(); const sameDay = date.getFullYear() === now.getFullYear() && date.getMonth() === now.getMonth() && date.getDate() === now.getDate(); return { visible: new Intl.DateTimeFormat(locale, sameDay ? { hour: "2-digit", minute: "2-digit" } : { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }).format(date), full: new Intl.DateTimeFormat(locale, { dateStyle: "full", timeStyle: "long" }).format(date) }; }
 function formatObservedTime(value: string, locale: string): string { const date = new Date(value); return Number.isNaN(date.getTime()) ? "" : new Intl.DateTimeFormat(locale, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }).format(date); }

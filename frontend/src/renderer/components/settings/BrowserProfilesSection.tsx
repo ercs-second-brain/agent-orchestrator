@@ -1,6 +1,5 @@
 import { Check, Eraser, Import, Pencil, Plus, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
-import { useTranslation } from "react-i18next";
 import type { AoBridge } from "../../../preload";
 import { aoBridge } from "../../lib/bridge";
 import { cn } from "../../lib/utils";
@@ -194,12 +193,9 @@ export function BrowserProfilesSection({ titleHidden }: { titleHidden?: boolean 
 					setActionError("");
 				}}
 				title={pendingAction
-					? t(
-							pendingAction.kind === "clear"
-								? "Clear data for {{profile}}?"
-								: "Delete {{profile}}?",
-							{ profile: pendingAction.profile.name },
-						)
+					? pendingAction.kind === "clear"
+						? `Clear data for ${pendingAction.profile.name}?`
+						: `Delete ${pendingAction.profile.name}?`
 					: ""}
 				description={pendingAction
 					? (pendingAction.kind === "clear" ? "This removes saved sign-ins and site data from this profile. This cannot be undone." : "This clears all saved sign-ins and site data, deletes the profile, and removes its worker bindings. This cannot be undone.")

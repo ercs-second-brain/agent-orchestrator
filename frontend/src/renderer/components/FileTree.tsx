@@ -1,11 +1,10 @@
 import { forwardRef, useCallback, useEffect, useRef, useState, type HTMLAttributes, type RefObject } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useTranslation } from "react-i18next";
 import { Tree, type NodeApi, type NodeRendererProps, type RowRendererProps, type TreeApi } from "react-arborist";
 import { ChevronRight } from "lucide-react";
 import { cn } from "../lib/utils";
 import { WorkspaceEntryIcon } from "./WorkspaceEntryIcon";
-import { statusLabel, statusTone } from "../lib/workspace-file-status";
+import { statusLabel, statusText, statusTone } from "../lib/workspace-file-status";
 import {
 	sessionWorkspaceTreeQueryOptions,
 	type TreeNode,
@@ -263,7 +262,7 @@ function FileTreeRow({ node, style, dragHandle }: NodeRendererProps<TreeNode>) {
 			{!isDir && entry.status && entry.status !== "unmodified" ? (
 				<span
 					className={cn("shrink-0 font-mono text-caption font-medium", statusTone[entry.status])}
-					title={t(`files.status.${entry.status}`)}
+					title={statusText[entry.status] || entry.status}
 				>
 					{statusLabel[entry.status]}
 				</span>

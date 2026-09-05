@@ -1,7 +1,6 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { LoaderCircle, Repeat2, TriangleAlert, X } from "lucide-react";
 import { type FormEvent, useEffect, useState } from "react";
-import { useTranslation } from "react-i18next";
 import {
 	agentSwitchesQueryKey,
 	agentSwitchNeedsRecovery,

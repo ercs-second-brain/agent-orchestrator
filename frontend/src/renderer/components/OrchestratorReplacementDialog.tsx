@@ -1,7 +1,6 @@
 import * as Dialog from "@radix-ui/react-dialog";
 import { useNavigate } from "@tanstack/react-router";
 import { AlertTriangle, RotateCw, X } from "lucide-react";
-import { useTranslation } from "react-i18next";
 import { isChatPreflightCode } from "../lib/spawn-orchestrator";
 import type { OrchestratorReplacementFailure } from "../stores/ui-store";
 import { findProjectOrchestrator, type WorkspaceSummary } from "../types/workspace";

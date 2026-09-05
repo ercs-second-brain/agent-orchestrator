@@ -9,7 +9,6 @@ import {
 	type FocusEvent,
 	type FormEvent,
 } from "react";
-import { useTranslation } from "react-i18next";
 import {
 	DndContext,
 	KeyboardSensor,
@@ -54,7 +53,6 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip";
 import { BrowserTabsRail, type BrowserTabsRailHandle } from "./BrowserTabsRail";
 import { BrowserProfileButton } from "./BrowserProfileButton";
 import { cn } from "../lib/utils";
-import { appI18n, type MessageKey } from "../i18n";
 import { browserTabLabel } from "../lib/browser-tab-label";
 import { reorderBrowserTabs } from "../lib/browser-tab-order";
 import { handleTabListKeyDown } from "../lib/terminal-tabs";
@@ -1130,7 +1128,7 @@ function agentActivityLabel(activity: BrowserViewModel["agentBrowserActivity"], 
 }
 
 function browserActionVerb(action: string): string {
-	const key = ((): MessageKey => {
+	const key = ((): string => {
 		switch (action) {
 			case "click":
 				return "clicking";
@@ -1165,7 +1163,7 @@ function browserActionVerb(action: string): string {
 				return "using browser";
 		}
 	})();
-	return appI18n.t(key);
+	return key;
 }
 
 function StaticPreview({ url }: { url: string }) {

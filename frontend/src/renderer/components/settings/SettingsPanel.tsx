@@ -1,5 +1,4 @@
 import { X } from "lucide-react";
-import { useTranslation } from "react-i18next";
 import { useEffect, type ReactNode } from "react";
 import { isDialogOrMenuOpen } from "../../lib/dom-selectors";
 

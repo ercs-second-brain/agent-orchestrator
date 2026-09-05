@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { useTranslation } from "react-i18next";
 import aoLogo from "../../../assets/ao-logo.svg";
 import { useSystemRequirementsGate } from "../hooks/useSystemRequirementsGate";
 import { InstallDependencyDialog } from "./InstallDependencyDialog";

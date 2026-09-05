@@ -1,5 +1,4 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { useTranslation } from "react-i18next";
 import { useNavigate, useParams } from "@tanstack/react-router";
 import { Folder, LayoutDashboard, Plus, Trash2 } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";

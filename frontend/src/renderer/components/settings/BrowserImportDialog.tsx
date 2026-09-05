@@ -1,6 +1,5 @@
 import { CheckCircle2, Cookie, History as HistoryIcon, LoaderCircle, TriangleAlert, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import { useTranslation } from "react-i18next";
 import type { AoBridge } from "../../../preload";
 import type {
 	BrowserImportProgress,
@@ -9,7 +8,6 @@ import type {
 	BrowserImportWarning,
 } from "../../../shared/browser-profile-import";
 import { aoBridge } from "../../lib/bridge";
-import { appI18n, type MessageKey } from "../../i18n";
 import { Button } from "../ui/button";
 import {
 	Dialog,
@@ -203,7 +201,7 @@ export function BrowserImportDialog({
 						<div className="flex flex-1 flex-col items-center justify-center gap-5 py-12 text-center">
 							<LoaderCircle aria-hidden="true" className="size-8 animate-spin text-accent" />
 							<div>
-								<p className="font-semibold">{t(`settings.browserImport.progress.${progress?.phase ?? "preparing"}`)}</p>
+								<p className="font-semibold">{importProgressText[progress?.phase ?? "preparing"]}</p>
 								<p className="mt-1 text-xs text-muted-foreground">{"Keep AO open until the import finishes."}</p>
 							</div>
 							<div className="h-1.5 w-full max-w-sm overflow-hidden rounded-full bg-muted">
@@ -414,7 +412,7 @@ function OptionsStep({
 				{source.cookieSupport !== "supported" ? (
 					<p className="flex items-start gap-2 text-xs text-warning">
 						<TriangleAlert aria-hidden="true" className="mt-0.5 size-3.5 shrink-0" />
-						{t(capabilityKey(source.cookieSupportReason))}
+						{capabilityKey(source.cookieSupportReason)}
 					</p>
 				) : null}
 				<label className={`flex cursor-pointer items-start gap-3 rounded-lg border p-3 transition-colors ${includeHistory ? "border-accent/70 bg-settings-menu-selected" : "border-border hover:bg-interactive-hover"}`}>
@@ -482,7 +480,8 @@ function ResultStep({ result }: { result: BrowserImportResult }) {
 }
 
 function warningText(warning: BrowserImportWarning): string {
-	return appI18n.t(warningKey(warning.code), { count: warning.count ?? 0 });
+	const text = warningKey(warning.code);
+	return text.replace(/\{\{count\}\}/g, String(warning.count ?? 0));
 }
 
 function suggestedName(browser: string, profile: string): string {
@@ -507,13 +506,19 @@ function applySourceDefaults(
 	setDestinationMode(selected.length > 1 ? "separate" : "merge");
 }
 
-function capabilityKey(reason: BrowserImportSource["cookieSupportReason"]): MessageKey {
+const importProgressText: Record<string, string> = {
+	preparing: "Preparing a safe import…",
+	reading: "Reading copied browser data…",
+	importing: "Writing new AO profiles…",
+};
+
+function capabilityKey(reason: BrowserImportSource["cookieSupportReason"]): string {
 	if (reason === "chromium-encryption-partial") return "Modern Chromium encryption can prevent some cookies from being imported. AO will report exactly what was skipped.";
 	if (reason === "chromium-encryption-unsupported") return "Encrypted Chromium cookies cannot be imported on this platform. Unencrypted cookies and history remain available.";
 	return "Copies usable website cookies into the destination profile.";
 }
 
-function warningKey(code: BrowserImportWarning["code"]): MessageKey {
+function warningKey(code: BrowserImportWarning["code"]): string {
 	switch (code) {
 		case "cookie-database-missing": return "No cookie database was available for this source profile.";
 		case "history-database-missing": return "No history database was available for this source profile.";

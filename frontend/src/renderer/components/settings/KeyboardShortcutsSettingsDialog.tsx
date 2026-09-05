@@ -1,6 +1,4 @@
 import { Check, Keyboard, Pencil, Plus, RotateCcw, Search, X } from "lucide-react";
-import { useTranslation } from "react-i18next";
-import type { TFunction } from "i18next";
 import { shortcutCategoryLabels, shortcutLabels } from "../../lib/shortcut-labels";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {

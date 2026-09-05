@@ -1,5 +1,4 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useTranslation } from "react-i18next";
 import { Fragment, useEffect, useRef, useState } from "react";
 import { ArrowUpRight, Check, Copy, Loader2, RotateCcw } from "lucide-react";
 import { apiClient, apiErrorMessage } from "../../lib/api-client";
@@ -432,7 +431,7 @@ export function ConnectMobileContent({ active }: { active: boolean }) {
 	const generatedQrVisible = Boolean(showRealQR && qrValue);
 	const generatedQrValue = generatedQrVisible ? (qrValue ?? null) : lastQrValueRef.current;
 	const shouldRenderGeneratedQr = generatedQrVisible || Boolean(lastQrValueRef.current);
-	const secureReasonText = reasonMessage(status.securePairing?.reason ?? "", t);
+	const secureReasonText = reasonMessage(status.securePairing?.reason ?? "");
 
 	return (
 		<div className="flex flex-col gap-4">
@@ -479,11 +478,11 @@ export function ConnectMobileContent({ active }: { active: boolean }) {
 											<button
 												type="button"
 												className={STEP_LINK_CLASS}
-												aria-label={t(ariaKey)}
+												aria-label={ariaKey}
 												onClick={() => void aoBridge.app.openExternal(url)}
 											>
 												<Icon className="size-3.5 shrink-0" />
-												{t(labelKey)}
+												{labelKey}
 												<ArrowUpRight className="size-3.5" aria-hidden="true" />
 											</button>
 										</TooltipTrigger>
@@ -560,10 +559,7 @@ export function ConnectMobileContent({ active }: { active: boolean }) {
 						// discovers the gap only by being away from home.
 						<div className="mt-3">
 							<p className="text-xs text-settings-muted" data-testid="mobile-remote-unavailable">
-								{t(
-									"Works on this network only — cloudflared isn't installed, so this machine can't be reached from elsewhere.",
-									"Works on this network only — cloudflared isn't installed, so this machine can't be reached from elsewhere.",
-								)}
+								{"Works on this network only — cloudflared isn't installed, so this machine can't be reached from elsewhere."}
 							</p>
 							{/* Deliberately not enable(): that mints a fresh password, so
 							    installing remote access would invalidate the phone the user

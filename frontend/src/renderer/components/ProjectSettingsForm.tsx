@@ -8,8 +8,6 @@ import {
 	ProjectWorkflowSettingsView,
 	validateProjectSettings,
 } from "@ercs-second-brain/product-ui";
-import { useTranslation } from "react-i18next";
-import type { TFunction } from "i18next";
 import { useEffect, useState } from "react";
 import { Info, Pencil } from "lucide-react";
 import type { components } from "../../api/schema";
@@ -349,7 +347,6 @@ function SettingsBody({
 		replacementError,
 		savedAt,
 		showSaving,
-		t,
 		validationError,
 	]);
 
@@ -637,7 +634,12 @@ function AgentModelField({
 		}
 	}, [agentId, projectId, queryClient, revalidationQuery.data]);
 	const isMode = catalog?.selectionMode === "mode";
-	const label = t(`settings.models.${role}${isMode ? "Mode" : "Model"}`);
+	const modelRoleLabels: Record<string, { mode: string; model: string }> = {
+		orchestrator: { mode: "Orchestrator mode", model: "Orchestrator model" },
+		worker: { mode: "Worker mode", model: "Worker model" },
+	};
+	const roleLabels = modelRoleLabels[role] ?? { mode: role, model: role };
+	const label = isMode ? roleLabels.mode : roleLabels.model;
 	const warning =
 		(revalidationQuery.isError
 			? revalidationQuery.error instanceof Error

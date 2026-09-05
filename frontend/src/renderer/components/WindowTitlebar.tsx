@@ -1,6 +1,4 @@
 import { useCanGoBack, useRouter } from "@tanstack/react-router";
-import { useTranslation } from "react-i18next";
-import type { TFunction } from "i18next";
 import {
   ArrowLeft,
   ArrowRight,
@@ -88,13 +86,7 @@ function TopMenu({
   );
 }
 
-function WindowControls({
-  isMaximized,
-  t,
-}: {
-  isMaximized: boolean;
-  t: TFunction;
-}) {
+function WindowControls({ isMaximized }: { isMaximized: boolean }) {
   return (
     <div
       aria-label={"Window"}
@@ -299,7 +291,7 @@ export function WindowTitlebar() {
         </TopMenu>
       </nav>
       <div className="window-titlebar__spacer" />
-      <WindowControls isMaximized={isMaximized} t={t} />
+      <WindowControls isMaximized={isMaximized} />
     </header>
   );
 }

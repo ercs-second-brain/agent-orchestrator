@@ -1,8 +1,5 @@
 import { useEffect, useState } from "react";
-import { useTranslation } from "react-i18next";
 import type { ThemePreference, ThemeStyle } from "../../lib/theme";
-import type { AppLocale } from "../../i18n";
-import { useLocaleStore } from "../../stores/locale-store";
 import { useSoundNotificationsStore } from "../../stores/sound-notifications-store";
 import { useUiStore } from "../../stores/ui-store";
 import { useTelemetryPolicyStore } from "../../stores/telemetry-policy-store";
@@ -131,6 +128,15 @@ const COLOR_THEME_OPTIONS = [
 	{ value: "solarized", label: "Solarized" },
 ] satisfies SettingsOption<ThemeStyle>[];
 
+const telemetryStatusText: Record<string, string> = {
+	pending: "Telemetry is off locally. Daemon cleanup is still pending.",
+	failed: "Telemetry cleanup failed. Reporting remains disabled while cleanup retries.",
+	veto: "This preference is disabled by the environment.",
+	unsupported: "Enabling is unavailable on this platform because durable consent writes are not supported.",
+	releaseBlocked: "Error reporting is disabled by this release's safety gate.",
+	description: "Share bounded, privacy-filtered error diagnostics to improve reliability.",
+};
+
 export function GeneralSettingsSection({
 	titleHidden,
 }: {
@@ -140,10 +146,6 @@ export function GeneralSettingsSection({
 	const setThemePreference = useUiStore((state) => state.setThemePreference);
 	const themeStyle = useUiStore((state) => state.themeStyle);
 	const setThemeStyle = useUiStore((state) => state.setThemeStyle);
-	const locale = useLocaleStore((state) => state.locale);
-	const setLocale = useLocaleStore((state) => state.setLocale);
-	const localeSaving = useLocaleStore((state) => state.saving);
-	const localeSaveError = useLocaleStore((state) => state.saveError);
 	const soundNotificationsEnabled = useSoundNotificationsStore((state) => state.enabled);
 	const setSoundNotificationsEnabled = useSoundNotificationsStore((state) => state.setEnabled);
 	const soundNotificationsSaving = useSoundNotificationsStore((state) => state.saving);
@@ -156,17 +158,6 @@ export function GeneralSettingsSection({
 		{ value: "dark", label: "Dark" },
 		{ value: "system", label: "System" },
 	] satisfies SettingsOption<ThemePreference>[];
-
-	const languageOptions = [
-		{ value: "en", label: "English" },
-		{ value: "zh-CN", label: "Simplified Chinese" },
-		{ value: "ja", label: "日本語" },
-		{ value: "ko", label: "한국어" },
-		{ value: "es", label: "Español" },
-		{ value: "fr", label: "Français" },
-		{ value: "de", label: "Deutsch" },
-		{ value: "pt-BR", label: "Português (Brasil)" },
-	] satisfies SettingsOption<AppLocale>[];
 
 	return (
 		<>
@@ -189,22 +180,6 @@ export function GeneralSettingsSection({
 						/>
 					</div>
 				</SettingsRow>
-				<SettingsRow label={"Language"}>
-					<SettingsOptionMenu
-						aria-label={"Language"}
-						disabled={localeSaving}
-						value={locale}
-						options={languageOptions}
-						onChange={(next) => {
-							void setLocale(next);
-						}}
-					/>
-				</SettingsRow>
-				{localeSaveError ? (
-					<p role="alert" className="px-3 text-caption leading-4 text-error">
-						{"Could not save the language preference."}
-					</p>
-				) : null}
 			</SettingsSection>
 
 			{/* Sessions */}
@@ -259,7 +234,7 @@ function TelemetryEventsRow() {
 			<Switch aria-label={"Share error events"} checked={checked} disabled={saving || !view || blockedEnable} onCheckedChange={(enabled) => { void setEnabled(enabled); }} />
 		</SettingsRow>
 		<p className={cn("px-3 pb-2 text-xs leading-relaxed", status === "failed" ? "text-destructive" : "text-muted-foreground")} role={status === "failed" ? "alert" : undefined}>
-			{t(status ? `settings.telemetryEvents.${status}` : "settings.telemetryEvents.description")}
+			{status ? telemetryStatusText[status] ?? telemetryStatusText.description : telemetryStatusText.description}
 		</p>
 	</div>;
 }

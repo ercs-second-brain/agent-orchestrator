@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useRef } from "react";
 import { X } from "lucide-react";
-import { useTranslation } from "react-i18next";
 import type { CodexActiveLogin } from "../../hooks/useCodexAccountsQuery";
 import { codexAccountReasonKey } from "../../hooks/codex-accounts-state";
 import type { TerminalSessionState } from "../../hooks/useTerminalSession";
@@ -35,7 +34,7 @@ export function CodexAccountLoginTerminalPanel({ activeLogin, pending, onCheckAg
 		? "Complete sign-in in the terminal below."
 		: activeLogin.status === "verifying"
 			? "Verifying Codex authentication…"
-			: t(codexAccountReasonKey(activeLogin.reasonCode));
+			: codexAccountReasonKey(activeLogin.reasonCode);
 	const retryable = activeLogin.status === "unauthorized" || activeLogin.status === "expired" || activeLogin.status === "failed";
 	const checkable = activeLogin.status === "unverified";
 	return (

@@ -4,8 +4,6 @@ import {
 	SHORTCUT_CATEGORIES,
 	shortcutBindingKeys,
 } from "../../shared/shortcuts";
-import { useTranslation } from "react-i18next";
-import type { TFunction } from "i18next";
 import { shortcutCategoryLabels, shortcutLabels } from "../lib/shortcut-labels";
 import type { AppShortcutId, ShortcutCategory } from "../../shared/shortcuts";
 import { useCommandPaletteEnabled } from "../hooks/useCommandPaletteEnabled";

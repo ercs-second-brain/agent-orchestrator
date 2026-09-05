@@ -3,7 +3,6 @@ import {
 	ProjectSetupFormView,
 	ProjectSetupHeaderView,
 } from "@ercs-second-brain/product-ui";
-import { useTranslation } from "react-i18next";
 import * as Dialog from "@radix-ui/react-dialog";
 import { ChevronLeft, TriangleAlert, X, type LucideIcon } from "lucide-react";
 import { memo, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
@@ -28,7 +27,6 @@ import { SettingsOptionMenu } from "./settings/SettingsOptionMenu";
 import type { ProjectKind } from "../types/workspace";
 import { Label } from "./ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
-import { appI18n } from "../i18n";
 import { Button } from "./ui/button";
 
 type TrackerIntakeConfig = components["schemas"]["TrackerIntakeConfig"];

@@ -318,7 +318,7 @@ export function UpdatesSection({ titleHidden }: { titleHidden?: boolean } = {}) 
 			<ConfirmDialog
 				open={pendingPin !== null}
 				title={"Switch feature build?"}
-				description={pendingPin ? t("settings.updates.switchFeatureBody", pendingPin) : null}
+				description={pendingPin ? `Switch to PR #${pendingPin.pr}: ${pendingPin.title}? The app will download the feature build and restart.` : null}
 				confirmLabel={"Confirm"}
 				onConfirm={() => void confirmPinBuild()}
 				onOpenChange={(open) => !open && setPendingPin(null)}

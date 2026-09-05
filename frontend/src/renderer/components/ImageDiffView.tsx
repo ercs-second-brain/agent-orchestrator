@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { useTranslation } from "react-i18next";
 import { getApiBaseUrl } from "../lib/api-client";
 import { cn } from "../lib/utils";
 import type { WorkspaceFileSummary } from "../hooks/useSessionWorkspaceFiles";

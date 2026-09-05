@@ -14,7 +14,6 @@ import {
 } from "./command-palette";
 import type { PRReviewState } from "./session-reviews";
 import type { PullRequestFacts, WorkspaceSession, WorkspaceSummary } from "../types/workspace";
-import { appI18n } from "../i18n";
 
 function session(overrides: Partial<WorkspaceSession> & { id: string }): WorkspaceSession {
 	return {
@@ -74,13 +73,6 @@ describe("findSession", () => {
 });
 
 describe("buildCommands grouping", () => {
-	it("uses the translator supplied by the reactive caller", () => {
-		const items = buildCommands(
-			{ workspaces: workspaces(), currentProjectId: "proj-1" },
-			appI18n.getFixedT("zh-CN"),
-		);
-		expect(byId(items).get("current-new-task")?.title).toBe("新建任务");
-	});
 
 	it("puts current-scoped actions in the Current group when the project is valid", () => {
 		const items = buildCommands({ workspaces: workspaces(), currentProjectId: "proj-1", currentSessionId: "w-pr" });

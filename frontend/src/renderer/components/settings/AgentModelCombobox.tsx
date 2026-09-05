@@ -1,6 +1,5 @@
 import { ChevronDown, Search } from "lucide-react";
 import { type ReactNode, useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { useTranslation } from "react-i18next";
 import type { AgentModelCatalog } from "../../hooks/useAgentModelsQuery";
 import { useSuppressStrayFocusRing } from "../../hooks/useSuppressStrayFocusRing";
 import { cn } from "../../lib/utils";
@@ -129,7 +128,7 @@ export function AgentModelCombobox({
 						pinned: "Current & defaults",
 						recent: "Recent",
 					}),
-		[compact, normalizedSearch, recentModelIDs, t, value, visibleModels],
+		[compact, normalizedSearch, recentModelIDs, value, visibleModels],
 	);
 	const customSearchValue = search.trim();
 	const showCustomSearchAction = allowDirectCustom && customSearchValue !== "" && rankedModels.length === 0;

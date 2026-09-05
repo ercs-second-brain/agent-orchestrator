@@ -1,6 +1,5 @@
 import { useCallback, useRef, useState } from "react";
 import type { QueryClient } from "@tanstack/react-query";
-import { useTranslation } from "react-i18next";
 import { shellTerminalsQueryKey } from "./useShellTerminals";
 import {
 	cancelCodexAccountLogin,
@@ -62,7 +61,7 @@ export function useCodexAccountActions(queryClient: QueryClient) {
 		} finally {
 			setLoginPending(false);
 		}
-	}, [queryClient, t, writeCurrent]);
+	}, [queryClient, writeCurrent]);
 
 	const verifyLogin = useCallback(async (login: CodexActiveLogin) => {
 		const key = `${login.operationId}:${login.shellTerminal.handleId}`;
@@ -102,7 +101,7 @@ export function useCodexAccountActions(queryClient: QueryClient) {
 			verifyingRef.current = null;
 			setLoginOperationPending(false);
 		}
-	}, [queryClient, t, writeCurrent]);
+	}, [queryClient, writeCurrent]);
 
 	const closeLogin = useCallback(async (login: CodexActiveLogin) => {
 		setError(null);
@@ -126,7 +125,7 @@ export function useCodexAccountActions(queryClient: QueryClient) {
 		} finally {
 			setLoginOperationPending(false);
 		}
-	}, [queryClient, t, writeCurrent]);
+	}, [queryClient, writeCurrent]);
 
 	const retryLogin = useCallback(async (login: CodexActiveLogin) => {
 		await closeLogin(login);

@@ -1,6 +1,5 @@
 import { MoreVertical } from "lucide-react";
 import { Children, type ReactNode } from "react";
-import { useTranslation } from "react-i18next";
 import { TopbarButton } from "./TopbarButton";
 import {
 	DropdownMenu,

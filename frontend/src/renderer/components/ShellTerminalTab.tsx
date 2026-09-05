@@ -1,6 +1,5 @@
 import { SquareTerminal, X } from "lucide-react";
 import { type MouseEvent, useEffect, useRef, useState } from "react";
-import { useTranslation } from "react-i18next";
 import { useTruncatedText } from "../hooks/useTruncatedText";
 import type { ShellTerminal } from "../hooks/useShellTerminals";
 import { isWindowsPlatform } from "../lib/platform";
@@ -165,9 +164,9 @@ export function ShellTerminalTab({
 					tabIndex: isActive ? 0 : -1,
 					title: isTruncated
 						? title
-						: t(renameViaRightClick ? "terminal.renameHintRightClick" : "terminal.renameHintDoubleClick", {
-								workingDir: shell.workingDir,
-							}),
+						: renameViaRightClick
+							? `${shell.workingDir} (right-click to rename)`
+							: `${shell.workingDir} (double-click to rename)`,
 					type: "button",
 				}}
 				buttonRef={ref}
@@ -246,9 +245,9 @@ export function ShellTerminalTab({
 					title={
 						isTruncated
 							? title
-							: t(renameViaRightClick ? "terminal.renameHintRightClick" : "terminal.renameHintDoubleClick", {
-									workingDir: shell.workingDir,
-								})
+							: renameViaRightClick
+								? `${shell.workingDir} (right-click to rename)`
+								: `${shell.workingDir} (double-click to rename)`
 					}
 					type="button"
 				>

@@ -1,6 +1,5 @@
 import { ChevronRight, Pencil, type LucideIcon } from "lucide-react";
 import { useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
-import { useTranslation } from "react-i18next";
 import { cn } from "../../lib/utils";
 
 function SettingsRowLabel({

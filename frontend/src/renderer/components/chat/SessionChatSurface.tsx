@@ -9,7 +9,6 @@
 
 import { AlertTriangle, CheckCircle2, Loader2, X } from "lucide-react";
 import { useEffect, type ReactNode } from "react";
-import { useTranslation } from "react-i18next";
 import {
 	findActiveAgentSwitch,
 	selectDurableAgentSwitch,

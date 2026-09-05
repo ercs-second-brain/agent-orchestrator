@@ -1,4 +1,3 @@
-import { useTranslation } from "react-i18next";
 import type { AgentSwitchPresentation } from "../lib/agent-switch-presentation";
 import { cn } from "../lib/utils";
 

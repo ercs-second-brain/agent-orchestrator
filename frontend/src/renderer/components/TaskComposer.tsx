@@ -6,7 +6,6 @@ import {
 	type TaskComposerModelControl,
 } from "@ercs-second-brain/product-ui";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useTranslation } from "react-i18next";
 import { Loader2 } from "lucide-react";
 import { RequiredAgentField } from "./CreateProjectAgentSheet";
 import type { components } from "../../api/schema";
@@ -27,6 +26,25 @@ import {
 } from "../hooks/useAgentModelsQuery";
 import { AgentModelCombobox } from "./settings/AgentModelCombobox";
 import { SettingsOptionMenu } from "./settings/SettingsOptionMenu";
+
+const taskPlaceholders = [
+	"Go through the backend files and let me know if there is any dead code in there",
+	"Set up a GitHub Actions workflow that runs tests on every pull request",
+	"Refactor the authentication module to use JWT tokens instead of sessions",
+	"Write unit tests for the payment processing service",
+	"Find and fix the memory leak in the WebSocket connection handler",
+	"Add rate limiting to the public API endpoints",
+	"Migrate the database schema to support multi-tenancy",
+	"Review the frontend bundle size and suggest optimizations",
+	"Document all public API endpoints with OpenAPI annotations",
+	"Add error boundaries to the React component tree and improve error messages",
+	"Investigate why the nightly build is 40% slower than last week",
+	"Replace the deprecated library usages flagged in the latest audit",
+	"Implement dark mode support across all UI components",
+	"Profile the database queries on the dashboard page and add missing indexes",
+	"Set up structured logging with correlation IDs across all services",
+];
+
 
 type Project = components["schemas"]["Project"];
 type DelegateAgent = components["schemas"]["DelegateTaskRequest"]["agent"];
@@ -84,11 +102,8 @@ export function TaskComposer({
 	autoFocusTitle,
 }: TaskComposerProps) {
 	const taskPlaceholder = useMemo(() => {
-		const placeholders = t("newTask.taskPlaceholders" as never, { returnObjects: true }) as string[];
-		return Array.isArray(placeholders)
-			? (placeholders[Math.floor(Math.random() * placeholders.length)] ?? "")
-			: "";
-	}, [t]);
+		return taskPlaceholders[Math.floor(Math.random() * taskPlaceholders.length)] ?? "";
+	}, []);
 	const queryClient = useQueryClient();
 	const [isPromptDirty, setIsPromptDirty] = useState(false);
 	const [model, setModel] = useState("");

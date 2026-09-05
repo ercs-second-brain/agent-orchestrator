@@ -1,5 +1,4 @@
 import { QrCode } from "lucide-react";
-import { useTranslation } from "react-i18next";
 import { useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
 import { aoBridge } from "../../lib/bridge";

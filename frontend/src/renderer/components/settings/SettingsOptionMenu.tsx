@@ -1,5 +1,4 @@
 import { type ReactNode, useCallback, useLayoutEffect, useRef, useState } from "react";
-import { useTranslation } from "react-i18next";
 import { cn } from "../../lib/utils";
 import { useSuppressStrayFocusRing } from "../../hooks/useSuppressStrayFocusRing";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "../ui/dropdown-menu";

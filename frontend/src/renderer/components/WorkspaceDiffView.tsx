@@ -10,8 +10,6 @@ import {
 	type RefObject,
 } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import type { TFunction } from "i18next";
-import { useTranslation } from "react-i18next";
 import { Check, Plus, Send as SendIcon } from "lucide-react";
 import type { FileAnnotationTarget } from "../../shared/file-annotations";
 import {
@@ -22,7 +20,7 @@ import {
 import { useParsedDiff } from "../hooks/useParsedDiff";
 import { useDiffHighlight } from "../hooks/useDiffHighlight";
 import { cn } from "../lib/utils";
-import { statusLabel, statusTone } from "../lib/workspace-file-status";
+import { statusLabel, statusText, statusTone } from "../lib/workspace-file-status";
 import type { DiffRow, DiffRowKind } from "../lib/diff-parser";
 import type { DiffRun } from "../lib/diff-highlight";
 import type { DiffSelectionLine } from "../../shared/diff-selection";
@@ -354,7 +352,6 @@ function DiffView({
 						path={path}
 						previousPath={previousPath}
 						rows={rows}
-						t={t}
 					/>
 				) : shouldVirtualize ? (
 					<div
@@ -384,7 +381,6 @@ function DiffView({
 										previousPath={previousPath}
 										row={row}
 										runs={runs[virtualRow.index]}
-										t={t}
 										wrap={wrap}
 									/>
 								</div>
@@ -402,7 +398,6 @@ function DiffView({
 								previousPath={previousPath}
 								row={row}
 								runs={runs[index]}
-								t={t}
 								wrap={wrap}
 							/>
 						))}
@@ -438,13 +433,12 @@ type DiffRowContentProps = {
 	previousPath?: string;
 	row: DiffRow;
 	runs: DiffRun[];
-	t: TFunction;
 	wrap: boolean;
 };
 
 // One unified-view diff row, shared between the plain (non-virtualized) and
 // virtualized render paths so they can't drift apart from each other.
-function DiffRowContentInner({ annotation, index, path, previousPath, row, runs, t, wrap }: DiffRowContentProps) {
+function DiffRowContentInner({ annotation, index, path, previousPath, row, runs, wrap }: DiffRowContentProps) {
 	if (row.kind === "hunk") return <HunkBand row={row} />;
 	return (
 		<div>
@@ -459,7 +453,6 @@ function DiffRowContentInner({ annotation, index, path, previousPath, row, runs,
 				<LineFeedbackButton
 					active={isAnnotationRow(annotation.target, path, index)}
 					onClick={() => annotation.begin(lineAnnotationTarget(path, previousPath, row, index))}
-					t={t}
 					target={lineAnnotationTarget(path, previousPath, row, index)}
 				/>
 				<span className="w-9 shrink-0 select-none border-r border-border/50 bg-terminal px-1.5 text-right text-passive/70 tabular-nums">
@@ -491,7 +484,7 @@ function DiffRowContentInner({ annotation, index, path, previousPath, row, runs,
 // `annotation` changes; every other row only cares about `row`/`index`/
 // `path`/`previousPath`/`wrap`, which are stable across scroll-driven
 // re-renders. This is what actually lets scrolling skip re-running the
-// i18next calls, cn() calls, and nested Button for rows that are already
+// cn() calls and nested Button for rows that are already
 // mounted and unchanged.
 const DiffRowContent = memo(DiffRowContentInner, (prev, next) => {
 	if (
@@ -561,7 +554,6 @@ function SplitDiff({
 	path,
 	previousPath,
 	rows,
-	t,
 }: {
 	annotation: FileAnnotationModel;
 	newRuns: DiffRun[][];
@@ -569,7 +561,6 @@ function SplitDiff({
 	path: string;
 	previousPath?: string;
 	rows: DiffRow[];
-	t: TFunction;
 }) {
 	const splitRows = useMemo(() => toSplitRows(rows), [rows]);
 	return (
@@ -588,7 +579,6 @@ function SplitDiff({
 								rowIndex={splitRow.leftIndex}
 								runs={splitRow.leftIndex === null ? null : oldRuns[splitRow.leftIndex]}
 								side="old"
-								t={t}
 							/>
 							<SplitSide
 								annotation={annotation}
@@ -598,7 +588,6 @@ function SplitDiff({
 								rowIndex={splitRow.rightIndex}
 								runs={splitRow.rightIndex === null ? null : newRuns[splitRow.rightIndex]}
 								side="new"
-								t={t}
 							/>
 						</div>
 						{(splitRow.leftIndex !== null && isAnnotationRow(annotation.target, path, splitRow.leftIndex)) ||
@@ -620,7 +609,6 @@ function SplitSide({
 	rowIndex,
 	runs,
 	side,
-	t,
 }: {
 	annotation: FileAnnotationModel;
 	path: string;
@@ -629,7 +617,6 @@ function SplitSide({
 	rowIndex: number | null;
 	runs: DiffRun[] | null;
 	side: "old" | "new";
-	t: TFunction;
 }) {
 	if (!row || rowIndex === null || !runs) return <div className="bg-surface-faint/20" aria-hidden="true" />;
 	const lineNo = side === "old" ? row.oldNo : row.newNo;
@@ -648,7 +635,6 @@ function SplitSide({
 				<LineFeedbackButton
 					active={isAnnotationRow(annotation.target, path, rowIndex)}
 					onClick={() => annotation.begin(target)}
-					t={t}
 					target={target}
 				/>
 			) : null}
@@ -684,20 +670,15 @@ function isAnnotationRow(target: ActiveFileAnnotationTarget | null, path: string
 	return target?.path === path && target.side !== "file" && target.rowIndex === rowIndex;
 }
 
-// `t` comes from the caller (which already holds one useTranslation()
-// subscription) rather than calling useTranslation() here: this button is
-// invisible until hover on every diff row, and a virtualized file can mount
-// dozens of them per scroll tick — a separate i18n context subscription per
-// row added up on large files.
+// This button is invisible until hover on every diff row, and a virtualized
+// file can mount dozens of them per scroll tick, so it stays cheap on purpose.
 function LineFeedbackButton({
 	active,
 	onClick,
-	t,
 	target,
 }: {
 	active: boolean;
 	onClick: () => void;
-	t: TFunction;
 	target: ActiveFileAnnotationTarget;
 }) {
 	if (active) return null;
@@ -848,7 +829,7 @@ export function StatusMark({ status }: { status: WorkspaceFileStatus }) {
 				"inline-flex w-5 shrink-0 items-center justify-center font-mono text-caption font-medium",
 				statusTone[status],
 			)}
-			title={diffFileStatusText[status] ?? status}
+			title={statusText[status] || status}
 		>
 			{label}
 		</span>

@@ -13,7 +13,6 @@ import {
 	type RefObject,
 } from "react";
 import { createPortal } from "react-dom";
-import { useTranslation } from "react-i18next";
 import type { components } from "../../api/schema";
 import { defaultShortcutBindings, shortcutBindingLabel } from "../../shared/shortcuts";
 import { BrowserPanelView, useBrowserAnnotationQueue } from "./BrowserPanel";
@@ -1466,13 +1465,13 @@ export function SessionView({ sessionId, projectId }: SessionViewProps) {
 				>
 					<div className="flex max-w-sm flex-col items-center gap-3 rounded-xl border border-border bg-card px-6 py-5 text-center shadow-lg">
 						<div aria-live="assertive" className="flex flex-col items-center gap-3" role="status">
-							{codexAccountSwitchPresentation?.busy ? <LoaderCircle className="size-5 animate-spin text-passive" aria-label={t(codexAccountSwitchPresentation.key)} /> : null}
+							{codexAccountSwitchPresentation?.busy ? <LoaderCircle className="size-5 animate-spin text-passive" aria-label={codexAccountSwitchPresentation.key} /> : null}
 							<p className="text-sm font-medium">
 								{codexAccountSwitchPresentation?.canRecover
-									? t(codexAccountSwitchPresentation.key)
+									? codexAccountSwitchPresentation.key
 									: "Switching the device Codex account and restarting AO sessions"}
 							</p>
-							{codexAccountSwitchPresentation && !codexAccountSwitchPresentation.canRecover ? <p className="text-xs text-passive">{t(codexAccountSwitchPresentation.key)}</p> : null}
+							{codexAccountSwitchPresentation && !codexAccountSwitchPresentation.canRecover ? <p className="text-xs text-passive">{codexAccountSwitchPresentation.key}</p> : null}
 						</div>
 						{codexAccountSwitchPresentation?.canRecover && codexAccountSwitch ? (
 							<Button

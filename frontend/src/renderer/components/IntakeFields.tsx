@@ -1,5 +1,4 @@
 import { TriangleAlert } from "lucide-react";
-import { useTranslation } from "react-i18next";
 import type { components } from "../../api/schema";
 import { cn } from "../lib/utils";
 import { Label } from "./ui/label";

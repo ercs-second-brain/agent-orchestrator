@@ -1,7 +1,6 @@
 import * as Dialog from "@radix-ui/react-dialog";
 import { ChevronLeft, X } from "lucide-react";
 import { type FormEvent, useState } from "react";
-import { useTranslation } from "react-i18next";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";

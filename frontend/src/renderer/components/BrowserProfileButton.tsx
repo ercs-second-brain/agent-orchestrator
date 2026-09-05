@@ -1,6 +1,5 @@
 import { ChevronDown, UserRound } from "lucide-react";
 import { useEffect, useRef } from "react";
-import { useTranslation } from "react-i18next";
 import type { BrowserProfileViewState } from "../../shared/browser-profiles";
 import { useUiStore } from "../stores/ui-store";
 import { Button } from "./ui/button";

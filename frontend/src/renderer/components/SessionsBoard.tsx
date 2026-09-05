@@ -1,5 +1,4 @@
 import { memo, useCallback, useEffect, useRef, useState, type MouseEvent } from "react";
-import { useTranslation } from "react-i18next";
 import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import {

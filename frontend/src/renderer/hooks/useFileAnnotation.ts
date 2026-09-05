@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from "react";
-import { useTranslation } from "react-i18next";
 import { formatFileAnnotationMessage } from "../../shared/file-annotations";
 import { apiClient, apiErrorMessage } from "../lib/api-client";
 import type { ActiveFileAnnotationTarget, FileAnnotationModel, FileAnnotationStatus } from "../components/WorkspaceDiffView";

@@ -1,4 +1,3 @@
-import { useTranslation } from "react-i18next";
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import {
 	collectReportProblemDiagnostics,

@@ -1,5 +1,4 @@
 import { Plus, X } from "lucide-react";
-import { useTranslation } from "react-i18next";
 import type { SessionFileTabState } from "../lib/session-file-tabs";
 import { TerminalTabFrame } from "./TerminalTabFrame";
 import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip";

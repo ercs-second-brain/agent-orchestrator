@@ -1,5 +1,3 @@
-import { useTranslation } from "react-i18next";
-import type { TFunction } from "i18next";
 import { RadioGroup } from "radix-ui";
 import { Switch } from "../ui/switch";
 import { cn } from "../../lib/utils";
@@ -9,7 +7,7 @@ export type SetupMode = "lan" | "tailscale";
 // Maps a `securePairing.reason` from the daemon to the copy explaining it. An
 // unknown reason (e.g. a newer daemon build) returns undefined and renders
 // nothing rather than a raw translation key.
-export function reasonMessage(reason: string, t: TFunction): string | undefined {
+export function reasonMessage(reason: string): string | undefined {
 	switch (reason) {
 		case "no_cli":
 		case "no_magicdns":
@@ -56,7 +54,7 @@ interface ConnectMobileSetupProps {
 // (backend/internal/mobilebridge/netiface.go), or the MagicDNS host over 443
 // when secure pairing is active.
 export function ConnectMobileSetup({ mode, onModeChange, enabled, busy = false, secure, onSecureChange }: ConnectMobileSetupProps) {
-	const reasonText = reasonMessage(secure.reason, t);
+	const reasonText = reasonMessage(secure.reason);
 
 	// Margin-free on purpose: the parent settings page owns the spacing around this block.
 	return (

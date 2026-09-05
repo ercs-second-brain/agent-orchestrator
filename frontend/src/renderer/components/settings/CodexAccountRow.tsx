@@ -1,5 +1,4 @@
 import { ChevronDown, CircleAlert, CircleCheck, LoaderCircle, LogOut, Trash2, UserRound } from "lucide-react";
-import { useTranslation } from "react-i18next";
 import type { CodexAccount, CodexActiveLogin } from "../../hooks/useCodexAccountsQuery";
 import { Button } from "../ui/button";
 import { CodexAccountDetails, formatAuthMethod, formatPercentage, formatPlanName } from "./CodexAccountDetails";

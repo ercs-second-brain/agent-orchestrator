@@ -1,7 +1,6 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
 import { useEffect } from "react";
-import { useTranslation } from "react-i18next";
 import {
 	agentModelsQueryKey,
 	agentModelsQueryOptions,

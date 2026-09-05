@@ -179,7 +179,7 @@ export function prCardPresentation(pr: SessionPRSummary): PRCardPresentation {
 	} else if (pr.review.decision === "changes_requested" || pr.review.hasUnresolvedHumanComments) {
 		primary = cardStatus("review", "Changes requested", "warning", reviewSummary(pr), reviewLinks(pr));
 	} else if (pr.review.decision === "review_required") {
-		primary = cardStatus("review", "pr.card.reviewRequired", "review", "Merge blocked until a required review is submitted.");
+		primary = cardStatus("review", "Review required", "review", "Merge blocked until a required review is submitted.");
 	} else if (pr.ci.state === "pending") {
 		primary = cardStatus("ci", "Checks running", "neutral", undefined, [], prChecksUrl(pr), true);
 	} else if (pr.ci.state === "unknown") {

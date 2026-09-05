@@ -8,7 +8,6 @@ import {
 	type CSSProperties,
 	type HTMLAttributes,
 } from "react";
-import { useTranslation } from "react-i18next";
 import {
 	DndContext,
 	KeyboardSensor,

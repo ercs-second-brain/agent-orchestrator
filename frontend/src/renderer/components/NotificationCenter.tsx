@@ -1,5 +1,4 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { useTranslation } from "react-i18next";
 import { useParams } from "@tanstack/react-router";
 import {
 	ArrowUpRight,
@@ -254,7 +253,7 @@ export function NotificationCenter({ style }: NotificationCenterProps) {
 				for (const id of newly) acknowledgedIdsRef.current.delete(id);
 				setMarkReadError(error instanceof Error ? error.message : "Could not mark notifications read");
 			});
-	}, [ackRetryNonce, markAllMutate, open, t, unreadQuery.isLoading, visibleUnreadKey]);
+	}, [ackRetryNonce, markAllMutate, open, unreadQuery.isLoading, visibleUnreadKey]);
 
 	const setPanelOpen = useCallback((nextOpen: boolean) => {
 		setOpen(nextOpen);

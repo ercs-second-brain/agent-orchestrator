@@ -6,13 +6,12 @@ import {
 	type PRSummaryPartKey,
 } from "@ercs-second-brain/product-ui";
 import type { ReactNode } from "react";
-import { useTranslation } from "react-i18next";
 import type { SessionPRSummary } from "../hooks/useSessionScmSummary";
-import { prCardPresentation, prNounKeys, prSummaryParts } from "../lib/pr-display";
+import { prCardPresentation, prNouns, prSummaryParts } from "../lib/pr-display";
 import { ProductExternalLink } from "./ProductExternalLink";
 
 function useCountNounLabel(): CountNounLabel {
-	return (count, noun) => `${count} ${t(prNounKeys[noun], { count })}`;
+	return (count, noun) => `${count} ${count === 1 ? prNouns[noun].one : prNouns[noun].other}`;
 }
 
 export function PRSummaryMeta({

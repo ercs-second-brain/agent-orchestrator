@@ -5,7 +5,6 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { PanelLeftIcon } from "lucide-react";
 import { motion, useReducedMotion } from "motion/react";
 import { Slot } from "radix-ui";
-import { useTranslation } from "react-i18next";
 
 import { useIsMobile } from "@/hooks/use-mobile";
 import { SHELL_PANEL_SPRING } from "@/lib/motion-spring";

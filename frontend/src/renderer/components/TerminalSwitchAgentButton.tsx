@@ -1,7 +1,6 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { LoaderCircle, Repeat2, TriangleAlert } from "lucide-react";
 import { useEffect } from "react";
-import { useTranslation } from "react-i18next";
 import { clearSwitchAgentState } from "../hooks/useSwitchAgent";
 import type { AgentSwitchPresentation } from "../lib/agent-switch-presentation";
 import { cn } from "../lib/utils";

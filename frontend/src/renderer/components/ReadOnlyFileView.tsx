@@ -1,4 +1,3 @@
-import { useTranslation } from "react-i18next";
 import { getApiBaseUrl } from "../lib/api-client";
 import type { WorkspaceFileDetail } from "../hooks/useSessionWorkspaceFiles";
 import { canonicalLanguage } from "../lib/code-highlight";
