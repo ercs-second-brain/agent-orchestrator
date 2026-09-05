@@ -42,7 +42,9 @@ func ScrubAmbientDaemonEnv() {
 func PrivateTempDir(t testing.TB) string {
 	t.Helper()
 	dir := t.TempDir()
-	if err := os.Chmod(dir, 0o700); err != nil {
+	// 0700 on a directory is the owner-private mode the vault's ancestor
+	// validation requires; gosec G302 targets file permissions, not dirs.
+	if err := os.Chmod(dir, 0o700); err != nil { //nolint:gosec // G302: directory, intentionally owner-private
 		t.Fatalf("harden temp dir %s: %v", dir, err)
 	}
 	return dir
