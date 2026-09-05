@@ -67,7 +67,7 @@ function respondWith(projects: Project[], sessions: Session[]) {
 					requirements: [
 						{ id: "git", label: "git", satisfied: true, required: true, detail: "/usr/bin/git" },
 						{ id: "tmux", label: "tmux", satisfied: true, required: true, detail: "/usr/bin/tmux" },
-						{ id: "harness", label: "agent harness", satisfied: true, required: true, detail: "Claude Code" },
+						{ id: "harness", label: "agent harness", satisfied: true, required: true, detail: "pi" },
 						{ id: "gh", label: "gh", satisfied: true, required: false, detail: "/usr/bin/gh" },
 					],
 				},
@@ -292,7 +292,7 @@ describe("project board with no sessions", () => {
 
 	it("offers an explicit Terminal UI fallback when Chat preflight fails", async () => {
 		respondWith([project], []);
-		const preflightError = Object.assign(new Error("Claude Code is unavailable"), {
+		const preflightError = Object.assign(new Error("pi is unavailable"), {
 			code: "CHAT_DRIVER_UNAVAILABLE",
 		});
 		spawnOrchestratorMock.mockRejectedValueOnce(preflightError).mockResolvedValueOnce("proj-1-orchestrator");

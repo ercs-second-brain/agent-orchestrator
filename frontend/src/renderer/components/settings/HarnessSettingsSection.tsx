@@ -143,9 +143,7 @@ export function HarnessSettingsSection({ titleHidden = false }: { titleHidden?: 
 			refreshedSuccess.current.add(token);
 			const agentId = token.split(":", 1)[0] as AgentId;
 			setActionErrors((current) => ({ ...current, [agentId]: undefined }));
-			void apiClient.POST("/api/v1/agents/{agent}/probe", {
-				params: { path: { agent: agentId } },
-			}).finally(async () => {
+			void ensureAgentReadiness([agentId], "launch").finally(async () => {
 				try {
 					const readiness = await ensureAgentReadiness([agentId], "display");
 					cacheAgentReadiness(queryClient, readiness);
@@ -273,7 +271,8 @@ export function HarnessSettingsSection({ titleHidden = false }: { titleHidden?: 
 			: current);
 		const result = await checkAuth(workflow.agentId);
 		if (authWorkflowRef.current?.terminal.handleId !== workflow.terminal.handleId) return;
-		if (result?.agent.authStatus === "authorized") {
+		const authStatus = result?.agents[0]?.authentication.state;
+		if (authStatus === "authorized") {
 			try {
 				await closeAuthTerminal(workflow.terminal.handleId);
 			} catch (error) {
@@ -290,8 +289,8 @@ export function HarnessSettingsSection({ titleHidden = false }: { titleHidden?: 
 		setAuthWorkflow((current) => current?.terminal.handleId === workflow.terminal.handleId
 			? {
 				...current,
-				phase: result?.agent.authStatus === "unauthorized" ? "unauthorized" : "unverified",
-				reason: result?.agent.authStatus === "unauthorized"
+				phase: authStatus === "unauthorized" ? "unauthorized" : "unverified",
+				reason: authStatus === "unauthorized"
 					? "Not logged in"
 					: "Login status unknown",
 			}
@@ -351,7 +350,7 @@ export function HarnessSettingsSection({ titleHidden = false }: { titleHidden?: 
 		setRefreshError(null);
 		try {
 			const [{ error }] = await Promise.all([
-				apiClient.POST("/api/v1/agents/refresh"),
+				Promise.resolve({ error: null }),
 				queryClient.invalidateQueries({ queryKey: installerQueryKey }),
 				queryClient.invalidateQueries({ queryKey: installJobsQueryKey }),
 				queryClient.invalidateQueries({ queryKey: agentAuthPlansQueryKey }),

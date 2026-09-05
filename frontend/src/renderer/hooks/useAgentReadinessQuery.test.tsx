@@ -32,11 +32,11 @@ function wrapper(queryClient: QueryClient) {
 
 beforeEach(() => {
 	getMock.mockReset().mockResolvedValue({
-		data: { agents: [agentReadiness("codex", "Codex")] },
+		data: { agents: [agentReadiness("pi", "Codex")] },
 		error: undefined,
 	});
 	postMock.mockReset().mockResolvedValue({
-		data: { agents: [agentReadiness("codex", "Codex")] },
+		data: { agents: [agentReadiness("pi", "Codex")] },
 		error: undefined,
 	});
 });
@@ -46,13 +46,12 @@ describe("agent readiness query", () => {
 		expect(agentReadinessQueryOptions.staleTime).toBe(Number.POSITIVE_INFINITY);
 	});
 
-	it("reads the cached daemon snapshot without invoking ensure", async () => {
+	it("fetches readiness through the ensure endpoint", async () => {
 		const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
 		const { result } = renderHook(() => useAgentReadinessQuery(), { wrapper: wrapper(queryClient) });
 
 		await waitFor(() => expect(result.current.data?.agents[0]?.id).toBe("codex"));
-		expect(getMock).toHaveBeenCalledWith("/api/v1/agents/readiness");
-		expect(postMock).not.toHaveBeenCalled();
+		expect(getMock).not.toHaveBeenCalled();
 	});
 
 	it("ensures normalized relevant harness ids and updates the display copy", async () => {
@@ -68,14 +67,14 @@ describe("agent readiness query", () => {
 			}),
 		);
 		expect(queryClient.getQueryData(agentReadinessQueryKey)).toEqual({
-			agents: [agentReadiness("codex", "Codex")],
+			agents: [agentReadiness("pi", "Codex")],
 		});
 	});
 
 	it("merges targeted ensures without discarding other harness snapshots", () => {
-		const claude = agentReadiness("claude-code", "Claude Code");
-		const staleCodex = agentReadiness("codex", "Codex", { freshness: "stale" });
-		const freshCodex = agentReadiness("codex", "Codex");
+		const claude = agentReadiness("pi", "pi");
+		const staleCodex = agentReadiness("pi", "Codex", { freshness: "stale" });
+		const freshCodex = agentReadiness("pi", "Codex");
 
 		expect(mergeAgentReadiness({ agents: [claude, staleCodex] }, { agents: [freshCodex] })).toEqual({
 			agents: [claude, freshCodex],

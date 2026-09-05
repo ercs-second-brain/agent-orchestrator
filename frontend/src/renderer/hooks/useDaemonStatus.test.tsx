@@ -137,12 +137,8 @@ describe("useDaemonStatus", () => {
 			queryKey: ["agent-readiness"],
 			exact: true,
 		});
-		expect(queryClient.removeQueries).toHaveBeenCalledWith({
-			queryKey: ["codex-accounts"],
-			exact: true,
-		});
-		// 2 real transitions (pid change, stopped) x 3 evicted caches.
-		expect(queryClient.removeQueries).toHaveBeenCalledTimes(6);
+		// 2 real transitions (pid change, stopped) x 2 evicted caches.
+		expect(queryClient.removeQueries).toHaveBeenCalledTimes(4);
 	});
 
 	it("ensures display readiness when the window regains focus", async () => {

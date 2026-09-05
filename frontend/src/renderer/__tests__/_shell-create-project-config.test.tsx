@@ -9,8 +9,8 @@ describe("createProjectConfig", () => {
 				orchestratorAgent: "claude-code",
 			}),
 		).toEqual({
-			worker: { agent: "codex" },
-			orchestrator: { agent: "claude-code" },
+			worker: { agent: "pi" },
+			orchestrator: { agent: "pi" },
 		});
 	});
 

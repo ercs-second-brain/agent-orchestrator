@@ -19,7 +19,9 @@ import { aoBridge } from "../lib/bridge";
 import { useShellMaybe } from "../lib/shell-context";
 import { cn } from "../lib/utils";
 import type { ProjectKind } from "../types/workspace";
-import { CreateProjectAgentSheet, type CreateProjectAgentSelection } from "./CreateProjectAgentSheet";
+// ADR 0005: pi is the only agent, so the former agent-pick sheet is gone. The
+// selection collapses to fixed pi values and the flow submits directly.
+export type CreateProjectAgentSelection = { workerAgent: string; orchestratorAgent: string };
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
@@ -116,7 +118,7 @@ export function CreateProjectFlow({
 	const [isInitializing, setIsInitializing] = useState(false);
 	const [isPreparingGit, setIsPreparingGit] = useState(false);
 	const [repositorySetup, setRepositorySetup] = useState<"NOT_A_GIT_REPO" | "PROJECT_UNBORN" | null>(null);
-	const [repositorySetupWarning, setRepositorySetupWarning] = useState<string | null>(null);
+	const [, setRepositorySetupWarning] = useState<string | null>(null);
 	// A path that arrived via droppedPath, staged until the user confirms
 	// Workspace vs Project. Consumed exactly once by openFolderStep.
 	const [pendingDropPath, setPendingDropPath] = useState<string | null>(null);
@@ -284,7 +286,16 @@ export function CreateProjectFlow({
 		selectSource(sourceSignal.source);
 	}, [sourceSignal]);
 
-	const createProject = async (selection: CreateProjectAgentSelection) => {
+		const selectedPathRef = useRef<string | null>(selectedPath);
+	selectedPathRef.current = selectedPath;
+	useEffect(() => {
+		// With a single supported harness there is no agent choice to collect:
+		// submit as soon as a path has been chosen.
+		if (!selectedPath || isCreating) return;
+		void createProject({ workerAgent: "pi", orchestratorAgent: "pi" });
+	}, [selectedPath, isCreating]);
+
+const createProject = async (selection: CreateProjectAgentSelection) => {
 		if (!selectedPath) return;
 		setError(null);
 		setIsCreating(true);
@@ -607,41 +618,7 @@ export function CreateProjectFlow({
 				events={projectPrepEvents}
 				validation={projectValidation}
 			/>
-			<CreateProjectAgentSheet
-				action={cloneSelection ? "clone" : "create"}
-				error={error}
-				isCreating={isCreating}
-				isInitializing={isInitializing}
-				kind={selectedKind}
-				onOpenChange={(open) => {
-					if (!open) {
-						setSelectedPath(null);
-						setCloneSelection(null);
-						setCreateSelection(null);
-						if (!folderPickerOpen) {
-							setError(null);
-						}
-					}
-				}}
-					onBack={
-					cloneSelection
-						? () => {
-								setSelectedPath(null);
-								setCloneDialogOpen(true);
-							}
-						: createSelection
-							? () => {
-									setSelectedPath(null);
-									setCreateDialogOpen(true);
-								}
-						: undefined
-				}
-				onSubmit={createProject}
-				open={selectedPath !== null}
-				path={selectedPath}
-				repositorySetupNeeded={repositorySetup !== null}
-				repositorySetupWarning={repositorySetupWarning}
-			/>
+			
 			{error && !hasModePicker && (
 				<span className="sr-only" role="status">
 					{error}
