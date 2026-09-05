@@ -27,7 +27,7 @@ jobs:
           # Read the version from go.mod so CI can't drift from the module
           # (it previously pinned 1.22 while go.mod declared 1.25).
           go-version-file: backend/go.mod
-          cache: false
+          cache: true
 
       - name: Check formatting
         run: |
@@ -47,8 +47,14 @@ jobs:
       - name: Test
         # The SQLite migration package already runs close to Go's default
         # 10-minute per-package limit under the race detector. Keep deadlock
-        # protection while leaving enough headroom for migration coverage.
-        run: go test -race -timeout=15m ./...
+        # protection (-timeout=15m) on every run while leaving enough headroom
+        # for migration coverage.
+        # The race detector is expensive (2-10x wall time), so PRs run the
+        # plain suite for faster feedback and full -race runs happen on push
+        # to main — races are still caught on the merge run.
+        env:
+          RACE_FLAG: ${{ github.event_name == 'pull_request' && '' || '-race' }}
+        run: go test $RACE_FLAG -timeout=15m ./...
 
   # The suite above only ever runs on Linux, so the packages whose behaviour is
   # genuinely platform-specific have never been exercised on Windows: worktree
