@@ -123,6 +123,12 @@ describe("useDaemonStatus", () => {
 		const queryClient = fakeQueryClient();
 		const { result } = renderHook(() => useDaemonStatus(queryClient));
 		await waitFor(() => expect(result.current).toEqual({ state: "ready", port: 4555, pid: 101 }));
+		// The hook's first observation of an already-ready daemon is not a daemon
+		// change: no cache eviction may happen before a real transition. Treating
+		// first observation as a change made every newly mounted useDaemonStatus
+		// instance (shell, SessionInspector, settings) evict the workspace cache
+		// on mount and remount-loop the surfaces that own it (#17).
+		expect(queryClient.removeQueries).not.toHaveBeenCalled();
 		const pushStatus = onStatusMock.mock.calls[0][0] as (status: DaemonStatus) => void;
 
 		act(() => pushStatus({ state: "ready", port: 4555, pid: 102 }));
@@ -136,7 +142,8 @@ describe("useDaemonStatus", () => {
 			queryKey: ["codex-accounts"],
 			exact: true,
 		});
-		expect(queryClient.removeQueries).toHaveBeenCalledTimes(9);
+		// 2 real transitions (pid change, stopped) x 3 evicted caches.
+		expect(queryClient.removeQueries).toHaveBeenCalledTimes(6);
 	});
 
 	it("ensures display readiness when the window regains focus", async () => {
