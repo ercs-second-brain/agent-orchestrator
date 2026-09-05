@@ -57,7 +57,7 @@ export function Composer({
 				/>
 				{!targetLocked ? <Pressable
 					accessibilityRole="button"
-					accessibilityLabel={target === "terminal" ? "Switch to chat" : "Switch to terminal"}
+					accessibilityLabel={target === "terminal" ? "Switch to agent send" : "Switch to terminal"}
 					accessibilityState={{ selected: target === "terminal" }}
 					onPress={() => { haptics.select(); onTargetChange(target === "terminal" ? "agent" : "terminal"); }}
 					hitSlop={6}
@@ -68,7 +68,7 @@ export function Composer({
 					]}
 				>
 					<Feather
-						name={target === "terminal" ? "message-square" : "terminal"}
+						name={target === "terminal" ? "send" : "terminal"}
 						size={15}
 						color={target === "terminal" ? t.textTertiary : t.blue}
 					/>

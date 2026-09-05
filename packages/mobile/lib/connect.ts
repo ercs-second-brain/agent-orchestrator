@@ -18,11 +18,11 @@ export function configForEndpoint(endpoint: Endpoint, token: string, hostId = ""
 		httpPort: String(endpoint.port),
 		secure: endpoint.secure,
 		password: token,
-		// Carried so per-machine state — the chat event cursor above all — keys on
-		// the machine rather than whichever address won the race.
+		// Carried so per-machine state keys on it — the point is that the same
+		// machine is recognized rather than whichever address won the race.
 		...(hostId ? { hostId } : {}),
-		// Carried so the poll can speed up on paths where the event stream
-		// cannot deliver. See pollInterval.ts.
+		// Carried so the poll can speed up on paths that cannot carry small
+		// live frames well. See pollInterval.ts.
 		endpointKind: endpoint.kind,
 	};
 }

@@ -17,17 +17,17 @@ export type ServerConfig = {
 	secure?: boolean; // use https/wss instead of http/ws (TLS / Tailscale funnel)
 	password: string; // daemon connection password for Authorization header
 	/**
-	 * The machine's stable identity, when known. Used to key per-machine state
-	 * (the chat event cursor) so it survives the address changing as the app
-	 * races between LAN, Tailscale and the tunnel. Absent for a pairing migrated
-	 * from the single-server config until its first connect.
+	 * The machine's stable identity, when known. Used to key per-machine state so
+	 * it survives the address changing as the app races between LAN, Tailscale
+	 * and the tunnel. Absent for a pairing migrated from the single-server config
+	 * until its first connect.
 	 */
 	hostId?: string;
 	/**
-	 * Which kind of endpoint won the race. Drives how often we poll: the
-	 * conversation event stream cannot deliver over a Cloudflare quick tunnel
-	 * (it forwards the body in ~128 KB chunks), so polling is the only live
-	 * signal on that path. Absent for a config that predates the race.
+	 * Which kind of endpoint won the race. Drives how often we poll: the daemon
+	 * does not stream events to the phone over a Cloudflare quick tunnel (it
+	 * forwards bodies in ~128 KB chunks), so polling is the only live signal on
+	 * that path. Absent for a config that predates the race.
 	 */
 	endpointKind?: EndpointKind;
 };

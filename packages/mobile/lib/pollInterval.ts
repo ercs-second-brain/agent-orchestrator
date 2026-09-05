@@ -3,22 +3,13 @@ import type { ServerConfig } from "./config";
 /**
  * How often to poll, given which endpoint won the race.
  *
- * Normally the poll is a backstop: the conversation event stream carries live
- * updates and the poll only reconciles. Over a Cloudflare quick tunnel it is
- * the only thing that works.
+ * The daemon pushes no event stream to the phone, so the REST poll is the only
+ * live signal. Over a Cloudflare quick tunnel it is also slow (bodies are
+ * forwarded in ~128 KB chunks), so the poll paces up on that path.
  *
- * Measured against a real tunnel: the body is forwarded in ~128 KB chunks, so
- * a few-hundred-byte chat event is never pushed through on its own. A reply
- * that took the agent two seconds sat unseen for over a minute, while the same
- * conversation was instant over the LAN. Until that path carries a stream —
- * a named tunnel, or a relay — polling faster is what keeps it usable.
- *
- * See docs/adr/0004-cloudflare-tunnel-for-remote-mobile-access.md — this is a
- * stopgap, and the exit condition is concrete: conversation events move to the
- * existing /mux WebSocket, which already reaches the same daemon and already
- * round-trips small frames in 11ms over the tunnel. When that lands, both this
- * and conversationPoll.ts are deleted and the poll returns to DIRECT_POLL_MS on
- * every path. Until then the cost is unmeasured battery and cellular data.
+ * See docs/adr/0004-cloudflare-tunnel-for-remote-mobile-access.md — still a
+ * stopgap: the poll remains the only live signal on every path until the
+ * existing /mux WebSocket carries app events too.
  */
 
 /** Direct paths stream fine, so the poll stays cheap on battery and data. */

@@ -1,17 +1,16 @@
 import { useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
 import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
-import { ChatSessionScreen } from "../../lib/chat/ChatSessionScreen";
 import TerminalSessionScreen from "../../lib/session/TerminalSessionScreen";
 import { useApp } from "../../lib/store";
 import { useTheme, useThemedStyles } from "../../lib/ThemeProvider";
 import type { Theme } from "../../lib/theme";
 
 /**
- * The committed session mode is daemon-authoritative, including after an
- * explicit controller handoff. The board's cached session supplies the fast
- * path; a missing row waits for the next refresh rather than guessing Terminal
- * and briefly attaching a nonexistent PTY.
+ * Sessions are terminal-first: the daemon's tmux TUI is the agent interface, and
+ * the phone mirrors it through the mux. A `mode: "chat"` row can still exist in
+ * daemon storage written before chat was removed; it has no live surface, so it
+ * renders the notice below rather than guessing a renderer.
  */
 export default function MobileSessionRoute() {
 	const { id: rawId } = useLocalSearchParams<{ id: string }>();
@@ -38,8 +37,14 @@ export default function MobileSessionRoute() {
 		return () => { cancelled = true; };
 	}, [id, refresh, session]);
 
-	if (session?.mode === "chat") return <ChatSessionScreen session={session} />;
 	if (session?.mode === "tui") return <TerminalSessionScreen />;
+	if (session?.mode === "chat") {
+		return (
+			<View style={styles.center}>
+				<Text style={styles.copy}>Chat sessions are no longer supported. Open the session terminal on desktop.</Text>
+			</View>
+		);
+	}
 
 	return (
 		<View style={styles.center}>

@@ -22,9 +22,6 @@ const SHEET_ROUTES = [
 	{ name: "sheets/project", detents: [0.5, 0.95] },
 	{ name: "sheets/agent", detents: [0.5, 0.95] },
 	{ name: "sheets/model", detents: [0.5, 0.95] },
-	{ name: "sheets/chat-settings", detents: [0.5, 0.95] },
-	{ name: "sheets/conversation-map", detents: [0.5, 0.95] },
-	{ name: "sheets/composer-picker", detents: [0.6, 0.95] },
 	{ name: "sheets/theme", detents: "fitToContents" },
 	{ name: "sheets/store-update", detents: "fitToContents" },
 ] as const;
@@ -90,7 +87,6 @@ function Shell() {
 				<Stack.Screen name="(tabs)" options={{ headerShown: false }} />
 				<Stack.Screen name="session/[id]" options={{ title: "Session", headerBackButtonDisplayMode: "minimal", headerLeft: () => <MinimalBackButton /> }} />
 				<Stack.Screen name="shell/[handleId]" options={{ title: "Worktree shell", headerBackButtonDisplayMode: "minimal", headerLeft: () => <MinimalBackButton /> }} />
-				<Stack.Screen name="preview/[id]" options={{ title: "Preview", headerBackButtonDisplayMode: "minimal", headerLeft: () => <MinimalBackButton /> }} />
 				<Stack.Screen name="spawn" options={{ presentation: "modal", title: "New agent" }} />
 				{/* Reachable from Settings and from the board's bell, so naming either one
 				    in the back label would be wrong half the time. "minimal" drops the

@@ -15,17 +15,16 @@ const cfg = (over: Partial<ServerConfig> = {}): ServerConfig => ({
 });
 
 describe("pollIntervalFor", () => {
-	// Measured: a Cloudflare quick tunnel forwards the body in ~128 KB chunks,
-	// so a few-hundred-byte chat event is never pushed through on its own. The
-	// live stream cannot deliver over that path, which leaves polling as the
-	// only thing that moves the UI — so it has to be quick enough to feel live.
-	it("polls quickly over the tunnel, where the event stream cannot deliver", () => {
+	// Measured: a Cloudflare quick tunnel forwards bodies in ~128 KB chunks, so
+	// small live frames never get through promptly. Polling is the only thing
+	// that moves the UI, so on that path it has to be quick enough to feel live.
+	it("polls quickly over the tunnel, the one path that cannot deliver small frames", () => {
 		expect(pollIntervalFor(cfg({ endpointKind: "tunnel" }))).toBe(TUNNEL_POLL_MS);
 		expect(TUNNEL_POLL_MS).toBeLessThan(DIRECT_POLL_MS);
 	});
 
-	// Direct paths stream fine, so the poll is only a backstop and should stay
-	// cheap on battery and data.
+	// Direct paths carry small frames fine, so the poll stays cheap on battery
+	// and data.
 	it.each(["lan", "tailscale"] as const)("keeps the normal interval over %s", (kind) => {
 		expect(pollIntervalFor(cfg({ endpointKind: kind }))).toBe(DIRECT_POLL_MS);
 	});

@@ -2,7 +2,6 @@ import { clearConfig } from "./config";
 import { activeHostMetadata, removeHost, type HostMetadata } from "./hosts";
 import { clearOnboardingSkipped } from "./onboardingStore";
 import { unpairFromServer } from "./push";
-import { clearEventCursorsForHost } from "./chat/eventCursor";
 
 // "Disconnect & forget server" — the inverse of pairing. Until this existed
 // there was no way to un-pair a phone at all: clearing the host by hand left the
@@ -41,11 +40,10 @@ export async function forgetServer(): Promise<void> {
 	}
 
 	// Each local deletion is independent. A rejected SecureStore operation must
-	// not prevent the config, event cursor, or onboarding flag from being
-	// cleared; otherwise "forget" can leave a partially paired phone behind.
+	// not prevent the config or onboarding flag from being cleared; otherwise
+	// "forget" can leave a partially paired phone behind.
 	const cleanup = await Promise.allSettled([
 		host ? removeHost(host.id) : Promise.resolve(),
-		host ? clearEventCursorsForHost(host) : Promise.resolve(),
 		clearConfig(),
 		clearOnboardingSkipped(),
 	]);

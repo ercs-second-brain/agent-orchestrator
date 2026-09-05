@@ -16,7 +16,7 @@ const cfg = (over: Partial<ServerConfig> = {}): ServerConfig => ({
 
 describe("sameServerConfig", () => {
 	// Resolution builds a fresh object every time. Effects across the app key
-	// on the config's identity — the live conversation stream, the poll loop —
+	// on the config's identity — the REST poll loop, the terminal mux —
 	// so handing them a new object for an unchanged endpoint tears the stream
 	// down and rebuilds it, leaving the UI to update only on the 8s poll.
 	it("treats an identical endpoint as unchanged", () => {

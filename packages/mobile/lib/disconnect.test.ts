@@ -41,11 +41,6 @@ vi.mock("./hosts", () => ({
 		if (removeHostThrows) throw removeHostThrows;
 	}),
 }));
-vi.mock("./chat/eventCursor", () => ({
-	clearEventCursorsForHost: vi.fn(async (host: typeof active) => {
-		calls.push(`clearEventCursor:${host.id}`);
-	}),
-}));
 vi.mock("./onboardingStore", () => ({
 	clearOnboardingSkipped: vi.fn(async () => {
 		calls.push("clearOnboardingSkipped");
@@ -69,7 +64,6 @@ describe("forgetServer", () => {
 		expect(calls).toEqual([
 			"unpairFromServer",
 			"removeHost:h_active",
-			"clearEventCursor:h_active",
 			"clearConfig",
 			"clearOnboardingSkipped",
 		]);
@@ -136,7 +130,6 @@ describe("forgetServer and the host list", () => {
 		removeHostThrows = new Error("SecureStore unavailable");
 
 		await expect(forgetServer()).rejects.toThrow("SecureStore unavailable");
-		expect(calls).toContain("clearEventCursor:h_active");
 		expect(calls).toContain("clearConfig");
 		expect(calls).toContain("clearOnboardingSkipped");
 	});
