@@ -12,6 +12,8 @@ const { getMock, postMock, getMigration, setMigration } = vi.hoisted(() => ({
 }));
 
 vi.mock("../lib/api-client", () => ({
+				getApiBaseUrl: () => "",
+				hasTrustedApiBaseUrl: () => false,
 	subscribeApiBaseUrl: () => () => undefined,
 	apiClient: { GET: getMock, POST: postMock },
 	apiErrorMessage: (e: unknown, fb = "Request failed") =>

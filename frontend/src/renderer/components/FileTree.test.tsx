@@ -9,6 +9,8 @@ import type { TreeNode } from "../hooks/useSessionWorkspaceTree";
 const { getMock } = vi.hoisted(() => ({ getMock: vi.fn() }));
 
 vi.mock("../lib/api-client", () => ({
+				getApiBaseUrl: () => "",
+				hasTrustedApiBaseUrl: () => false,
 	subscribeApiBaseUrl: () => () => undefined,
 	apiClient: { GET: getMock },
 	apiErrorMessage: (error: unknown, fallback = "Request failed") => {

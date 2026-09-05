@@ -3,6 +3,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const getMock = vi.hoisted(() => vi.fn());
 
 vi.mock("../lib/api-client", () => ({
+				getApiBaseUrl: () => "",
+				hasTrustedApiBaseUrl: () => false,
 	subscribeApiBaseUrl: () => () => undefined,
 	apiClient: { GET: (...args: unknown[]) => getMock(...args) },
 }));

@@ -21,6 +21,8 @@ function render(ui: ReactElement) {
 const postMock = vi.hoisted(() => vi.fn());
 
 vi.mock("../lib/api-client", () => ({
+				getApiBaseUrl: () => "",
+				hasTrustedApiBaseUrl: () => false,
 	subscribeApiBaseUrl: () => () => undefined,
 	apiClient: { POST: postMock },
 	apiErrorMessage: (error: unknown, fallback = "Request failed") =>

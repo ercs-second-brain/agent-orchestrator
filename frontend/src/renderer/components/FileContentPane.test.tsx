@@ -9,6 +9,7 @@ import type { FileAnnotationModel } from "./WorkspaceDiffView";
 const { getMock } = vi.hoisted(() => ({ getMock: vi.fn() }));
 
 vi.mock("../lib/api-client", () => ({
+				hasTrustedApiBaseUrl: () => false,
 	subscribeApiBaseUrl: () => () => undefined,
 	apiClient: { GET: getMock },
 	getApiBaseUrl: () => "",

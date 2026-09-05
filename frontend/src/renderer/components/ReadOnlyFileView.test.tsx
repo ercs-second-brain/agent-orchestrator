@@ -4,6 +4,7 @@ import { ReadOnlyFileView } from "./ReadOnlyFileView";
 import type { WorkspaceFileDetail } from "../hooks/useSessionWorkspaceFiles";
 
 vi.mock("../lib/api-client", () => ({
+				hasTrustedApiBaseUrl: () => false,
 	getApiBaseUrl: () => "",
 	subscribeApiBaseUrl: () => () => undefined,
 }));

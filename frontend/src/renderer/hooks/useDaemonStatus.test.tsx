@@ -34,6 +34,8 @@ vi.mock("../lib/event-transport", () => ({
 }));
 
 vi.mock("../lib/api-client", () => ({
+				getApiBaseUrl: () => "",
+				hasTrustedApiBaseUrl: () => false,
 	subscribeApiBaseUrl: () => () => undefined,
 	setApiBaseUrl: setApiBaseUrlMock,
 	setApiDaemonStatus: setApiDaemonStatusMock,

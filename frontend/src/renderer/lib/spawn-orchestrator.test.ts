@@ -4,6 +4,9 @@ import { apiClient } from "./api-client";
 import { captureRendererEvent } from "./telemetry";
 
 vi.mock("./api-client", () => ({
+				getApiBaseUrl: () => "",
+				subscribeApiBaseUrl: () => () => undefined,
+				hasTrustedApiBaseUrl: () => false,
 	apiClient: { POST: vi.fn() },
 	apiErrorCode: (error: unknown) =>
 		typeof error === "object" && error !== null && "code" in error
