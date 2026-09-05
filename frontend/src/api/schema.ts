@@ -481,23 +481,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/dev/import-projects": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Run the developer project-registry import through the daemon store */
-        post: operations["runDevImportProjects"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/v1/endpoints": {
         parameters: {
             query?: never;
@@ -543,24 +526,6 @@ export interface paths {
         get: operations["getIdentity"];
         put?: never;
         post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/import": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Check whether a legacy AO install is available to import */
-        get: operations["getImportStatus"];
-        put?: never;
-        /** Run the legacy AO project import through the daemon store */
-        post: operations["runImport"];
         delete?: never;
         options?: never;
         head?: never;
@@ -3105,29 +3070,6 @@ export interface components {
             sessionId: string;
             workspacePath: string;
         };
-        DevImportProjectsConflict: {
-            path: string;
-            projectId: string;
-            reason: string;
-            targetId?: string;
-            targetPath?: string;
-        };
-        DevImportProjectsReport: {
-            conflicts?: components["schemas"]["DevImportProjectsConflict"][];
-            dryRun: boolean;
-            inserted: number;
-            skipped: number;
-            sourceDataDir: string;
-            targetDataDir: string;
-            updated: number;
-        };
-        DevImportProjectsRequest: {
-            dryRun: boolean;
-            sourceDataDir: string;
-        };
-        DevImportProjectsResponse: {
-            report: components["schemas"]["DevImportProjectsReport"];
-        };
         DomainActivity: {
             /** Format: date-time */
             lastActivityAt: string;
@@ -3220,19 +3162,6 @@ export interface components {
         IdentityResponse: {
             apiVersion: number;
             hostId: string;
-        };
-        ImportReport: {
-            dryRun: boolean;
-            notes?: string[];
-            projectsImported: number;
-            projectsSkipped: number;
-        };
-        ImportRunResponse: {
-            report: components["schemas"]["ImportReport"];
-        };
-        ImportStatusResponse: {
-            available: boolean;
-            legacyRoot: string;
         };
         ImportValidationInput: {
             /** @enum {string} */
@@ -5748,57 +5677,6 @@ export interface operations {
             };
         };
     };
-    runDevImportProjects: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["DevImportProjectsRequest"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DevImportProjectsResponse"];
-                };
-            };
-            /** @description Bad Request */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["APIError"];
-                };
-            };
-            /** @description Internal Server Error */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["APIError"];
-                };
-            };
-            /** @description Not Implemented */
-            501: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["APIError"];
-                };
-            };
-        };
-    };
     getEndpoints: {
         parameters: {
             query?: never;
@@ -5894,82 +5772,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["IdentityResponse"];
-                };
-            };
-            /** @description Not Implemented */
-            501: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["APIError"];
-                };
-            };
-        };
-    };
-    getImportStatus: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ImportStatusResponse"];
-                };
-            };
-            /** @description Internal Server Error */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["APIError"];
-                };
-            };
-            /** @description Not Implemented */
-            501: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["APIError"];
-                };
-            };
-        };
-    };
-    runImport: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ImportRunResponse"];
-                };
-            };
-            /** @description Internal Server Error */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["APIError"];
                 };
             };
             /** @description Not Implemented */

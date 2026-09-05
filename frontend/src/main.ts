@@ -137,7 +137,7 @@ import { sameBrowserRuntimeIdentity, type BrowserRuntimeIdentity } from "./main/
 import { connectSupervisor, type SupervisorLinkHandle } from "./main/supervisor-link";
 import { connectBrowserRuntime, type BrowserRuntimeLinkHandle } from "./main/browser-runtime-link";
 import { keepDaemonAlive, shouldLinkOnAttach } from "./main/daemon-owner";
-import { readMigrationState, updateMigration, writeAppStateMarker, type MigrationState } from "./main/app-state";
+import { writeAppStateMarker } from "./main/app-state";
 import { isAllowedAppExternalURL, openAllowedAppExternalURL } from "./main/external-open";
 import { dockBounceType, shouldReplaceBounce, shouldSignalAttention, shouldToast } from "./main/notification-signals";
 import { buildMacAppMenuTemplate, buildWindowsAppMenuTemplate } from "./main/menu";
@@ -2087,17 +2087,6 @@ ipcMain.handle("terminal:saveDroppedFile", async (_event, input: { name: string;
 	const target = path.join(dir, `${Date.now()}-${base}`);
 	await writeFile(target, Buffer.from(input.bytes));
 	return target;
-});
-
-ipcMain.handle("appState:getMigration", async (): Promise<MigrationState> => {
-	const runFile = runFilePath();
-	if (!runFile) return { status: "pending" };
-	return readMigrationState(path.dirname(runFile));
-});
-ipcMain.handle("appState:setMigration", async (_event, migration: MigrationState) => {
-	const runFile = runFilePath();
-	if (!runFile) return;
-	await updateMigration({ stateDir: path.dirname(runFile), migration, now: () => new Date() });
 });
 
 ipcMain.handle("updateSettings:get", async (): Promise<UpdateSettings> => {

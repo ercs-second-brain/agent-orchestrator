@@ -50,7 +50,7 @@ const (
 )
 
 // WithDefault returns GitStatusReady when the stored value is empty, so callers
-// that construct WorkspaceRepoRecord without populating GitStatus (e.g. devimport)
+// that construct WorkspaceRepoRecord without populating GitStatus
 // still satisfy the NOT NULL CHECK constraint on workspace_repos.git_status.
 func (g GitStatus) WithDefault() GitStatus {
 	if g == "" {
