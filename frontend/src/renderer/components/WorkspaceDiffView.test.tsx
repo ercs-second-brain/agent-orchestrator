@@ -7,6 +7,8 @@ import type { WorkspaceFileDetail } from "../hooks/useSessionWorkspaceFiles";
 const { postMock } = vi.hoisted(() => ({ postMock: vi.fn() }));
 
 vi.mock("../lib/api-client", () => ({
+				hasTrustedApiBaseUrl: () => false,
+	subscribeApiBaseUrl: () => () => undefined,
 	apiClient: { POST: postMock },
 	getApiBaseUrl: () => "",
 	apiErrorMessage: (error: unknown, fallback = "Request failed") => {

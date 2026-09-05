@@ -3,6 +3,8 @@ import { describe, expect, it, vi } from "vitest";
 import { ImageDiffView } from "./ImageDiffView";
 
 vi.mock("../lib/api-client", () => ({
+				hasTrustedApiBaseUrl: () => false,
+	subscribeApiBaseUrl: () => () => undefined,
 	getApiBaseUrl: () => "",
 }));
 

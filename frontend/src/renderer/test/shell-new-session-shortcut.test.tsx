@@ -152,6 +152,7 @@ vi.mock("../hooks/useWorkspaceQuery", () => ({
 	useWorkspaceQuery: () => shellMocks.state.workspaceQuery,
 	useWorkspaceTraySessions: () => ({ data: [] }),
 	workspaceQueryKey: ["workspaces"],
+	resolveWorkspaceQueryKey: () => ["workspaces"],
 	workspaceQueryOptions: {},
 }));
 
@@ -160,6 +161,11 @@ vi.mock("../hooks/useDaemonStatus", () => ({
 }));
 
 vi.mock("../lib/api-client", () => ({
+	getApiBaseUrl: () => {
+		const s = shellMocks.state.daemonStatus;
+		return s.state === "ready" && s.port ? `http://127.0.0.1:${s.port}` : "";
+	},
+	subscribeApiBaseUrl: () => () => undefined,
 	apiClient: { POST: vi.fn(), DELETE: vi.fn() },
 	apiErrorCode: (error: { code?: string } | undefined) => error?.code,
 	apiErrorMessage: (error: { message?: string } | undefined) => error?.message ?? "request failed",
@@ -168,6 +174,8 @@ vi.mock("../lib/api-client", () => ({
 
 vi.mock("../lib/daemon-status", () => ({
 	refreshDaemonStatus: vi.fn(async () => shellMocks.state.daemonStatus),
+	applyDaemonStatus: () => undefined,
+	isDaemonReady: (status: { state: string }) => status.state === "ready",
 }));
 
 // TerminalCacheProvider resolves the cloud terminal transport in production.

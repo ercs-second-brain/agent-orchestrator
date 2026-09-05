@@ -47,6 +47,9 @@ vi.mock("../lib/orchestrator-replacement-telemetry", () => ({
 }));
 
 vi.mock("../lib/api-client", () => ({
+				getApiBaseUrl: () => "http://127.0.0.1:8080",
+				hasTrustedApiBaseUrl: () => false,
+	subscribeApiBaseUrl: () => () => undefined,
 	apiClient: {
 		GET: getMock,
 		PUT: putMock,
@@ -112,7 +115,9 @@ function renderSettings(projectId = "proj-1", workspaces?: WorkspaceSummary[], s
 		},
 	});
 	if (workspaces) {
-		queryClient.setQueryData(workspaceQueryKey, workspaces);
+		// useWorkspaceQuery keys its cache under ["workspaces", apiBaseUrl] since the
+		// remote-daemon work; mirror the mocked api base URL here.
+		queryClient.setQueryData([...workspaceQueryKey, "http://127.0.0.1:8080"], workspaces);
 	}
 	render(
 		<QueryClientProvider client={queryClient}>

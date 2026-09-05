@@ -82,7 +82,7 @@ describe("apiClient runtime base URL", () => {
 		expect(JSON.parse(seen[0].body ?? "{}")).toEqual({ projectId: "p1", prompt: "hello" });
 	});
 
-	it("skips the rebase when the request already targets the runtime base URL", async () => {
+	it("rebases requests even when the runtime base URL matches the dev origin", async () => {
 		const seen: (RequestInfo | URL)[] = [];
 		vi.spyOn(globalThis, "fetch").mockImplementation(async (input: RequestInfo | URL) => {
 			seen.push(input);
@@ -92,15 +92,16 @@ describe("apiClient runtime base URL", () => {
 			});
 		});
 
-		// Match the base openapi-fetch built the request against (the dev origin
-		// in jsdom), so the rewrite has nothing to do.
+		// The rewrite is unconditional: even when the base matches the origin
+		// openapi-fetch built the request against, the request is rebuilt so the
+		// duplex-free fetch call is uniform across dev and packaged runs.
 		setApiBaseUrl(window.location.origin);
 		const { error } = await apiClient.GET("/api/v1/projects");
 
 		expect(error).toBeUndefined();
 		expect(seen).toHaveLength(1);
-		// Untouched pass-through: fetch receives the original Request object.
-		expect(seen[0]).toBeInstanceOf(Request);
+		// Rebuilt onto the runtime base URL, preserving method and path.
+		expect(String(seen[0])).toBe(`${window.location.origin}/api/v1/projects`);
 	});
 
 	it("passes the request through untouched when the base URL is empty", async () => {

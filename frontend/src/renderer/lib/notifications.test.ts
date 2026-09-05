@@ -22,6 +22,7 @@ const {
 }));
 
 vi.mock("./api-client", () => ({
+				hasTrustedApiBaseUrl: () => false,
 	apiClient: { GET: apiGetMock },
 	apiErrorMessage: () => "Request failed",
 	getApiBaseUrl: getApiBaseUrlMock,

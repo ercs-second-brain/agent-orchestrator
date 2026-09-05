@@ -4,6 +4,11 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 // resets the module registry and re-mocks the heavy boundaries (posthog, the
 // Electron bridge) before importing. This exercises the real init control flow.
 
+// initTelemetry bails out before touching the bridge when no PostHog key is
+// configured (packaged defaults intentionally ship no key), so every test in
+// this file stubs one before re-importing the module.
+vi.stubEnv("VITE_AO_POSTHOG_KEY", "posthog_init_test_key");
+
 const posthogStub = {
 	init: vi.fn(),
 	register: vi.fn(),

@@ -4,6 +4,8 @@ import { aoBridge } from "../../lib/bridge";
 import { MarkdownFileView } from "./MarkdownFileView";
 
 vi.mock("../../lib/api-client", () => ({
+				hasTrustedApiBaseUrl: () => false,
+	subscribeApiBaseUrl: () => () => undefined,
 	getApiBaseUrl: () => "http://127.0.0.1:4567",
 }));
 

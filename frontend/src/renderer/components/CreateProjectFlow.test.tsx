@@ -32,6 +32,9 @@ vi.mock("../lib/bridge", () => ({
 }));
 
 vi.mock("../lib/api-client", () => ({
+				getApiBaseUrl: () => "",
+				hasTrustedApiBaseUrl: () => false,
+	subscribeApiBaseUrl: () => () => undefined,
 	apiClient: {
 		POST: apiMocks.POST,
 	},
@@ -741,6 +744,7 @@ function RemoteShell({ children }: { children: ReactNode }) {
 					daemonStatus: { state: "ready", connectionMode: "remote" },
 					workspaceStartupState: "ready",
 					createProject: async () => undefined,
+					createRepository: async () => undefined,
 					cloneProject: async () => undefined,
 					initializeProjectRepository: async () => undefined,
 				} as ShellContextValue

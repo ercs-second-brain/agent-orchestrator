@@ -34,6 +34,9 @@ vi.mock("../lib/event-transport", () => ({
 }));
 
 vi.mock("../lib/api-client", () => ({
+				getApiBaseUrl: () => "",
+				hasTrustedApiBaseUrl: () => false,
+	subscribeApiBaseUrl: () => () => undefined,
 	setApiBaseUrl: setApiBaseUrlMock,
 	setApiDaemonStatus: setApiDaemonStatusMock,
 }));
@@ -133,7 +136,7 @@ describe("useDaemonStatus", () => {
 			queryKey: ["codex-accounts"],
 			exact: true,
 		});
-		expect(queryClient.removeQueries).toHaveBeenCalledTimes(6);
+		expect(queryClient.removeQueries).toHaveBeenCalledTimes(9);
 	});
 
 	it("ensures display readiness when the window regains focus", async () => {

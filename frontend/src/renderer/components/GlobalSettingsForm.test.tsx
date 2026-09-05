@@ -81,7 +81,7 @@ vi.mock("../lib/bridge", () => ({
 	aoBridge: {
 		app: { getVersion, openExternal },
 		clipboard: { writeText },
-		daemon: { getStatus: getDaemonStatus },
+		daemon: { getStatus: getDaemonStatus, onStatus: () => () => undefined },
 		updateSettings: { get: getUpdate, set: setUpdate },
 		uiSettings: { get: getUiSettings, set: setUiSettings },
 		keybindings: {
