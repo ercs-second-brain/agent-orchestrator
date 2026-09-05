@@ -5,12 +5,7 @@ import { useTranslation } from "react-i18next";
 import type { components } from "../../api/schema";
 import { agentModelsQueryOptions, type AgentModelCatalog } from "../hooks/useAgentModelsQuery";
 import { agentLabel } from "../lib/agent-options";
-import {
-	buildRankedAgentOptions,
-	type AgentInfo,
-	type RankedAgentOption,
-	unknownAgentReadiness,
-} from "../lib/agent-select-options";
+import { buildRankedAgentOptions, type RankedAgentOption } from "../lib/agent-select-options";
 import { KNOWN_REVIEWER_HARNESS_IDS } from "../lib/reviewer-harnesses";
 import { cn } from "../lib/utils";
 import { AgentAvatar } from "./AgentAvatar";
@@ -83,18 +78,13 @@ export function ReviewerSelect({
 	const { t } = useTranslation();
 	const queryClient = useQueryClient();
 	const [menuOpen, setMenuOpen] = useState(false);
-	// Until the daemon's catalog arrives these entries carry the whole menu, so
-	// label them the way the catalog would rather than printing bare ids: without
-	// this the same row reads "claude-code" now and "Claude Code" a moment later.
-	const fallbackAgents: AgentInfo[] = [...KNOWN_REVIEWER_HARNESS_IDS].map(
-		(id) => unknownAgentReadiness(id, agentLabel(id)),
-	);
-	const filteredSupported = (agents ?? fallbackAgents).filter((a) => KNOWN_REVIEWER_HARNESS_IDS.has(a.id));
-	const supportedAgents = filteredSupported.length > 0 ? filteredSupported : fallbackAgents;
+	// The daemon's readiness snapshot is the only source of reviewer candidates:
+	// against a remote daemon a client-local fallback would offer harnesses the
+	// daemon cannot run. Until the snapshot arrives, only the default row shows.
 	const options = buildRankedAgentOptions({
-		agents: supportedAgents,
+		agents: agents?.filter((a) => KNOWN_REVIEWER_HARNESS_IDS.has(a.id)),
 		priorityRank: REVIEWER_AGENT_PRIORITY_RANK,
-		fallbackAgents,
+		fallbackAgents: [],
 	});
 	const selectableOptions = options.filter((agent) => {
 		if (agent.id === excludedHarness) return false;

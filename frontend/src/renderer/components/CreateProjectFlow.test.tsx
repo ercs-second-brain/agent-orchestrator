@@ -746,6 +746,7 @@ function RemoteShell({ children }: { children: ReactNode }) {
 					createProject: async () => undefined,
 					createRepository: async () => undefined,
 					cloneProject: async () => undefined,
+					createRepository: async () => undefined,
 					initializeProjectRepository: async () => undefined,
 				} as ShellContextValue
 			}

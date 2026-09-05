@@ -152,7 +152,7 @@ function SettingsBody({
 		reviewerHarness: config.reviewers?.[0]?.harness ?? "",
 		reviewerModel: config.reviewers?.[0]?.agentConfig?.model ?? "",
 		reviewerMode: config.reviewers?.[0]?.agentConfig?.mode ?? "",
-		autoReview: config.autoReview ?? false,
+		autoReview: config.autoReview ?? true,
 		intakeEnabled: intake.enabled ?? false,
 		intakeRepo: intake.repo ?? "",
 		intakeAssignee: intake.assignee ?? "",

@@ -1927,7 +1927,79 @@ describe("SessionInspector summary reviews", () => {
     expect(trigger).not.toHaveTextContent("claude-code");
   });
 
-  it("configures session auto-review and disables manual controls", async () => {
+  // A remote daemon (Connect Mobile / LAN mode) runs agents on the server, not
+  // on the client machine. Its readiness snapshot is the only reviewer source:
+  // with only pi installed there, the picker must offer pi, and the run button
+  // must stay usable while auto review is enabled.
+  it("runs a review from a daemon snapshot that only has pi installed", async () => {
+    getMock.mockImplementation(async (path: string) => {
+      if (path === "/api/v1/agents/readiness") {
+        return {
+          data: {
+            agents: [
+              agentReadiness("pi"),
+              agentReadiness("claude-code", "Claude Code", { installation: "not_installed" }),
+            ],
+          },
+        };
+      }
+      if (path === "/api/v1/agents/{agent}/models") {
+        return {
+          data: {
+            agentId: "unknown",
+            selectionMode: "text",
+            models: [],
+            allowCustom: false,
+            source: "manual",
+            fetchedAt: "2026-08-30T00:00:00Z",
+            stale: false,
+          },
+          error: undefined,
+        };
+      }
+      if (path === "/api/v1/sessions/{sessionId}/workspace/files") {
+        return { data: { sessionId: "sess-1", files: [], truncated: false }, error: undefined };
+      }
+      if (path === "/api/v1/sessions/{sessionId}/reviews") {
+        return { data: { reviewerHandleId: "", reviews: [reviewState(3, "needs_review")] } };
+      }
+      if (path === "/api/v1/projects/{id}") {
+        return {
+          data: {
+            status: "ok",
+            project: {
+              id: "ws-1",
+              kind: "git",
+              name: "my-app",
+              path: "/repo",
+              repo: "my-app",
+              defaultBranch: "main",
+              config: { reviewers: [{ harness: "pi" }] },
+            },
+          },
+        };
+      }
+      return { data: undefined };
+    });
+
+    renderWithQuery(
+      <SessionInspector
+        session={sessionWithProvider([pr(3, "open")], "pi")}
+      />,
+    );
+    await openReviewsSection();
+
+    expect(
+      screen.getByRole("button", { name: "Review latest commit" }),
+    ).toBeEnabled();
+    const trigger = screen.getByRole("button", { name: /Select reviewer agent/ });
+    expect(trigger).toHaveTextContent("Pi");
+    await userEvent.click(trigger);
+    expect(await screen.findByRole("menuitem", { name: /^pi/i })).toBeEnabled();
+    expect(screen.queryByRole("menuitem", { name: /^codex/i })).not.toBeInTheDocument();
+  });
+
+  it("configures session auto-review while keeping manual controls usable", async () => {
     getMock.mockImplementation(async (path: string) => {
       if (path === "/api/v1/agents/readiness") {
         const agents = ["claude-code", "codex", "opencode"].map((id) => agentReadiness(id));
@@ -1969,10 +2041,10 @@ describe("SessionInspector summary reviews", () => {
 
     expect(
       screen.getByRole("button", { name: "Review latest commit" }),
-    ).toBeDisabled();
+    ).toBeEnabled();
     expect(
       screen.getByRole("button", { name: "Select reviewer agent" }),
-    ).toBeDisabled();
+    ).toBeEnabled();
     const toggle = screen.getByRole("switch", { name: "Auto review" });
     expect(toggle).toBeChecked();
     await userEvent.click(toggle);

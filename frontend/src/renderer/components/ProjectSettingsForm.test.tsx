@@ -47,14 +47,14 @@ vi.mock("../lib/orchestrator-replacement-telemetry", () => ({
 }));
 
 vi.mock("../lib/api-client", () => ({
-				getApiBaseUrl: () => "http://127.0.0.1:8080",
-				hasTrustedApiBaseUrl: () => false,
-	subscribeApiBaseUrl: () => () => undefined,
 	apiClient: {
 		GET: getMock,
 		PUT: putMock,
 		POST: postMock,
 	},
+	getApiBaseUrl: () => "http://127.0.0.1:3001",
+	hasTrustedApiBaseUrl: () => false,
+	subscribeApiBaseUrl: () => () => {},
 	apiErrorCode: (error: unknown) =>
 		typeof error === "object" && error !== null && "code" in error
 			? String((error as { code: unknown }).code)
@@ -73,7 +73,7 @@ vi.mock("../lib/api-client", () => ({
 }));
 
 import { ProjectSettingsForm, type ProjectSettingsSaveState, type ProjectSettingsSection } from "./ProjectSettingsForm";
-import { workspaceQueryKey } from "../hooks/useWorkspaceQuery";
+import { resolveWorkspaceQueryKey, workspaceQueryKey } from "../hooks/useWorkspaceQuery";
 import type { WorkspaceSummary } from "../types/workspace";
 
 async function beginEdit(label: string) {
@@ -115,9 +115,7 @@ function renderSettings(projectId = "proj-1", workspaces?: WorkspaceSummary[], s
 		},
 	});
 	if (workspaces) {
-		// useWorkspaceQuery keys its cache under ["workspaces", apiBaseUrl] since the
-		// remote-daemon work; mirror the mocked api base URL here.
-		queryClient.setQueryData([...workspaceQueryKey, "http://127.0.0.1:8080"], workspaces);
+		queryClient.setQueryData(resolveWorkspaceQueryKey(), workspaces);
 	}
 	render(
 		<QueryClientProvider client={queryClient}>
@@ -543,6 +541,25 @@ describe("ProjectSettingsForm", () => {
 		await waitFor(() => expect(putMock).toHaveBeenCalledTimes(1));
 		const request = putMock.mock.calls[0]?.[1];
 		expect(request?.body.config.autoReview).toBe(false);
+	});
+
+	it("defaults auto review to on when the project config does not set it", async () => {
+		mockProject({
+			id: "proj-1",
+			name: "Project One",
+			kind: "single_repo",
+			path: "/repo/project-one",
+			repo: "git@github.com:acme/project-one.git",
+			defaultBranch: "main",
+			config: {
+				worker: { agent: "codex" },
+				orchestrator: { agent: "claude-code" },
+			},
+		});
+
+		renderSettings("proj-1", undefined, "agents");
+
+		expect(await screen.findByRole("switch", { name: "Auto review PRs" })).toBeChecked();
 	});
 
 	it("keeps the automatic default branch unpinned when saving other settings", async () => {

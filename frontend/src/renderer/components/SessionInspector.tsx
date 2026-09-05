@@ -2265,7 +2265,7 @@ function ReviewPanel({
 							contentAlign="end"
 							defaultHarness={resolvedDefaultHarness}
 							defaultOptionLabel={agentLabel(resolvedDefaultHarness)}
-							disabled={reviewRunning || autoReviewEnabled || isKilling || isSwitchingReviewer || isTriggering || isCancelling}
+							disabled={reviewRunning || isKilling || isSwitchingReviewer || isTriggering || isCancelling}
 							onChange={(next) => onReviewerHarnessPreviewChange(next as ReviewerHarness | "")}
 							onConfigChange={(harness, config) => onReviewerOverrideChange(harness as ReviewerHarness | "", config)}
 							model={reviewerModel}
@@ -2291,7 +2291,7 @@ function ReviewPanel({
 							<Button
 								aria-label={primaryReviewActionLabel}
 								className="shrink-0 gap-1 px-1.5 text-xs [&_svg]:size-icon-sm"
-								disabled={reviewRunning ? isCancelling || isKilling || isSwitchingReviewer : runDisabled || autoReviewEnabled}
+								disabled={reviewRunning ? isCancelling || isKilling || isSwitchingReviewer : runDisabled}
 								onClick={reviewRunning ? onCancel : onTrigger}
 								size="sm"
 								type="button"

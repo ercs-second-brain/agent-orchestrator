@@ -3640,8 +3640,8 @@ func TestSpawn_DefaultsBranchFromSessionID(t *testing.T) {
 	if !st.sessions[s.ID].AutoInjectReview {
 		t.Fatal("automatic review injection must default to enabled")
 	}
-	if st.sessions[s.ID].AutoReviewEnabled {
-		t.Fatal("auto review must default to disabled when project config does not enable it")
+	if !st.sessions[s.ID].AutoReviewEnabled {
+		t.Fatal("auto review must default to enabled when project config does not set it")
 	}
 	if !st.sessions[s.ID].TerminateOnPRMerge {
 		t.Fatal("terminate on PR merge must default to enabled")
@@ -3651,7 +3651,8 @@ func TestSpawn_DefaultsBranchFromSessionID(t *testing.T) {
 func TestSpawn_InheritsAutoReviewFromProjectConfig(t *testing.T) {
 	m, st, _, _ := newManager()
 	cfg := testRoleAgents()
-	cfg.AutoReview = true
+	enabled := true
+	cfg.AutoReview = &enabled
 	st.projects["mer"] = domain.ProjectRecord{ID: "mer", Path: "/repo/mer", Kind: domain.ProjectKindWorkspace, Config: cfg}
 
 	s, _, _, err := m.Spawn(ctx, ports.SpawnConfig{ProjectID: "mer", Kind: domain.KindWorker})
@@ -3660,6 +3661,22 @@ func TestSpawn_InheritsAutoReviewFromProjectConfig(t *testing.T) {
 	}
 	if !st.sessions[s.ID].AutoReviewEnabled {
 		t.Fatal("auto review must be enabled when project config enables it")
+	}
+}
+
+func TestSpawn_RespectsExplicitAutoReviewOptOut(t *testing.T) {
+	m, st, _, _ := newManager()
+	cfg := testRoleAgents()
+	disabled := false
+	cfg.AutoReview = &disabled
+	st.projects["mer"] = domain.ProjectRecord{ID: "mer", Path: "/repo/mer", Kind: domain.ProjectKindWorkspace, Config: cfg}
+
+	s, _, _, err := m.Spawn(ctx, ports.SpawnConfig{ProjectID: "mer", Kind: domain.KindWorker})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if st.sessions[s.ID].AutoReviewEnabled {
+		t.Fatal("an explicit autoReview=false project config must keep auto review disabled")
 	}
 }
 

@@ -218,6 +218,70 @@ describe("useWorkspaceQuery", () => {
 		});
 	});
 
+	it("defaults auto review to enabled when the daemon omits the session flag", async () => {
+		respondWith({
+			sessions: {
+				data: {
+					sessions: [
+						{
+							id: "sess-legacy",
+							projectId: "proj-1",
+							harness: "codex",
+							status: "working",
+							isTerminated: false,
+							updatedAt: "2026-06-10T16:15:04Z",
+						},
+					],
+				},
+				error: undefined,
+			},
+			projects: {
+				data: {
+					projects: [{ id: "proj-1", name: "my-app", path: "/home/me/my-app", orchestratorAgent: "codex" }],
+				},
+				error: undefined,
+			},
+		});
+
+		const { result } = renderHook(() => useWorkspaceQuery(), { wrapper });
+		await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+		const [workspace] = result.current.data ?? [];
+		expect(workspace.sessions[0].autoReviewEnabled).toBe(true);
+	});
+
+	it("respects an explicit autoReviewEnabled=false from the daemon", async () => {
+		respondWith({
+			sessions: {
+				data: {
+					sessions: [
+						{
+							id: "sess-off",
+							projectId: "proj-1",
+							harness: "codex",
+							status: "working",
+							autoReviewEnabled: false,
+							isTerminated: false,
+							updatedAt: "2026-06-10T16:15:04Z",
+						},
+					],
+				},
+				error: undefined,
+			},
+			projects: {
+				data: {
+					projects: [{ id: "proj-1", name: "my-app", path: "/home/me/my-app", orchestratorAgent: "codex" }],
+				},
+				error: undefined,
+			},
+		});
+
+		const { result } = renderHook(() => useWorkspaceQuery(), { wrapper });
+		await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+		const [workspace] = result.current.data ?? [];
+		expect(workspace.sessions[0].autoReviewEnabled).toBe(false);
+	});
 	it("preserves scratch projects and leaves branchless scratch sessions branchless", async () => {
 		respondWith({
 			projects: {

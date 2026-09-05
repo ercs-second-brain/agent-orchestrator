@@ -84,7 +84,7 @@ function toWorkspaceSession(
 				permissions: session.reviewerConfig.permissions ?? undefined,
 			}
 			: undefined,
-		autoReviewEnabled: session.autoReviewEnabled ?? false,
+		autoReviewEnabled: session.autoReviewEnabled ?? true,
 		kind: session.kind === "orchestrator" ? "orchestrator" : session.kind === "worker" ? "worker" : undefined,
 		mode: session.mode === "chat" ? "chat" : "tui",
 		branch: session.branch || undefined,
