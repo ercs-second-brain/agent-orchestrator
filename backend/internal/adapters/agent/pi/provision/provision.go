@@ -244,7 +244,7 @@ func Ensure(ctx context.Context, opts Options) (string, error) {
 		recordStatus(Status{State: StateFailed, Version: version, Error: err.Error()})
 		return "", err
 	}
-	defer os.RemoveAll(tmpDir)
+	defer os.RemoveAll(tmpDir) //nolint:errcheck // best-effort cleanup of the staging dir
 
 	sums, err := fetchBounded(ctx, client, baseURL+"/v"+version+"/"+checksumsFileName, maxChecksumsBytes)
 	if err != nil {
@@ -290,7 +290,7 @@ func fetchBounded(ctx context.Context, client *http.Client, url string, maxBytes
 	if err := ctx.Err(); err != nil {
 		return nil, err
 	}
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, http.NoBody)
 	if err != nil {
 		return nil, err
 	}
@@ -298,7 +298,7 @@ func fetchBounded(ctx context.Context, client *http.Client, url string, maxBytes
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("GET %s: unexpected status %s", url, resp.Status)
 	}
@@ -359,7 +359,7 @@ func extractTarMember(artifactData []byte, destDir, member, binaryName string) (
 	if err != nil {
 		return "", fmt.Errorf("provision pi: open artifact: %w", err)
 	}
-	defer gz.Close()
+	defer func() { _ = gz.Close() }()
 	tr := tar.NewReader(gz)
 	for {
 		header, err := tr.Next()
@@ -381,18 +381,22 @@ func extractZipMember(artifactData []byte, destDir, member, binaryName string) (
 	if err != nil {
 		return "", fmt.Errorf("provision pi: open artifact: %w", err)
 	}
+	var match *zip.File
 	for _, f := range zr.File {
-		if f.FileInfo().IsDir() || filepath.Clean(f.Name) != member {
-			continue
+		if !f.FileInfo().IsDir() && filepath.Clean(f.Name) == member {
+			match = f
+			break
 		}
-		rc, err := f.Open()
-		if err != nil {
-			return "", fmt.Errorf("provision pi: read %s: %w", member, err)
-		}
-		defer rc.Close()
-		return writeFileExecutable(destDir, binaryName, rc)
 	}
-	return "", fmt.Errorf("provision pi: artifact does not contain %s", member)
+	if match == nil {
+		return "", fmt.Errorf("provision pi: artifact does not contain %s", member)
+	}
+	rc, err := match.Open()
+	if err != nil {
+		return "", fmt.Errorf("provision pi: read %s: %w", member, err)
+	}
+	defer func() { _ = rc.Close() }()
+	return writeFileExecutable(destDir, binaryName, rc)
 }
 
 func writeFileExecutable(destDir, binaryName string, r io.Reader) (string, error) {
@@ -401,12 +405,18 @@ func writeFileExecutable(destDir, binaryName string, r io.Reader) (string, error
 	if err != nil {
 		return "", fmt.Errorf("provision pi: write binary: %w", err)
 	}
-	defer f.Close()
 	if _, err := io.Copy(f, r); err != nil {
+		_ = f.Close()
 		return "", fmt.Errorf("provision pi: write binary: %w", err)
 	}
 	if err := f.Sync(); err != nil {
+		_ = f.Close()
 		return "", fmt.Errorf("provision pi: sync binary: %w", err)
+	}
+	// A failed close can mean truncated bytes on disk, so it is part of the
+	// write contract, not best-effort cleanup.
+	if err := f.Close(); err != nil {
+		return "", fmt.Errorf("provision pi: close binary: %w", err)
 	}
 	return out, nil
 }
