@@ -8105,6 +8105,7 @@ components:
           - git
           - tmux
           - harness
+          - pi-provisioning
           - gh
           type: string
         label:

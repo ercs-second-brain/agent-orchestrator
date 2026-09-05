@@ -6,6 +6,7 @@ import (
 	"runtime"
 	"testing"
 
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/adapters/agent/pi/provision"
 	agentsvc "github.com/ercs-second-brain/agent-orchestrator/backend/internal/service/agent"
 )
 
@@ -37,6 +38,14 @@ func lookPathFound(paths map[string]string) func(string) (string, error) {
 	}
 }
 
+// setReadyPiProvisioning pins a deterministic managed-pi status so the
+// pi-provisioning requirement behaves as satisfied in report-shape tests.
+func setReadyPiProvisioning(svc *Service) {
+	svc.SetPiProvisionStatus(func() provision.Status {
+		return provision.Status{State: provision.StateReady, Version: provision.PiPinnedVersion, Path: "/fake/pi"}
+	})
+}
+
 func TestCheck_AllSatisfied(t *testing.T) {
 	catalog := &fakeHarnessCatalog{inventory: agentsvc.Inventory{
 		Installed: []agentsvc.Info{{ID: "claude-code", Label: "Claude Code"}},
@@ -46,6 +55,7 @@ func TestCheck_AllSatisfied(t *testing.T) {
 		"tmux": "/usr/bin/tmux",
 		"gh":   "/usr/bin/gh",
 	}))
+	setReadyPiProvisioning(svc)
 
 	report, err := svc.Check(context.Background())
 	if err != nil {
@@ -54,11 +64,11 @@ func TestCheck_AllSatisfied(t *testing.T) {
 	if !report.Ready {
 		t.Fatalf("Ready = false, want true; requirements=%+v", report.Requirements)
 	}
-	if len(report.Requirements) != 4 {
-		t.Fatalf("len(Requirements) = %d, want 4", len(report.Requirements))
+	if len(report.Requirements) != 5 {
+		t.Fatalf("len(Requirements) = %d, want 5", len(report.Requirements))
 	}
-	wantOrder := []string{"git", "tmux", "harness", "gh"}
-	wantRequired := map[string]bool{"git": true, "tmux": true, "harness": true, "gh": false}
+	wantOrder := []string{"git", "tmux", "harness", "pi-provisioning", "gh"}
+	wantRequired := map[string]bool{"git": true, "tmux": true, "harness": true, "pi-provisioning": false, "gh": false}
 	for i, id := range wantOrder {
 		if report.Requirements[i].ID != id {
 			t.Fatalf("Requirements[%d].ID = %q, want %q", i, report.Requirements[i].ID, id)
@@ -83,6 +93,7 @@ func TestCheckStartup_OnlyUsesExecutableLookups(t *testing.T) {
 		"tmux": "/usr/bin/tmux",
 		"gh":   "/usr/bin/gh",
 	}))
+	setReadyPiProvisioning(svc)
 
 	report, err := svc.CheckStartup(context.Background())
 	if err != nil {
@@ -97,10 +108,10 @@ func TestCheckStartup_OnlyUsesExecutableLookups(t *testing.T) {
 	if catalog.binaryCalls != 1 {
 		t.Fatalf("FindInstalledBinary calls = %d, want 1", catalog.binaryCalls)
 	}
-	if len(report.Requirements) != 4 {
-		t.Fatalf("len(Requirements) = %d, want 4", len(report.Requirements))
+	if len(report.Requirements) != 5 {
+		t.Fatalf("len(Requirements) = %d, want 5", len(report.Requirements))
 	}
-	for i, want := range []string{"git", "tmux", "harness", "gh"} {
+	for i, want := range []string{"git", "tmux", "harness", "pi-provisioning", "gh"} {
 		if report.Requirements[i].ID != want {
 			t.Fatalf("Requirements[%d].ID = %q, want %q", i, report.Requirements[i].ID, want)
 		}

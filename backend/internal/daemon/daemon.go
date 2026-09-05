@@ -19,6 +19,8 @@ import (
 
 	codexagent "github.com/ercs-second-brain/agent-orchestrator/backend/internal/adapters/agent/codex"
 	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/adapters/agent/modelcatalog"
+	piagent "github.com/ercs-second-brain/agent-orchestrator/backend/internal/adapters/agent/pi"
+	piprovision "github.com/ercs-second-brain/agent-orchestrator/backend/internal/adapters/agent/pi/provision"
 	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/adapters/codexappserver"
 	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/adapters/runtime/runtimeselect"
 	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/adapters/systemexec"
@@ -52,6 +54,11 @@ import (
 	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/storage/sqlite"
 	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/terminal"
 )
+
+// piProvisionTimeout bounds the background managed-pi download so a hung
+// transfer cannot pin the goroutine (or the daemon's shutdown wait) forever.
+// A timeout just marks provisioning failed/pending; PATH fallback continues.
+const piProvisionTimeout = 10 * time.Minute
 
 // sentryEnvironment maps the daemon's app version to a Sentry environment so a
 // nightly/edge build's issues do not mix with stable release health.
@@ -253,6 +260,25 @@ func Run() error {
 	// graceful shutdown inside Server.Run and stops the background goroutines.
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
+
+	// Managed pi provisioning (ADR 0005, milestone N1): make sure the pinned
+	// pi binary exists under the AO data dir, downloading it in the background
+	// if the pin is missing or changed. This is strictly best-effort — a slow,
+	// failing, or unsupported-platform download never blocks startup or session
+	// spawning: binary resolution falls back to a PATH-installed pi and the
+	// provisioning state is surfaced via /system/requirements (requirement id
+	// "pi-provisioning").
+	piStoreRoot := filepath.Join(cfg.StateDir, "bin", "pi")
+	piagent.SetProvisionStoreRoot(piStoreRoot)
+	go func() {
+		provisionCtx, cancel := context.WithTimeout(ctx, piProvisionTimeout)
+		defer cancel()
+		if _, err := piprovision.Ensure(provisionCtx, piprovision.Options{StoreRoot: piStoreRoot, Logger: log}); err != nil {
+			log.Error("managed pi provisioning failed; sessions will fall back to pi on PATH",
+				"version", piprovision.PiPinnedVersion, "err", err)
+		}
+	}()
+
 	policyCoordinator.StartWatcher(ctx)
 	defer func() { _ = policyCoordinator.CloseAndDrain(context.Background()) }()
 	// Constructing the synchronous sender performs no I/O. The hard production
@@ -403,6 +429,7 @@ func Run() error {
 
 	hostCommands := systemexec.New(cfg.DataDir)
 	systemChecks := systemcheck.New(agentSvc, hostCommands)
+	systemChecks.SetPiProvisionStatus(piprovision.CurrentStatus)
 	systemInstall := systeminstall.NewWithDeps(hostCommands, hostCommands, systeminstall.Deps{
 		JobStore: store,
 		Verifier: systeminstall.NewVerifier(agents, hostCommands),

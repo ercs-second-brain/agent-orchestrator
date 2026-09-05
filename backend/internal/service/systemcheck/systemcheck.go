@@ -7,10 +7,12 @@ package systemcheck
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"runtime"
 	"strings"
 
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/adapters/agent/pi/provision"
 	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/ports"
 	agentsvc "github.com/ercs-second-brain/agent-orchestrator/backend/internal/service/agent"
 	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/tmuxbin"
@@ -18,7 +20,7 @@ import (
 
 // Requirement is one named startup gate check.
 type Requirement struct {
-	ID        string `json:"id" enum:"git,tmux,harness,gh" description:"Stable requirement identifier."`
+	ID        string `json:"id" enum:"git,tmux,harness,pi-provisioning,gh" description:"Stable requirement identifier."`
 	Label     string `json:"label" description:"Human-readable requirement name."`
 	Satisfied bool   `json:"satisfied" description:"Whether this requirement is currently met."`
 	Required  bool   `json:"required" description:"Whether this requirement blocks the overall Ready state."`
@@ -43,12 +45,24 @@ type HarnessCatalog interface {
 type Service struct {
 	harnesses   HarnessCatalog
 	executables ports.ExecutableFinder
+	// piStatus reports managed pi provisioning state (ADR 0005). It defaults
+	// to the provision package's process-local status and can be replaced in
+	// tests via SetPiProvisionStatus.
+	piStatus func() provision.Status
 }
 
 // New returns a Service backed by the supplied host executable adapter and
 // harness catalog (an *agent.Service in production).
 func New(harnesses HarnessCatalog, executables ports.ExecutableFinder) *Service {
-	return &Service{harnesses: harnesses, executables: executables}
+	return &Service{harnesses: harnesses, executables: executables, piStatus: provision.CurrentStatus}
+}
+
+// SetPiProvisionStatus overrides the managed pi provisioning status source.
+func (s *Service) SetPiProvisionStatus(f func() provision.Status) {
+	if f == nil {
+		return
+	}
+	s.piStatus = f
 }
 
 type executableFinderFunc func(string) (string, error)
@@ -74,6 +88,7 @@ func (s *Service) CheckStartup(ctx context.Context) (Report, error) {
 		s.checkGit(),
 		s.checkTmux(),
 		s.checkStartupHarness(ctx),
+		s.checkPiProvisioning(),
 		s.checkGH(),
 	}), nil
 }
@@ -89,6 +104,7 @@ func (s *Service) Check(ctx context.Context) (Report, error) {
 		s.checkGit(),
 		s.checkTmux(),
 		s.checkHarness(ctx),
+		s.checkPiProvisioning(),
 		s.checkGH(),
 	}
 
@@ -104,6 +120,33 @@ func reportFor(requirements []Requirement) Report {
 		}
 	}
 	return Report{Ready: ready, Requirements: requirements}
+}
+
+// checkPiProvisioning reports managed pi provisioning state (ADR 0005). It is
+// advisory (Required: false): a failed or in-flight download never blocks
+// startup or session spawning because binary resolution falls back to a
+// PATH-installed pi.
+func (s *Service) checkPiProvisioning() Requirement {
+	const id = "pi-provisioning"
+	const label = "pi (managed)"
+	status := provision.CurrentStatus()
+	if s.piStatus != nil {
+		status = s.piStatus()
+	}
+	switch status.State {
+	case provision.StateReady:
+		return Requirement{ID: id, Label: label, Satisfied: true, Detail: status.Path}
+	case provision.StatePending:
+		return Requirement{
+			ID: id, Label: label,
+			Detail: fmt.Sprintf("downloading pinned pi v%s; sessions use a PATH-installed pi until it is ready", status.Version),
+		}
+	default: // failed
+		return Requirement{
+			ID: id, Label: label,
+			Detail: fmt.Sprintf("could not provision pinned pi v%s: %s. Sessions fall back to pi on PATH. To retry, restart the daemon; to override, install pi and set AO_PI_BINARY.", status.Version, status.Error),
+		}
+	}
 }
 
 func (s *Service) checkGit() Requirement {

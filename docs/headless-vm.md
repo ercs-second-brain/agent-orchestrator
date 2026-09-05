@@ -26,10 +26,11 @@ on-box CLI only. Do not expose it beyond the VM.
 | `git` | Projects and worktrees |
 | `tmux` | TUI agent sessions |
 | `gh` or `AO_GITHUB_TOKEN` | PR observation, merge actions, and **Create a new Git repository**. Token needs `repo` and `read:org`. The daemon process must see the same auth as an SSH shell — `gh auth login` as the service user, or `Environment=AO_GITHUB_TOKEN=…` on the systemd unit. Interactive `GH_TOKEN` in `.bashrc` is not inherited. |
-| `pi` | Pi TUI harness — see [harnesses/pi.md](harnesses/pi.md) |
+| `pi` | Pi TUI harness — auto-provisioned by AO on first daemon start (see [pi provisioning](#pi-provisioning)); a PATH install is only a fallback |
 
 Install Pi credentials in the VM user's normal Pi config directory
-(`~/.pi/agent` or `PI_CODING_AGENT_DIR`). AO does not bundle or download Pi.
+(`~/.pi/agent` or `PI_CODING_AGENT_DIR`). AO provisions the pi binary itself;
+it does not bundle provider credentials.
 
 ## Install AO on the VM
 
@@ -79,6 +80,43 @@ Confirm loopback health:
 ```bash
 curl -sf http://127.0.0.1:3001/readyz
 ```
+
+## pi provisioning
+
+AO manages the pi binary it launches (ADR 0005). On every daemon start the
+provisioning service makes sure the **pinned** pi version for the current AO
+release exists under the AO data dir, downloading it if missing and
+checksum-verifying it against the release's published `SHA256SUMS`:
+
+- Store location: `~/.ao/bin/pi/<version>/pi` (`%AO_DATA_DIR%\bin\pi\...` on
+  Windows; `AO_DATA_DIR` moves the whole store with the rest of AO state).
+- Download source: pi's GitHub releases
+  (`github.com/earendil-works/pi`), platform artifacts `pi-linux-x64.tar.gz`,
+  `pi-darwin-arm64.tar.gz`, `pi-darwin-x64.tar.gz`, and `pi-windows-x64.zip`.
+- Platforms: linux-x64, darwin-arm64, darwin-x64, win32-x64. Anything else
+  relies on the PATH fallback.
+- Old pinned versions are deleted automatically after a successful re-pin, so
+  the store holds at most one version.
+
+Binary resolution order for session spawn:
+
+1. `AO_PI_BINARY` — explicit user override (must be an executable file).
+2. The AO-provisioned pinned binary.
+3. `PATH` / npm-global installs — the pre-existing fallback, still fully
+   supported for custom pi installs. PATH-resolved binaries keep the runtime
+   version floor (≥ 0.80.6 for `agent_settled`); the provisioned binary
+   satisfies it by construction.
+
+Provisioning failures never block daemon start or session spawning: AO logs
+the failure, falls back to PATH, and surfaces the state in
+`GET /api/v1/system/requirements` (requirement id `pi-provisioning`),
+including the fix hint. To retry, restart the daemon; to take manual control,
+install pi yourself and point `AO_PI_BINARY` at it.
+
+On a headless VM a PATH install is therefore optional. If you prefer your own
+pi (e.g. installed via npm so `pi`/`node` live on the service PATH), keep it
+and set `AO_PI_BINARY` — otherwise AO downloads and manages the binary for
+you and only needs network access to github.com at daemon start.
 
 ## Enable Connect Mobile (LAN bridge)
 
