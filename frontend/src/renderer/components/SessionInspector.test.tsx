@@ -2146,7 +2146,7 @@ describe("SessionInspector summary reviews", () => {
     expect(screen.queryByRole("link", { name: /View on PR/ })).not.toBeInTheDocument();
   });
 
-  it("opens an AO review in Browser and sends its summary to the worker", async () => {
+  it("sends an AO review summary to the worker", async () => {
     const reviewUrl = "https://github.com/acme/repo/pull/3#pullrequestreview-98765";
     mockCommonGets([], "reviewer-pane", [
       {
@@ -2164,16 +2164,7 @@ describe("SessionInspector summary reviews", () => {
     await openReviewsSection();
 
     await userEvent.click(await screen.findByRole("button", { name: "Review actions" }));
-    await userEvent.click(screen.getByRole("button", { name: "Open in AO Browser" }));
-
-    await waitFor(() =>
-      expect(postMock).toHaveBeenCalledWith("/api/v1/sessions/{sessionId}/preview", {
-        params: { path: { sessionId: "sess-1" } },
-        body: { url: reviewUrl },
-      }),
-    );
-    expect(useUiStore.getState().inspectorSessions["sess-1"]?.view).toBe("browser");
-    expect(useUiStore.getState().inspectorSessions["sess-1"]?.isOpen).toBe(true);
+    expect(screen.queryByRole("button", { name: "Open in AO Browser" })).not.toBeInTheDocument();
 
     await userEvent.click(screen.getByRole("button", { name: "Send to worker agent" }));
     await waitFor(() =>

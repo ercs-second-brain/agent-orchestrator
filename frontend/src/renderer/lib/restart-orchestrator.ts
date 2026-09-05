@@ -1,6 +1,6 @@
 import type { QueryClient } from "@tanstack/react-query";
 import { workspaceQueryKey } from "../hooks/useWorkspaceQuery";
-import type { SessionMode } from "../types/conversation";
+import type { SessionMode } from "../types/workspace";
 import { OrchestratorSpawnError, spawnOrchestrator } from "./spawn-orchestrator";
 import type { OrchestratorReplacementFailure } from "../stores/ui-store";
 

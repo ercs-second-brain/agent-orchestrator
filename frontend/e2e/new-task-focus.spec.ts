@@ -13,39 +13,6 @@ const projectId = "task-focus";
 const sessionA = "focus-session-a";
 const sessionB = "focus-session-b";
 
-function conversation(sessionId: string) {
-	const completedAt = "2026-08-26T06:00:00Z";
-	return {
-		conversationId: `conversation-${sessionId}`,
-		sessionId,
-		harness: "codex",
-		mode: "chat",
-		controller: "ready",
-		latestSequence: 1,
-		oldestSequence: 1,
-		hasMoreBefore: false,
-		turns: [
-			{ id: `${sessionId}-turn-1`, state: "completed", requestedAt: completedAt, startedAt: completedAt, completedAt },
-		],
-		messages: [
-			{
-				kind: "message",
-				id: `${sessionId}-message-1`,
-				turnId: `${sessionId}-turn-1`,
-				sequence: 1,
-				revision: 0,
-				role: "user",
-				origin: "human",
-				text: `Existing conversation in ${sessionId}`,
-				streaming: false,
-				createdAt: completedAt,
-			},
-		],
-		activities: [],
-		settings: {},
-	};
-}
-
 async function setup(page: Page, { animated = false } = {}) {
 	// The menu's exit animation decides whether Radix's deferred focus restore
 	// lands before or after the dialog mounts, so both paths are worth covering.
@@ -54,8 +21,8 @@ async function setup(page: Page, { animated = false } = {}) {
 		projectId,
 		projectName: projectId,
 		workers: [
-			{ id: sessionA, provider: "codex", title: "Session A", mode: "chat" },
-			{ id: sessionB, provider: "codex", title: "Session B", mode: "chat" },
+			{ id: sessionA, provider: "codex", title: "Session A" },
+			{ id: sessionB, provider: "codex", title: "Session B" },
 		],
 	});
 	await page.route("http://127.0.0.1:8080/api/v1/**", async (route) => {
@@ -74,24 +41,8 @@ async function setup(page: Page, { animated = false } = {}) {
 			return;
 		}
 		for (const id of [sessionA, sessionB]) {
-			if (pathname === `/api/v1/sessions/${id}/conversation`) {
-				await route.fulfill({ json: conversation(id) });
-				return;
-			}
-			if (pathname === `/api/v1/sessions/${id}/conversation/models`) {
-				await route.fulfill({ json: { models: [], selected: {} } });
-				return;
-			}
-			if (pathname === `/api/v1/sessions/${id}/conversation/skills`) {
-				await route.fulfill({ json: { skills: [] } });
-				return;
-			}
 			if (pathname === `/api/v1/sessions/${id}/workspace/files`) {
 				await route.fulfill({ json: { files: [], truncated: false } });
-				return;
-			}
-			if (pathname === `/api/v1/sessions/${id}/interface-transition`) {
-				await route.fulfill({ json: { supported: true, targetMode: "tui" } });
 				return;
 			}
 		}
@@ -141,7 +92,7 @@ for (const animated of [false, true]) {
 	}) => {
 		await setup(page, { animated });
 		await page.goto(`/#/projects/${projectId}/sessions/${sessionA}`);
-		await expect(page.getByRole("combobox", { name: "Message the agent" })).toBeVisible();
+		await expect(page.getByRole("button", { name: new RegExp(`Project actions for ${projectId}`) }).first()).toBeVisible();
 		await openProjectMenu(page);
 		await page.getByRole("menuitem", { name: /New session/ }).click();
 		await expect(page.getByRole("dialog")).toBeVisible();
@@ -153,7 +104,7 @@ for (const animated of [false, true]) {
 	}) => {
 		await setup(page, { animated });
 		await page.goto(`/#/projects/${projectId}/sessions/${sessionA}`);
-		await expect(page.getByRole("combobox", { name: "Message the agent" })).toBeVisible();
+		await expect(page.getByRole("button", { name: new RegExp(`Project actions for ${projectId}`) }).first()).toBeVisible();
 		await openProjectMenu(page);
 		await page.getByRole("menuitem", { name: /New session/ }).click();
 		await expect(page.getByRole("dialog")).toBeVisible();
@@ -169,7 +120,7 @@ for (const animated of [false, true]) {
 test("renderer: New task from the sidebar project context menu focuses the composer prompt @T0", async ({ page }) => {
 	await setup(page);
 	await page.goto(`/#/projects/${projectId}/sessions/${sessionA}`);
-	await expect(page.getByRole("combobox", { name: "Message the agent" })).toBeVisible();
+	await expect(page.getByRole("button", { name: new RegExp(`Project actions for ${projectId}`) }).first()).toBeVisible();
 	await page
 		.getByRole("button", { name: new RegExp(`Project actions for ${projectId}`) })
 		.first()
@@ -182,24 +133,13 @@ test("renderer: New task from the sidebar project context menu focuses the compo
 test("renderer: New task from the command palette focuses the composer prompt @T0", async ({ page }) => {
 	await setup(page);
 	await page.goto(`/#/projects/${projectId}/sessions/${sessionA}`);
-	await expect(page.getByRole("combobox", { name: "Message the agent" })).toBeVisible();
+	await expect(page.getByRole("button", { name: new RegExp(`Project actions for ${projectId}`) }).first()).toBeVisible();
+	// The session terminal claims the caret on load, and Ctrl+K inside a terminal
+	// deliberately stays a readline command — click page chrome to blur it first.
+	await page.getByText("Agent Orchestrator").click();
 	await page.keyboard.press("ControlOrMeta+k");
 	await page.getByRole("option", { name: /New task/ }).first().click();
 	await expectPromptTakesTyping(page);
-});
-
-test("renderer: opening another session focuses its chat composer @T0", async ({ page }) => {
-	await setup(page);
-	await page.goto(`/#/projects/${projectId}/sessions/${sessionA}`);
-	const composer = page.getByRole("combobox", { name: "Message the agent" });
-	await expect(composer).toBeVisible();
-	await expect.poll(async () => (await activeElementInfo(page)).label).toBe("Message the agent");
-
-	await page.getByRole("button", { name: /Open Session B/ }).first().click();
-	await expect(composer).toBeVisible();
-	await expect.poll(async () => (await activeElementInfo(page)).label).toBe("Message the agent");
-	await page.keyboard.type("typed after switching");
-	await expect(composer).toHaveText("typed after switching");
 });
 
 async function setupSwitchAgentSession(page: Page) {
@@ -259,24 +199,6 @@ test("renderer: closing that dialog never strands focus on the page body @T0", a
 		.toBe(true);
 });
 
-test("renderer: a chat session hands focus back to the menu trigger when its dialog closes @T0", async ({
-	page,
-}) => {
-	// No terminal underneath to claim the caret, and the chat composer only
-	// autofocuses when the session changes, so this is the case the hand-back
-	// exists for: without it focus is left on `document.body`.
-	await setup(page);
-	await page.goto(`/#/projects/${projectId}/sessions/${sessionA}`);
-	await expect(page.getByRole("combobox", { name: "Message the agent" })).toBeVisible();
-	const dialog = await openSwitchAgentDialog(page);
-	await expect.poll(async () => (await activeElementInfo(page)).inDialog).toBe(true);
-
-	await page.keyboard.press("Escape");
-	await expect(dialog).toBeHidden();
-	await expect.poll(async () => (await activeElementInfo(page)).label).toBe("Session actions");
-});
-
-
 test("renderer: a context-menu dialog returns focus to where the menu opened from @T0", async ({
 	page,
 }) => {
@@ -286,7 +208,7 @@ test("renderer: a context-menu dialog returns focus to where the menu opened fro
 	// that button is the expected landing spot, and never `document.body`.
 	await setup(page);
 	await page.goto(`/#/projects/${projectId}/sessions/${sessionA}`);
-	await expect(page.getByRole("combobox", { name: "Message the agent" })).toBeVisible();
+	await expect(page.getByRole("button", { name: new RegExp(`Project actions for ${projectId}`) }).first()).toBeVisible();
 
 	const openedFrom = `Project actions for ${projectId}`;
 	await page.getByRole("button", { name: new RegExp(openedFrom) }).first().click({ button: "right", force: true });

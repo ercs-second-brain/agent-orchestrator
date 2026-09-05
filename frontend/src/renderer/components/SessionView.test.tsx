@@ -6,7 +6,6 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { SessionView } from "./SessionView";
 import { SessionTopbarProvider } from "./SessionTopbarPortal";
 import { TooltipProvider } from "./ui/tooltip";
-import type { SessionInterfaceTransitionStatus } from "../hooks/useSessionInterfaceTransition";
 import { useUiStore, type InspectorView } from "../stores/ui-store";
 import type { WorkspaceSession, WorkspaceSummary } from "../types/workspace";
 
@@ -14,32 +13,10 @@ const navigateMock = vi.hoisted(() => vi.fn());
 const openShellTerminalMock = vi.hoisted(() => vi.fn());
 const closeShellTerminalMock = vi.hoisted(() => vi.fn());
 const nativeFullScreenMock = vi.hoisted(() => vi.fn(() => false));
-const interfaceTransitionMock = vi.hoisted(() => ({
-	start: vi.fn(),
-	resetStartError: vi.fn(),
-	cancel: vi.fn(),
-	acknowledgeNotice: vi.fn(),
-}));
-const interfaceTransitionState = vi.hoisted(() => ({
-	starting: false,
-	settling: false,
-	status: undefined as SessionInterfaceTransitionStatus | undefined,
-}));
 const reviewGetMock = vi.hoisted(() => vi.fn());
 const inspectorVisibilityRenders = vi.hoisted(() => [] as boolean[]);
-const chatSurfaceWorkState = vi.hoisted(() => ({
-	controllerBusy: false,
-	hasRunningTurn: false,
-	queuedTurnCount: 0,
-}));
 const codexAccountsQueryState = vi.hoisted(() => ({ data: undefined as unknown }));
 const recoverCodexAccountSwitchMock = vi.hoisted(() => vi.fn());
-
-async function chooseSessionAction(name: string) {
-	const user = userEvent.setup();
-	await user.click(screen.getByRole("button", { name: "Session actions" }));
-	await user.click(await screen.findByRole("menuitem", { name }));
-}
 
 vi.mock("@tanstack/react-router", () => ({
 	useNavigate: () => navigateMock,
@@ -54,52 +31,6 @@ vi.mock("../lib/platform", () => ({
 vi.mock("../hooks/useWindowFullScreen", () => ({
 	useWindowFullScreen: () => nativeFullScreenMock(),
 }));
-vi.mock("../hooks/useSessionInterfaceTransition", () => ({
-	interfaceTransitionIsActive: (transition?: { phase?: string }) =>
-		Boolean(
-			transition &&
-				[
-					"requested",
-					"preflighting",
-					"draining",
-					"source_stopping",
-					"source_stopped",
-					"target_starting",
-					"activating",
-				].includes(transition.phase ?? ""),
-		),
-	interfaceTransitionIsCancellable: (transition?: { phase?: string }) =>
-		Boolean(
-			transition && ["requested", "preflighting", "draining"].includes(transition.phase ?? ""),
-		),
-	interfaceTransitionHasUnacknowledgedNotice: (transition?: {
-		phase?: string;
-		noticeAcknowledgedAt?: string;
-	}) =>
-		Boolean(
-			transition &&
-				!transition.noticeAcknowledgedAt &&
-				(transition.phase === "failed" || transition.phase === "recovery_required"),
-		),
-	useSessionInterfaceTransition: () => ({
-		status: interfaceTransitionState.status,
-		transition: interfaceTransitionState.status?.transition,
-		isLoading: false,
-		statusError: undefined,
-		start: interfaceTransitionMock.start,
-		starting: interfaceTransitionState.starting,
-		settling: interfaceTransitionState.settling,
-		startError: undefined,
-		resetStartError: interfaceTransitionMock.resetStartError,
-		cancel: interfaceTransitionMock.cancel,
-		cancelling: false,
-		cancelError: undefined,
-		acknowledgeNotice: interfaceTransitionMock.acknowledgeNotice,
-		acknowledgingNotice: false,
-		acknowledgeNoticeError: undefined,
-	}),
-}));
-
 vi.mock("../hooks/useCodexAccountsQuery", () => ({
 	useCodexAccountsQuery: () => ({ data: codexAccountsQueryState.data, isLoading: false }),
 }));
@@ -208,56 +139,43 @@ vi.mock("./TerminalSwitchAgentButton", () => ({
 	TerminalSwitchAgentButton: ({ variant }: { variant?: "icon" | "menu-item" }) =>
 		variant === "menu-item" ? null : <button aria-label="Switch agent" type="button" />,
 }));
-vi.mock("./chat/SessionChatSurface", () => ({
-	SessionChatSurface: ({
+vi.mock("./CenterPane", () => ({
+	CenterPane: ({
 		session,
-		onOpenShell,
-		onOpenFile,
-		headerActions,
+		shellTerminals = [],
+		onCloseShellTerminal,
+		onSelectShellTerminal,
+		onSelectSessionTerminal,
+		onSelectReviewerTerminal,
+		topbarActions,
 		sessionTabAction,
 		tabStripAction,
-		reviewerTerminal,
-		onOpenReviewerTerminal,
-		reviewerTarget,
-		onSelectChat,
-		shellTerminals = [],
-		shellTarget,
-		onSelectShellTerminal,
-		onCloseShellTerminal,
 		workspaceTabs,
 		workspaceTabActions,
-		newWorkDisabled,
-		onConversationWorkChange,
+		reviewerTerminal,
+		terminalTarget,
 		auxiliaryTabOrder,
 		onAuxiliaryTabOrderChange,
 	}: {
-		session: WorkspaceSession;
-		onOpenShell?: () => void;
-		onOpenFile?: (path: string) => void;
-		headerActions?: ReactNode;
+		session?: WorkspaceSession;
+		shellTerminals?: Array<{ handleId: string; title: string }>;
+		onCloseShellTerminal?: (handleId: string) => void;
+		onSelectShellTerminal?: (handleId: string) => void;
+		onSelectSessionTerminal?: () => void;
+		onSelectReviewerTerminal?: (target: { handleId: string; harness: string }) => void;
+		topbarActions?: ReactNode;
 		sessionTabAction?: ReactNode;
 		tabStripAction?: ReactNode;
-		reviewerTerminal?: { handleId: string; harness: string };
-		onOpenReviewerTerminal?: (target: { handleId: string; harness: string }) => void;
-		reviewerTarget?: { kind: "reviewer"; handleId: string; harness: string; sessionId: string };
-		onSelectChat?: () => void;
-		shellTerminals?: Array<{ handleId: string; title: string }>;
-		shellTarget?: { kind: "shell"; handleId: string };
-		onSelectShellTerminal?: (handleId: string) => void;
-		onCloseShellTerminal?: (handleId: string) => void;
 		workspaceTabs?: Array<{ key: string; content: ReactNode; onSelect: () => void }>;
 		workspaceTabActions?: ReactNode;
-		newWorkDisabled?: boolean;
-		onConversationWorkChange?: (state: typeof chatSurfaceWorkState) => void;
+		reviewerTerminal?: { handleId: string; harness: string };
+		terminalTarget?: { kind: string; handleId?: string };
 		auxiliaryTabOrder?: string[];
 		onAuxiliaryTabOrderChange?: (keys: string[]) => void;
 	}) => (
-		<div
-			data-new-work-disabled={newWorkDisabled ? "true" : "false"}
-			data-testid="chat-surface"
-		>
-			chat surface
-			<div data-testid={`auxiliary-tab-order-${session.id}`}>
+		<div>
+			terminal center
+			<div data-testid={`auxiliary-tab-order-tui-${session?.id ?? "none"}`}>
 				{auxiliaryTabOrder?.join("|") ?? ""}
 			</div>
 			<button
@@ -280,95 +198,6 @@ vi.mock("./chat/SessionChatSurface", () => ({
 			>
 				reorder visible tabs
 			</button>
-			{headerActions}
-			{sessionTabAction}
-			<div role="tablist">
-				{workspaceTabs?.map((tab) => <div key={tab.key}>{tab.content}</div>)}
-				{workspaceTabActions}
-				{tabStripAction}
-			</div>
-			{onOpenFile ? (
-				<button type="button" onClick={() => onOpenFile("notes.txt")}>
-					open chat basename
-				</button>
-			) : null}
-			{reviewerTerminal ? (
-				<button type="button" onClick={() => onOpenReviewerTerminal?.(reviewerTerminal)}>
-					Reviewer
-				</button>
-			) : null}
-			{reviewerTarget ? (
-				<div data-testid="terminal-target">reviewer</div>
-			) : null}
-			{reviewerTarget ? (
-				<button type="button" onClick={onSelectChat}>
-					select chat tab
-				</button>
-			) : null}
-			<div data-testid="shell-tabs">
-				{shellTerminals.map((shell) => (
-					<div key={shell.handleId}>
-						<button onClick={() => onSelectShellTerminal?.(shell.handleId)} type="button">
-							{shell.title}
-						</button>
-						<button onClick={() => onCloseShellTerminal?.(shell.handleId)} type="button">
-							close {shell.title}
-						</button>
-					</div>
-				))}
-			</div>
-			{shellTarget ? <div data-testid="terminal-target">shell</div> : null}
-			{shellTarget ? (
-				<button type="button" onClick={onSelectChat}>
-					select chat tab
-				</button>
-			) : null}
-			<button type="button" onClick={onOpenShell}>
-				open shell from chat
-			</button>
-			<button type="button" onClick={() => onConversationWorkChange?.({ ...chatSurfaceWorkState })}>
-				report chat work
-			</button>
-		</div>
-	),
-}));
-vi.mock("./CenterPane", () => ({
-	CenterPane: ({
-		session,
-		shellTerminals = [],
-		onCloseShellTerminal,
-		onSelectShellTerminal,
-		onSelectSessionTerminal,
-		onSelectReviewerTerminal,
-		topbarActions,
-		sessionTabAction,
-		tabStripAction,
-		workspaceTabs,
-		workspaceTabActions,
-		reviewerTerminal,
-		terminalTarget,
-		auxiliaryTabOrder,
-	}: {
-		session?: WorkspaceSession;
-		shellTerminals?: Array<{ handleId: string; title: string }>;
-		onCloseShellTerminal?: (handleId: string) => void;
-		onSelectShellTerminal?: (handleId: string) => void;
-		onSelectSessionTerminal?: () => void;
-		onSelectReviewerTerminal?: (target: { handleId: string; harness: string }) => void;
-		topbarActions?: ReactNode;
-		sessionTabAction?: ReactNode;
-		tabStripAction?: ReactNode;
-		workspaceTabs?: Array<{ key: string; content: ReactNode; onSelect: () => void }>;
-		workspaceTabActions?: ReactNode;
-		reviewerTerminal?: { handleId: string; harness: string };
-		terminalTarget?: { kind: string; handleId?: string };
-		auxiliaryTabOrder?: string[];
-	}) => (
-		<div>
-			terminal center
-			<div data-testid={`auxiliary-tab-order-tui-${session?.id ?? "none"}`}>
-				{auxiliaryTabOrder?.join("|") ?? ""}
-			</div>
 			{topbarActions}
 			{sessionTabAction}
 			<div role="tablist">
@@ -655,16 +484,6 @@ describe("SessionView", () => {
 			optimistic: true,
 		}));
 		closeShellTerminalMock.mockReset();
-		interfaceTransitionMock.start.mockReset();
-		interfaceTransitionMock.resetStartError.mockReset();
-		interfaceTransitionMock.cancel.mockReset();
-		interfaceTransitionMock.acknowledgeNotice.mockReset();
-		interfaceTransitionState.starting = false;
-		interfaceTransitionState.settling = false;
-		interfaceTransitionState.status = undefined;
-		chatSurfaceWorkState.controllerBusy = false;
-		chatSurfaceWorkState.hasRunningTurn = false;
-		chatSurfaceWorkState.queuedTurnCount = 0;
 		codexAccountsQueryState.data = undefined;
 		recoverCodexAccountSwitchMock.mockReset();
 		reviewGetMock.mockReset();
@@ -813,41 +632,26 @@ describe("SessionView", () => {
 		expect(useUiStore.getState().visibleTerminalKindBySession["sess-1"]).toBeUndefined();
 	});
 
-	it("keeps a session-scoped shell reachable from a Chat session", () => {
-		workspaces[0].sessions[0].mode = "chat";
+	it("keeps a session-scoped shell reachable from the session pane", () => {
 		shellTerminalsState.data = [
 			{
-				handleId: "chat-shell",
+				handleId: "session-shell",
 				sessionId: "sess-1",
-				title: "chat worktree shell",
+				title: "session worktree shell",
 				workingDir: "/p",
 				createdAt: "2026-08-04T00:00:00Z",
 			},
 		];
 
 		render(<SessionView sessionId="sess-1" />);
-		expect(screen.getByTestId("chat-surface")).toBeInTheDocument();
+		expect(screen.getByTestId("terminal-target")).toHaveTextContent("worker");
 
-		// Selecting the shell keeps the chat surface mounted — the shell renders
-		// as a tab inside it instead of swapping in the terminal CenterPane.
-		act(() => useUiStore.getState().setActiveShellTerminal("chat-shell"));
-		expect(screen.getByTestId("chat-surface")).toBeInTheDocument();
+		// Selecting the shell swaps the active pane while the route stays here.
+		act(() => useUiStore.getState().setActiveShellTerminal("session-shell"));
 		expect(screen.getByTestId("terminal-target")).toHaveTextContent("shell");
 
-		fireEvent.click(screen.getByRole("button", { name: "select chat tab" }));
-		expect(screen.getByTestId("chat-surface")).toBeInTheDocument();
-		expect(screen.queryByTestId("terminal-target")).not.toBeInTheDocument();
-	});
-
-	it("remounts the session-owned Chat surface when navigation selects another Chat session", () => {
-		workerSession("sess-1").mode = "chat";
-		workerSession("sess-2").mode = "chat";
-		const view = render(<SessionView sessionId="sess-1" />);
-		const firstSurface = screen.getByTestId("chat-surface");
-
-		view.rerender(<SessionView sessionId="sess-2" />);
-
-		expect(screen.getByTestId("chat-surface")).not.toBe(firstSurface);
+		fireEvent.click(screen.getByRole("button", { name: "select agent tab" }));
+		expect(screen.getByTestId("terminal-target")).toHaveTextContent("worker");
 	});
 
 	// The strip only ever shows the session on screen — pinning another session's
@@ -908,7 +712,6 @@ describe("SessionView", () => {
 	// palette already own, and its long name crowds the controls it sits next to.
 	it.each([
 		["a terminal worker", "sess-1", "tui", true],
-		["a chat worker", "sess-1", "chat", true],
 		["an orchestrator", "sess-orch", "tui", false],
 	] as const)("keeps the git branch out of %s session's top bar", (_label, sessionId, mode, offersNewTerminal) => {
 		workerSession(sessionId).mode = mode;
@@ -923,14 +726,12 @@ describe("SessionView", () => {
 		expect(Boolean(screen.queryByRole("button", { name: "New terminal" }))).toBe(offersNewTerminal);
 	});
 
-	it("shows a shell opened from chat and returns to the chat agent tab", () => {
-		const session = workspaces[0]!.sessions.find((candidate) => candidate.id === "sess-1")!;
-		session.mode = "chat";
+	it("shows a shell opened from the session and returns to the agent tab", () => {
 		const shell = {
-			handleId: "sh-chat",
+			handleId: "sh-session",
 			projectId: "proj-1",
 			sessionId: "sess-1",
-			title: "chat shell",
+			title: "session shell",
 			workingDir: "/p",
 			createdAt: "2026-08-04T00:00:00Z",
 		};
@@ -941,23 +742,16 @@ describe("SessionView", () => {
 		});
 
 		render(<SessionView sessionId="sess-1" />);
-		expect(screen.getByText("chat surface")).toBeInTheDocument();
 
-		// Opening a shell from chat keeps the chat surface mounted: the shell is
-		// a tab in its header and renders as the surface's active pane.
-		fireEvent.click(screen.getByRole("button", { name: "open shell from chat" }));
-		expect(screen.getByText("chat surface")).toBeInTheDocument();
-		expect(screen.getByTestId("shell-tabs")).toHaveTextContent("chat shell");
-		expect(screen.getByTestId("terminal-target")).toHaveTextContent("shell");
+		fireEvent.click(screen.getByRole("button", { name: "New terminal" }));
+		expect(screen.getByTestId("shell-tabs")).toHaveTextContent("session shell");
+		expect(screen.getByTestId("terminal-target")).toHaveTextContent("sh-session");
 
-		fireEvent.click(screen.getByRole("button", { name: "select chat tab" }));
-		expect(screen.getByText("chat surface")).toBeInTheDocument();
-		expect(screen.queryByTestId("terminal-target")).not.toBeInTheDocument();
+		fireEvent.click(screen.getByRole("button", { name: "select agent tab" }));
+		expect(screen.getByTestId("terminal-target")).toHaveTextContent("worker");
 	});
 
-	it("preserves mixed tab order across session navigation and interface changes", async () => {
-		workerSession("sess-1").mode = "chat";
-		workerSession("sess-2").mode = "chat";
+	it("preserves mixed tab order across session navigation", async () => {
 		shellTerminalsState.data = [
 			{
 				handleId: "sh-a",
@@ -975,26 +769,19 @@ describe("SessionView", () => {
 		fireEvent.click(screen.getByRole("button", { name: "pop out src/panel.tsx" }));
 		await screen.findByTestId("session-file-workspace");
 		fireEvent.click(screen.getByRole("button", { name: "reorder auxiliary tabs" }));
-		expect(screen.getByTestId("auxiliary-tab-order-sess-1")).toHaveTextContent(
+		expect(screen.getByTestId("auxiliary-tab-order-tui-sess-1")).toHaveTextContent(
 			"sh-a|file:src/panel.tsx",
 		);
 
 		view.rerender(<SessionView sessionId="sess-2" />);
 		view.rerender(<SessionView sessionId="sess-1" />);
 
-		expect(screen.getByTestId("auxiliary-tab-order-sess-1")).toHaveTextContent(
-			"sh-a|file:src/panel.tsx",
-		);
-
-		workerSession("sess-1").mode = "tui";
-		view.rerender(<SessionView sessionId="sess-1" />);
 		expect(screen.getByTestId("auxiliary-tab-order-tui-sess-1")).toHaveTextContent(
 			"sh-a|file:src/panel.tsx",
 		);
 	});
 
 	it("selects the adjacent shell when closing a reordered file tab", async () => {
-		workerSession("sess-1").mode = "chat";
 		shellTerminalsState.data = [
 			{
 				handleId: "sh-a",
@@ -1015,12 +802,11 @@ describe("SessionView", () => {
 		fireEvent.click(screen.getByRole("button", { name: "Close panel.tsx" }));
 
 		expect(screen.queryByTestId("session-file-workspace")).not.toBeInTheDocument();
-		expect(screen.getByTestId("terminal-target")).toHaveTextContent("shell");
+		expect(screen.getByTestId("terminal-target")).toHaveTextContent("sh-a");
 	});
 
 	it("preserves a reordered reviewer position while the session is inactive", async () => {
 		const worker = workerSession("sess-1");
-		worker.mode = "chat";
 		worker.prs = [
 			{
 				url: "https://github.com/acme/repo/pull/7",
@@ -1049,13 +835,13 @@ describe("SessionView", () => {
 		});
 		const view = render(<SessionView sessionId="sess-1" />);
 
-		await screen.findByRole("button", { name: "Reviewer" });
+		await screen.findByRole("button", { name: "select reviewer tab" });
 		fireEvent.click(screen.getByRole("button", { name: "view review file" }));
 		await screen.findByText("rail preview src/panel.tsx");
 		fireEvent.click(screen.getByRole("button", { name: "pop out src/panel.tsx" }));
 		await screen.findByTestId("session-file-workspace");
 		fireEvent.click(screen.getByRole("button", { name: "reorder reviewer tab" }));
-		expect(screen.getByTestId("auxiliary-tab-order-sess-1")).toHaveTextContent(
+		expect(screen.getByTestId("auxiliary-tab-order-tui-sess-1")).toHaveTextContent(
 			"sh-a|reviewer:review-sess-1|file:src/panel.tsx",
 		);
 
@@ -1067,14 +853,13 @@ describe("SessionView", () => {
 		worker.isTerminated = false;
 		view.rerender(<SessionView sessionId="sess-1" />);
 
-		await screen.findByRole("button", { name: "Reviewer" });
-		expect(screen.getByTestId("auxiliary-tab-order-sess-1")).toHaveTextContent(
+		await screen.findByRole("button", { name: "select reviewer tab" });
+		expect(screen.getByTestId("auxiliary-tab-order-tui-sess-1")).toHaveTextContent(
 			"file:src/panel.tsx|reviewer:review-sess-1|sh-a",
 		);
 	});
 
 	it("keeps a shell's reordered position when closing it fails", async () => {
-		workerSession("sess-1").mode = "chat";
 		shellTerminalsState.data = [
 			{
 				handleId: "sh-a",
@@ -1095,424 +880,13 @@ describe("SessionView", () => {
 		fireEvent.click(screen.getByRole("button", { name: "pop out src/panel.tsx" }));
 		await screen.findByTestId("session-file-workspace");
 		fireEvent.click(screen.getByRole("button", { name: "reorder auxiliary tabs" }));
-		fireEvent.click(screen.getByRole("button", { name: "session one shell" }));
+		fireEvent.click(screen.getByRole("button", { name: "select session one shell" }));
 		fireEvent.click(screen.getByRole("button", { name: "close session one shell" }));
 		view.rerender(<SessionView sessionId="sess-1" />);
 
-		expect(screen.getByTestId("auxiliary-tab-order-sess-1")).toHaveTextContent(
+		expect(screen.getByTestId("auxiliary-tab-order-tui-sess-1")).toHaveTextContent(
 			"sh-a|file:src/panel.tsx",
 		);
-	});
-
-	it.each([
-		["Terminal UI worker", "sess-1", "tui", "chat", "Switch to chat UI"],
-		["Terminal UI orchestrator", "sess-orch", "tui", "chat", "Switch to chat UI"],
-	] as const)("switches an idle %s directly with drain", async (_label, sessionId, mode, targetMode, buttonName) => {
-		interfaceTransitionState.status = { supported: true, targetMode };
-		const session = workerSession(sessionId);
-		session.mode = mode;
-		session.status = "idle";
-		session.activity = { state: "idle", lastActivityAt: "2026-08-06T00:00:00Z" };
-
-		render(<SessionView sessionId={sessionId} />);
-
-		await chooseSessionAction(buttonName);
-
-		expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
-		expect(interfaceTransitionMock.start).toHaveBeenCalledWith({ targetMode, policy: "drain" });
-	});
-
-	it.each([
-		["worker", "sess-1"],
-		["orchestrator", "sess-orch"],
-	] as const)("switches an idle Chat %s directly to Terminal UI with drain", async (_label, sessionId) => {
-		interfaceTransitionState.status = { supported: true, targetMode: "tui" };
-		const session = workerSession(sessionId);
-		session.mode = "chat";
-		session.status = "idle";
-		session.activity = { state: "idle", lastActivityAt: "2026-08-06T00:00:00Z" };
-
-		render(<SessionView sessionId={sessionId} />);
-		fireEvent.click(screen.getByRole("button", { name: "report chat work" }));
-
-		await chooseSessionAction("Switch to terminal UI");
-
-		expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
-		expect(interfaceTransitionMock.start).toHaveBeenCalledWith({ targetMode: "tui", policy: "drain" });
-	});
-
-	it("keeps the policy dialog closed when an idle direct switch fails", async () => {
-		interfaceTransitionState.status = { supported: true, targetMode: "chat" };
-		const session = workerSession("sess-1");
-		session.status = "idle";
-		session.activity = { state: "idle", lastActivityAt: "2026-08-06T00:00:00Z" };
-		interfaceTransitionMock.start.mockRejectedValueOnce(new Error("switch failed"));
-
-		render(<SessionView sessionId="sess-1" />);
-
-		await chooseSessionAction("Switch to chat UI");
-
-		expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
-	});
-
-	it("keeps the policy dialog open when an explicit busy Chat choice fails", async () => {
-		interfaceTransitionState.status = { supported: true, targetMode: "tui" };
-		const session = workerSession("sess-1");
-		session.mode = "chat";
-		session.status = "working";
-		session.activity = { state: "active", lastActivityAt: "2026-08-06T00:00:00Z" };
-		interfaceTransitionMock.start.mockRejectedValueOnce(new Error("switch failed"));
-
-		render(<SessionView sessionId="sess-1" />);
-
-		await chooseSessionAction("Switch to terminal UI");
-		expect(screen.getByRole("dialog", { name: "Switch to Terminal UI?" })).toBeInTheDocument();
-		await act(async () => {
-			fireEvent.click(screen.getByRole("button", { name: /^Stop now and switch/ }));
-		});
-
-		expect(screen.getByRole("dialog", { name: "Switch to Terminal UI?" })).toBeInTheDocument();
-		expect(interfaceTransitionMock.start).toHaveBeenCalledWith({ targetMode: "tui", policy: "interrupt" });
-	});
-
-	it.each([
-		["working status", "sess-1", "tui", "chat", "Switch to chat UI", "working", "idle"],
-		["needs-input status", "sess-orch", "tui", "chat", "Switch to chat UI", "needs_input", "idle"],
-		["blocked activity", "sess-1", "tui", "chat", "Switch to chat UI", "idle", "blocked"],
-	] as const)("opens the switch policy dialog for %s", async (_label, sessionId, mode, targetMode, buttonName, status, activityState) => {
-		interfaceTransitionState.status = { supported: true, targetMode };
-		const session = workerSession(sessionId);
-		session.mode = mode;
-		session.status = status;
-		session.activity = { state: activityState, lastActivityAt: "2026-08-06T00:00:00Z" };
-
-		render(<SessionView sessionId={sessionId} />);
-
-		await chooseSessionAction(buttonName);
-
-		expect(screen.getByRole("dialog")).toBeInTheDocument();
-		expect(interfaceTransitionMock.start).not.toHaveBeenCalled();
-	});
-
-	it("requires an explicit policy while current Chat work is not yet known", async () => {
-		interfaceTransitionState.status = { supported: true, targetMode: "tui" };
-		const session = workerSession("sess-1");
-		session.mode = "chat";
-		session.status = "idle";
-		session.activity = { state: "idle", lastActivityAt: "2026-08-06T00:00:00Z" };
-
-		render(<SessionView sessionId="sess-1" />);
-		await chooseSessionAction("Switch to terminal UI");
-
-		expect(screen.getByRole("dialog", { name: "Switch to Terminal UI?" })).toBeInTheDocument();
-		expect(interfaceTransitionMock.start).not.toHaveBeenCalled();
-	});
-
-	it.each([
-		["working status", "sess-1", "working", "idle"],
-		["needs-input status", "sess-orch", "needs_input", "idle"],
-		["active activity", "sess-1", "idle", "active"],
-		["waiting-input activity", "sess-orch", "idle", "waiting_input"],
-		["blocked activity", "sess-1", "idle", "blocked"],
-	] as const)("asks for policy before a busy Chat session switches for %s", async (_label, sessionId, status, activityState) => {
-		interfaceTransitionState.status = { supported: true, targetMode: "tui" };
-		const session = workerSession(sessionId);
-		session.mode = "chat";
-		session.status = status;
-		session.activity = { state: activityState, lastActivityAt: "2026-08-06T00:00:00Z" };
-
-		render(<SessionView sessionId={sessionId} />);
-
-		await chooseSessionAction("Switch to terminal UI");
-
-		expect(screen.getByRole("dialog", { name: "Switch to Terminal UI?" })).toBeInTheDocument();
-		expect(interfaceTransitionMock.start).not.toHaveBeenCalled();
-	});
-
-	it.each([
-		["a busy controller", { controllerBusy: true, hasRunningTurn: false, queuedTurnCount: 0 }],
-		["a running turn", { controllerBusy: false, hasRunningTurn: true, queuedTurnCount: 0 }],
-		["accepted queued work", { controllerBusy: false, hasRunningTurn: false, queuedTurnCount: 1 }],
-	] as const)("asks for policy when Chat reports %s but the session projection is idle", async (_label, work) => {
-		interfaceTransitionState.status = { supported: true, targetMode: "tui" };
-		const session = workerSession("sess-1");
-		session.mode = "chat";
-		session.status = "idle";
-		session.activity = { state: "idle", lastActivityAt: "2026-08-06T00:00:00Z" };
-		Object.assign(chatSurfaceWorkState, work);
-
-		render(<SessionView sessionId="sess-1" />);
-		fireEvent.click(screen.getByRole("button", { name: "report chat work" }));
-		await chooseSessionAction("Switch to terminal UI");
-
-		expect(screen.getByRole("dialog", { name: "Switch to Terminal UI?" })).toBeInTheDocument();
-		expect(interfaceTransitionMock.start).not.toHaveBeenCalled();
-	});
-
-	it("does not apply one Chat session's reported work to another selected session", async () => {
-		interfaceTransitionState.status = { supported: true, targetMode: "tui" };
-		for (const sessionId of ["sess-1", "sess-2"]) {
-			const session = workerSession(sessionId);
-			session.mode = "chat";
-			session.status = "idle";
-			session.activity = { state: "idle", lastActivityAt: "2026-08-06T00:00:00Z" };
-		}
-		chatSurfaceWorkState.queuedTurnCount = 1;
-
-		const view = render(<SessionView sessionId="sess-1" />);
-		fireEvent.click(screen.getByRole("button", { name: "report chat work" }));
-		view.rerender(<SessionView sessionId="sess-2" />);
-		chatSurfaceWorkState.queuedTurnCount = 0;
-		fireEvent.click(screen.getByRole("button", { name: "report chat work" }));
-		await chooseSessionAction("Switch to terminal UI");
-
-		expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
-		expect(interfaceTransitionMock.start).toHaveBeenCalledWith({ targetMode: "tui", policy: "drain" });
-	});
-
-	it.each([
-		["Finish work, then switch", "drain"],
-		["Stop now and switch", "interrupt"],
-	] as const)("maps explicit busy Chat consent through the %s action", async (buttonName, policy) => {
-		interfaceTransitionState.status = { supported: true, targetMode: "tui" };
-		const session = workerSession("sess-1");
-		session.mode = "chat";
-		session.status = "working";
-		session.activity = { state: "active", lastActivityAt: "2026-08-06T00:00:00Z" };
-
-		render(<SessionView sessionId="sess-1" />);
-
-		await chooseSessionAction("Switch to terminal UI");
-		expect(interfaceTransitionMock.start).not.toHaveBeenCalled();
-		fireEvent.click(screen.getByRole("button", { name: new RegExp(`^${buttonName}`) }));
-
-		expect(interfaceTransitionMock.start).toHaveBeenCalledOnce();
-		expect(interfaceTransitionMock.start).toHaveBeenCalledWith({ targetMode: "tui", policy });
-	});
-
-	it("disables Chat input while an accepted Chat-to-Terminal drain starts, runs, or settles", async () => {
-		interfaceTransitionState.status = { supported: true, targetMode: "tui" };
-		const session = workerSession("sess-1");
-		session.mode = "chat";
-		session.status = "working";
-		session.activity = { state: "active", lastActivityAt: "2026-08-06T00:00:00Z" };
-
-		const view = render(<SessionView sessionId="sess-1" />);
-		const chatSurface = () => screen.getByTestId("chat-surface");
-		expect(chatSurface()).toHaveAttribute("data-new-work-disabled", "false");
-
-		await chooseSessionAction("Switch to terminal UI");
-		fireEvent.click(screen.getByRole("button", { name: /^Finish work, then switch/ }));
-		expect(interfaceTransitionMock.start).toHaveBeenCalledWith({ targetMode: "tui", policy: "drain" });
-
-		interfaceTransitionState.starting = true;
-		view.rerender(<SessionView sessionId="sess-1" />);
-		expect(chatSurface()).toHaveAttribute("data-new-work-disabled", "true");
-
-		interfaceTransitionState.starting = false;
-		interfaceTransitionState.status = {
-			supported: true,
-			targetMode: "tui",
-			transition: {
-				id: "switch-chat-to-tui",
-				sessionId: "sess-1",
-				sourceMode: "chat",
-				targetMode: "tui",
-				policy: "drain",
-				phase: "draining",
-				createdAt: "2026-08-06T00:00:00Z",
-				updatedAt: "2026-08-06T00:00:01Z",
-			},
-		};
-		view.rerender(<SessionView sessionId="sess-1" />);
-		expect(chatSurface()).toHaveAttribute("data-new-work-disabled", "true");
-
-		interfaceTransitionState.status.transition!.phase = "completed";
-		interfaceTransitionState.settling = true;
-		view.rerender(<SessionView sessionId="sess-1" />);
-		expect(chatSurface()).toHaveAttribute("data-new-work-disabled", "true");
-
-		interfaceTransitionState.settling = false;
-		view.rerender(<SessionView sessionId="sess-1" />);
-		expect(chatSurface()).toHaveAttribute("data-new-work-disabled", "false");
-	});
-
-	it("discards one session's switch consent dialog when navigating to another session", async () => {
-		interfaceTransitionState.status = { supported: true, targetMode: "tui" };
-		for (const sessionId of ["sess-1", "sess-2"]) {
-			const session = workerSession(sessionId);
-			session.mode = "chat";
-			session.status = "working";
-			session.activity = { state: "active", lastActivityAt: "2026-08-06T00:00:00Z" };
-		}
-		const view = render(<SessionView sessionId="sess-1" />);
-
-		await chooseSessionAction("Switch to terminal UI");
-		expect(screen.getByRole("dialog", { name: "Switch to Terminal UI?" })).toBeInTheDocument();
-
-		view.rerender(<SessionView sessionId="sess-2" />);
-		expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
-		expect(interfaceTransitionMock.start).not.toHaveBeenCalled();
-
-		view.rerender(<SessionView sessionId="sess-1" />);
-		expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
-	});
-
-	it("does not let a completed switch close another session's newer consent dialog", async () => {
-		interfaceTransitionState.status = { supported: true, targetMode: "tui" };
-		for (const sessionId of ["sess-1", "sess-2"]) {
-			const session = workerSession(sessionId);
-			session.mode = "chat";
-			session.status = "working";
-			session.activity = { state: "active", lastActivityAt: "2026-08-06T00:00:00Z" };
-		}
-		let finishFirstSwitch!: () => void;
-		interfaceTransitionMock.start.mockImplementationOnce(
-			() => new Promise<void>((resolve) => {
-				finishFirstSwitch = resolve;
-			}),
-		);
-		const view = render(<SessionView sessionId="sess-1" />);
-
-		await chooseSessionAction("Switch to terminal UI");
-		fireEvent.click(screen.getByRole("button", { name: /^Stop now and switch/ }));
-		expect(interfaceTransitionMock.start).toHaveBeenCalledWith({
-			targetMode: "tui",
-			policy: "interrupt",
-		});
-
-		view.rerender(<SessionView sessionId="sess-2" />);
-		await chooseSessionAction("Switch to terminal UI");
-		expect(screen.getByRole("dialog", { name: "Switch to Terminal UI?" })).toBeInTheDocument();
-
-		await act(async () => finishFirstSwitch());
-
-		expect(screen.getByRole("dialog", { name: "Switch to Terminal UI?" })).toBeInTheDocument();
-	});
-
-	it("discards switch consent when the requested target changes", async () => {
-		interfaceTransitionState.status = { supported: true, targetMode: "tui" };
-		const session = workerSession("sess-1");
-		session.mode = "chat";
-		session.status = "working";
-		session.activity = { state: "active", lastActivityAt: "2026-08-06T00:00:00Z" };
-		const view = render(<SessionView sessionId="sess-1" />);
-
-		await chooseSessionAction("Switch to terminal UI");
-		expect(screen.getByRole("dialog", { name: "Switch to Terminal UI?" })).toBeInTheDocument();
-
-		interfaceTransitionState.status = { supported: true, targetMode: "chat" };
-		view.rerender(<SessionView sessionId="sess-1" />);
-		expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
-		expect(interfaceTransitionMock.start).not.toHaveBeenCalled();
-
-		interfaceTransitionState.status = { supported: true, targetMode: "tui" };
-		view.rerender(<SessionView sessionId="sess-1" />);
-		expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
-	});
-
-	it("checks only the selected session when deciding whether to show the policy dialog", async () => {
-		interfaceTransitionState.status = { supported: true, targetMode: "chat" };
-		const selected = workerSession("sess-1");
-		selected.status = "idle";
-		selected.activity = { state: "idle", lastActivityAt: "2026-08-06T00:00:00Z" };
-		const other = workerSession("sess-2");
-		other.status = "working";
-		other.activity = { state: "active", lastActivityAt: "2026-08-06T00:00:00Z" };
-
-		render(<SessionView sessionId="sess-1" />);
-
-		await chooseSessionAction("Switch to chat UI");
-
-		expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
-		expect(interfaceTransitionMock.start).toHaveBeenCalledWith({ targetMode: "chat", policy: "drain" });
-	});
-
-	it("does not resurrect an acknowledged recovery notice after the session view remounts", async () => {
-		const transition = {
-			id: "transition-recovered",
-			sessionId: "sess-1",
-			sourceMode: "chat" as const,
-			targetMode: "tui" as const,
-			policy: "drain" as const,
-			phase: "recovery_required" as const,
-			errorCode: "DAEMON_RESTARTED",
-			errorDetail: "AO recovered the session in its last committed mode.",
-			createdAt: "2026-08-12T10:00:00Z",
-			updatedAt: "2026-08-12T10:01:00Z",
-			completedAt: "2026-08-12T10:01:00Z",
-		};
-		interfaceTransitionState.status = { supported: true, targetMode: "chat", transition };
-		interfaceTransitionMock.acknowledgeNotice.mockImplementation(async () => {
-			Object.assign(transition, { noticeAcknowledgedAt: "2026-08-13T08:00:00Z" });
-		});
-
-		const view = render(<SessionView sessionId="sess-1" />);
-		expect(screen.getByText(transition.errorDetail)).toBeInTheDocument();
-		fireEvent.click(screen.getByRole("button", { name: "Dismiss interface switch message" }));
-		await waitFor(() =>
-			expect(interfaceTransitionMock.acknowledgeNotice).toHaveBeenCalledWith("transition-recovered"),
-		);
-
-		view.unmount();
-		render(<SessionView sessionId="sess-1" />);
-		expect(screen.queryByText(transition.errorDetail)).not.toBeInTheDocument();
-	});
-
-	it("returns to the source terminal while a failed Chat switch mode refetch settles", () => {
-		const session = workerSession("sess-1");
-		// The workspace cache observed the transition's intermediate mode commit,
-		// but the durable transition already says the target failed and rolled back.
-		session.mode = "chat";
-		const transition = {
-			id: "transition-failed",
-			sessionId: "sess-1",
-			sourceMode: "tui" as const,
-			targetMode: "chat" as const,
-			policy: "drain" as const,
-			phase: "failed" as const,
-			errorCode: "TARGET_HISTORY_UNSETTLED",
-			errorDetail: "The native conversation history did not settle.",
-			createdAt: "2026-08-23T17:00:00Z",
-			updatedAt: "2026-08-23T17:01:00Z",
-			completedAt: "2026-08-23T17:01:00Z",
-		};
-		interfaceTransitionState.status = { supported: true, targetMode: "chat", transition };
-
-		render(<SessionView sessionId="sess-1" />);
-
-		expect(screen.getByText("terminal center")).toBeInTheDocument();
-		expect(screen.queryByTestId("chat-surface")).not.toBeInTheDocument();
-		expect(screen.getByText(transition.errorDetail)).toBeInTheDocument();
-	});
-
-	it.each([
-		["worker", "sess-1"],
-		["orchestrator", "sess-orch"],
-	] as const)("hides the interface switch button for %s sessions when Chat UI is unsupported", async (_label, sessionId) => {
-		interfaceTransitionState.status = { supported: false, targetMode: "chat", reasonCode: "CHAT_UNSUPPORTED" };
-		const session = workerSession(sessionId);
-		session.mode = "tui";
-		session.status = "idle";
-		session.activity = { state: "idle", lastActivityAt: "2026-08-06T00:00:00Z" };
-
-		render(<SessionView sessionId={sessionId} />);
-
-		await userEvent.click(screen.getByRole("button", { name: "Session actions" }));
-		expect(screen.queryByRole("menuitem", { name: "Switch to chat UI" })).not.toBeInTheDocument();
-	});
-
-	it("shows the switch button when the adapter only reports a generic unsupported reason", async () => {
-		interfaceTransitionState.status = { supported: false, targetMode: "chat", reasonCode: "INTERFACE_HANDOFF_UNSUPPORTED" };
-		const session = workerSession("sess-1");
-		session.mode = "tui";
-		session.status = "idle";
-		session.activity = { state: "idle", lastActivityAt: "2026-08-06T00:00:00Z" };
-
-		render(<SessionView sessionId="sess-1" />);
-
-		await userEvent.click(screen.getByRole("button", { name: "Session actions" }));
-		expect(screen.getByRole("menuitem", { name: "Switch to chat UI" })).toBeInTheDocument();
 	});
 
 	it("walks backward through auxiliary terminals before returning to the permanent terminal", () => {
@@ -1574,9 +948,8 @@ describe("SessionView", () => {
 		await waitFor(() => expect(screen.getByTestId("reviewer-harness")).toHaveTextContent("codex"));
 	});
 
-	it("keeps the reviewer terminal reachable from a Chat session", async () => {
+	it("keeps the reviewer terminal reachable from the session pane", async () => {
 		const worker = workerSession("sess-1");
-		worker.mode = "chat";
 		worker.prs = [{
 			url: "https://github.com/acme/repo/pull/7",
 			number: 7,
@@ -1593,15 +966,12 @@ describe("SessionView", () => {
 		});
 
 		render(<SessionView sessionId="sess-1" />);
-		await screen.findByRole("button", { name: "Reviewer" });
-		fireEvent.click(screen.getByRole("button", { name: "Reviewer" }));
-		// The chat surface stays mounted; the reviewer pane renders inside it.
-		expect(screen.getByTestId("chat-surface")).toBeInTheDocument();
+		await screen.findByRole("button", { name: "select reviewer tab" });
+		fireEvent.click(screen.getByRole("button", { name: "select reviewer tab" }));
 		expect(screen.getByTestId("terminal-target")).toHaveTextContent("reviewer");
-		// Selecting the chat tab returns to the chat timeline.
-		fireEvent.click(screen.getByRole("button", { name: "select chat tab" }));
-		expect(screen.queryByTestId("terminal-target")).not.toBeInTheDocument();
-		expect(screen.getByTestId("chat-surface")).toBeInTheDocument();
+		// Selecting the agent tab returns to the session terminal.
+		fireEvent.click(screen.getByRole("button", { name: "select agent tab" }));
+		expect(screen.getByTestId("terminal-target")).toHaveTextContent("worker");
 	});
 
 	it("returns to the session terminal when the reviewer handle is cleared", async () => {
@@ -1636,11 +1006,8 @@ describe("SessionView", () => {
 		expect(screen.queryByRole("button", { name: "select reviewer tab" })).not.toBeInTheDocument();
 	});
 
-	it.each(["tui", "chat"] as const)(
-		"restores the selected reviewer terminal when a %s session becomes active again",
-		async (mode) => {
+	it("restores the selected reviewer terminal when the session becomes active again", async () => {
 			const worker = workerSession("sess-1");
-			worker.mode = mode;
 			worker.prs = [
 				{
 					url: "https://github.com/acme/repo/pull/7",
@@ -1659,7 +1026,7 @@ describe("SessionView", () => {
 			});
 
 			const view = render(<SessionView sessionId="sess-1" />);
-			const reviewerButtonName = mode === "chat" ? "Reviewer" : "select reviewer tab";
+			const reviewerButtonName = "select reviewer tab";
 			await screen.findByRole("button", { name: reviewerButtonName });
 			fireEvent.click(screen.getByRole("button", { name: reviewerButtonName }));
 			expect(screen.getByTestId("terminal-target")).toHaveTextContent("reviewer");
@@ -1667,7 +1034,6 @@ describe("SessionView", () => {
 			worker.status = "terminated";
 			worker.isTerminated = true;
 			view.rerender(<SessionView sessionId="sess-1" />);
-			if (mode === "chat") expect(screen.getByTestId("chat-surface")).toBeInTheDocument();
 			expect(screen.getByTestId("terminal-target")).toHaveTextContent("reviewer");
 			expect(screen.queryByRole("button", { name: reviewerButtonName })).not.toBeInTheDocument();
 
@@ -2204,45 +1570,6 @@ describe("SessionView", () => {
 		render(<SessionView sessionId="sess-1" />);
 
 		fireEvent.click(screen.getByRole("button", { name: "view review basename" }));
-
-		await waitFor(() => {
-			expect(screen.getByText("rail preview docs/notes.txt")).toBeInTheDocument();
-		});
-		expect(screen.queryByTestId("session-file-workspace")).not.toBeInTheDocument();
-	});
-
-	it("resolves a chat basename against workspace files before opening on a cold cache", async () => {
-		workspaces[0].sessions[0].mode = "chat";
-		reviewGetMock.mockImplementation(async (path: string) => {
-			if (path === "/api/v1/sessions/{sessionId}/workspace/files") {
-				return {
-					data: {
-						sessionId: "sess-1",
-						files: [
-							{
-								path: "docs/notes.txt",
-								status: "added",
-								additions: 1,
-								deletions: 0,
-								binary: false,
-								size: 10,
-							},
-						],
-						truncated: false,
-						sections: { staged: [], unstaged: [], untracked: [], committed: [] },
-						commits: [],
-						summary: { files: 1, additions: 1, deletions: 0 },
-					},
-					error: undefined,
-				};
-			}
-			return { data: { reviewerHandleId: "", reviews: [], runs: [] }, error: undefined };
-		});
-
-		act(() => useUiStore.getState().setInspectorOpen("sess-1", true));
-		render(<SessionView sessionId="sess-1" />);
-
-		fireEvent.click(screen.getByRole("button", { name: "open chat basename" }));
 
 		await waitFor(() => {
 			expect(screen.getByText("rail preview docs/notes.txt")).toBeInTheDocument();

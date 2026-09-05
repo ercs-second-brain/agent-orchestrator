@@ -5,7 +5,6 @@ import { setEventsConnectionState } from "./events-connection";
 import { computeSseRetryDelayMs } from "./sse-backoff";
 import { workspaceQueryKey } from "../hooks/useWorkspaceQuery";
 import { sessionScmSummaryQueryKey } from "../hooks/useSessionScmSummary";
-import { conversationQueryKey, conversationQueryRoot } from "../hooks/useConversation";
 import { agentSwitchesQueryRoot } from "../hooks/useAgentSwitches";
 import { sessionUsageQueryRoot } from "../hooks/useSessionUsageSummaries";
 import { agentSwitchVisibility } from "./agent-switch-visibility";
@@ -52,10 +51,7 @@ export function createEventTransport(queryClient: QueryClient): EventTransport {
 		connect() {
 			let healthAttempt = 0;
 			let debounce: ReturnType<typeof setTimeout> | undefined;
-			const pendingConversationSessions = new Set<string>();
-			const pendingInterfaceTransitionSessions = new Set<string>();
 			let workspaceInvalidationPending = false;
-			let allConversationsInvalidationPending = false;
 			let retryTimer: ReturnType<typeof setTimeout> | undefined;
 			let source: EventSource | undefined;
 			let sourceBaseUrl: string | undefined;
@@ -70,64 +66,10 @@ export function createEventTransport(queryClient: QueryClient): EventTransport {
 					// A malformed transient event cannot replace the cached safe snapshot.
 				}
 			};
-			const refreshWorkspaces = (event?: Event) => {
-				let conversationOnly = false;
-				if (event === undefined) {
-					// A lifecycle refresh -- reconnect, daemon status change, base-URL change --
-					// carries no event, so we cannot know which conversations moved. Normally the
-					// replay that follows tells us, but when the event log has been truncated the
-					// daemon starts us at head and no CDC arrives at all. EventSource cannot read
-					// the header reporting that clamp, so refresh every conversation instead of
-					// leaving an open chat frozen on its pre-gap snapshot.
-					allConversationsInvalidationPending = true;
-				}
-				if (event && "data" in event) {
-					try {
-						const decoded = JSON.parse(String((event as MessageEvent).data)) as {
-							sessionId?: unknown;
-							payload?: unknown;
-						};
-						// The SSE endpoint sends the complete durable CDC event. Routing
-						// fields such as sessionId live on that envelope, while trigger-built
-						// details such as conversationId live inside its payload. Do not
-						// mistake the payload for the entire event: doing so refreshes the
-						// sidebar but leaves a Chat timeline frozen on its pre-turn snapshot.
-						const payload =
-							typeof decoded.payload === "object" && decoded.payload !== null
-								? (decoded.payload as {
-										conversationId?: unknown;
-										interfaceTransitionId?: unknown;
-								  })
-								: undefined;
-						if (
-							typeof decoded.sessionId === "string" &&
-							decoded.sessionId &&
-							typeof payload?.interfaceTransitionId === "string" &&
-							payload.interfaceTransitionId
-						) {
-							pendingInterfaceTransitionSessions.add(decoded.sessionId);
-						}
-						if (
-							typeof decoded.sessionId === "string" &&
-							decoded.sessionId &&
-							typeof payload?.conversationId === "string" &&
-							payload.conversationId
-						) {
-							pendingConversationSessions.add(decoded.sessionId);
-							conversationOnly = true;
-						}
-					} catch {
-						// A malformed CDC payload still invalidates workspaces; it simply
-						// cannot target a conversation cache precisely.
-					}
-				}
-				if (!conversationOnly) workspaceInvalidationPending = true;
+			const refreshWorkspaces = (_event?: Event) => {
+				workspaceInvalidationPending = true;
 				if (debounce) clearTimeout(debounce);
 				debounce = setTimeout(() => {
-					if (allConversationsInvalidationPending) {
-						void queryClient.invalidateQueries({ queryKey: conversationQueryRoot });
-						allConversationsInvalidationPending = false;
-					}
 					if (workspaceInvalidationPending) {
 						void queryClient.invalidateQueries({ queryKey: workspaceQueryKey });
 						void queryClient.invalidateQueries({ queryKey: agentSwitchesQueryRoot });
@@ -135,19 +77,8 @@ export function createEventTransport(queryClient: QueryClient): EventTransport {
 						void queryClient.invalidateQueries({ queryKey: sessionUsageQueryRoot });
 						workspaceInvalidationPending = false;
 					}
-					for (const sessionId of pendingConversationSessions) {
-						void queryClient.invalidateQueries({ queryKey: conversationQueryKey(sessionId) });
-					}
-					pendingConversationSessions.clear();
-					for (const sessionId of pendingInterfaceTransitionSessions) {
-						void queryClient.invalidateQueries({
-							queryKey: ["session-interface-transition", sessionId],
-						});
-					}
-					pendingInterfaceTransitionSessions.clear();
 				}, INVALIDATE_DEBOUNCE_MS);
 			};
-
 			// Consecutive scheduled rebuilds since the stream last opened. Paces
 			// the retry so a daemon that keeps refusing the stream is not
 			// hammered on a flat cadence (#4323).

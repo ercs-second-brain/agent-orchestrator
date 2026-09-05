@@ -936,7 +936,7 @@ function AttachedTerminal({
 			return;
 		}
 	}, [initFailed, onFatal, onTerminalStateChange]);
-	const handleLinkOpen = useSessionBrowserLink(session);
+	const handleLinkOpen = useSessionBrowserLink();
 	const restoreSession = useCallback(async () => {
 		if (!session?.id || !canRestoreSession || isRestoring) return;
 		setIsRestoring(true);

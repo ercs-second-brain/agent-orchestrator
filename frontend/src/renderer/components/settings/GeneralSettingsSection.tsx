@@ -9,54 +9,9 @@ import { SettingsInputRow, SettingsRow } from "./SettingsRow";
 import { SettingsSection } from "./SettingsSection";
 import { Switch } from "../ui/switch";
 import { cn } from "../../lib/utils";
-import { useSettings, useUpdateSessionInterface } from "../../hooks/useSettings";
-import type { SessionMode } from "../../types/workspace";
 import type { TerminalShellKind } from "../../../shared/ui-locale";
 import { isWindowsPlatform } from "../../lib/platform";
 import { RemoteConnectionSection } from "./RemoteConnectionSection";
-
-/**
- * Default interface for new sessions. Daemon-owned so `ao spawn` and mobile
- * resolve the same value. Only affects sessions created afterwards — a
- * session's interface is fixed when it is born.
- */
-function SessionInterfaceRow() {
-	const { settings, isLoading, error } = useSettings();
-	const { update, saving, error: saveError } = useUpdateSessionInterface();
-	const interfaceOptions = [
-		{ value: "tui", label: "Terminal" },
-		{ value: "chat", label: "Chat" },
-	] satisfies SettingsOption<SessionMode>[];
-
-	const chatAvailable = (settings?.chatHarnesses.length ?? 0) > 0;
-	// Silent when everything works; speak up only when the control is limited
-	// (no chat-capable agent installed) or a save failed.
-	const note = saveError ?? error ?? (!chatAvailable ? "Applies to new sessions. No installed agent supports chat yet." : null);
-
-	return (
-		<div className="flex w-full flex-col">
-			<SettingsRow className="rounded-none" label={"Default session interface"}>
-				<SettingsOptionMenu
-					aria-label={"Default session interface"}
-					value={settings?.defaultSessionMode ?? "tui"}
-					options={interfaceOptions}
-					onChange={(mode) => update(mode)}
-					disabled={isLoading || saving || !chatAvailable}
-				/>
-			</SettingsRow>
-			{note ? (
-				<p
-					className={cn(
-						"px-3 pt-0 pb-4 text-xs leading-relaxed",
-						saveError || error ? "text-destructive" : "text-muted-foreground",
-					)}
-				>
-					{note}
-				</p>
-			) : null}
-		</div>
-	);
-}
 
 function TerminalShellRows() {
 	const preference = useTerminalShellStore((state) => state.preference);
@@ -184,7 +139,6 @@ export function GeneralSettingsSection({
 
 			{/* Sessions */}
 			<SettingsSection title={"Sessions"} grouped>
-				<SessionInterfaceRow />
 				{isWindowsPlatform() ? <TerminalShellRows /> : null}
 				<SettingsRow label={"Sound notifications"}>
 					<Switch
