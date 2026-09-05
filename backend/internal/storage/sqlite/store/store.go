@@ -7,8 +7,6 @@ import (
 	"database/sql"
 	"fmt"
 
-	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/domain"
-	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/ports"
 	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/storage/sqlite/gen"
 )
 
@@ -25,10 +23,6 @@ type Store struct {
 	qw      *gen.Queries // bound to the single writer connection
 	qr      *gen.Queries // bound to the reader pool
 	writeMu *contextMutex
-
-	agentSwitchFailureEventMetadata *domain.AgentSwitchEventMetadata
-	agentSwitchFailureEventEncoder  ports.AgentSwitchFailureEventEncoder
-	agentSwitchFailureCommit        func(*sql.Tx) error
 }
 
 type contextMutex struct {
@@ -94,8 +88,7 @@ func NewStore(writeDB, readDB *sql.DB) *Store {
 		readDB:                   readDB,
 		qw:                       gen.New(writeDB),
 		qr:                       gen.New(readDB),
-		writeMu:                  newContextMutex(),
-		agentSwitchFailureCommit: func(tx *sql.Tx) error { return tx.Commit() },
+		writeMu: newContextMutex(),
 	}
 }
 

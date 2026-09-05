@@ -35,34 +35,34 @@ type AgentModelCatalog struct {
 }
 
 type AgentNativeSession struct {
-	ID               domain.AgentNativeSessionID
-	AoSessionID      domain.SessionID
-	Harness          domain.AgentHarness
+	ID               string
+	AoSessionID      string
+	Harness          string
 	ConfigDir        string
 	NativeSessionID  string
 	TranscriptPath   string
-	LastGenerationID domain.AgentGenerationID
+	LastGenerationID string
 	CreatedAt        time.Time
 	LastUsedAt       time.Time
 }
 
 type AgentSwitch struct {
-	ID                      domain.AgentSwitchID
-	SessionID               domain.SessionID
+	ID                      string
+	SessionID               string
 	IdempotencyKey          string
-	RequestFingerprint      domain.AgentSwitchRequestFingerprint
-	FromHarness             domain.AgentHarness
-	TargetHarness           domain.AgentHarness
-	TargetNativeSessionRef  *domain.AgentNativeSessionID
-	TargetStartMode         domain.AgentSwitchTargetStartMode
-	State                   domain.AgentSwitchState
-	AgentHandoffStatus      domain.AgentHandoffStatus
-	SourceTranscriptStatus  domain.AgentSwitchSourceTranscriptStatus
-	SemanticHandoffIncluded bool
+	RequestFingerprint      string
+	FromHarness             string
+	TargetHarness           string
+	TargetNativeSessionRef  sql.NullString
+	TargetStartMode         string
+	State                   string
+	AgentHandoffStatus      string
+	SourceTranscriptStatus  string
+	SemanticHandoffIncluded int64
 	AgentHandoffPath        string
 	AgentHandoffHash        string
-	SourceGenerationID      domain.AgentGenerationID
-	TargetGenerationID      domain.AgentGenerationID
+	SourceGenerationID      string
+	TargetGenerationID      string
 	TargetRuntimeHandleID   string
 	TargetAcknowledgedAt    sql.NullTime
 	ErrorCode               string
@@ -127,7 +127,7 @@ type AgentSwitchFailureOutbox struct {
 
 type AgentSwitchFailurePolicy struct {
 	Singleton              int64
-	Enabled                bool
+	Enabled                int64
 	ConsentGeneration      string
 	DestinationFingerprint string
 	UpdatedAt              time.Time

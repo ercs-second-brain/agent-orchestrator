@@ -2,7 +2,6 @@ package session
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -63,9 +62,6 @@ func (f *fakeAgentReadiness) RecheckAgent(agentID string) {
 type fakeStore struct {
 	sessions            map[domain.SessionID]domain.SessionRecord
 	getSessionErr       error
-	activeSwitches      map[domain.SessionID]domain.AgentSwitch
-	activeSwitchGetErr  error
-	activeSwitchListErr error
 	pr                  map[domain.SessionID]domain.PRFacts
 	prFacts             map[domain.SessionID][]domain.PRFacts
 	prs                 map[domain.SessionID][]domain.PullRequest
@@ -86,7 +82,6 @@ type fakeStore struct {
 func newFakeStore() *fakeStore {
 	return &fakeStore{
 		sessions:       map[domain.SessionID]domain.SessionRecord{},
-		activeSwitches: map[domain.SessionID]domain.AgentSwitch{},
 		pr:             map[domain.SessionID]domain.PRFacts{},
 		prFacts:        map[domain.SessionID][]domain.PRFacts{},
 		prs:            map[domain.SessionID][]domain.PullRequest{},
@@ -122,25 +117,6 @@ func TestListBatchesKanbanReads(t *testing.T) {
 	if st.listReviewRunsCalls != 1 {
 		t.Fatalf("ListCurrentHeadReviewRuns calls = %d, want 1 batched call", st.listReviewRunsCalls)
 	}
-}
-
-func (f *fakeStore) GetActiveAgentSwitch(_ context.Context, id domain.SessionID) (domain.AgentSwitch, bool, error) {
-	if f.activeSwitchGetErr != nil {
-		return domain.AgentSwitch{}, false, f.activeSwitchGetErr
-	}
-	sw, ok := f.activeSwitches[id]
-	return sw, ok, nil
-}
-
-func (f *fakeStore) ListActiveAgentSwitches(context.Context) ([]domain.AgentSwitch, error) {
-	if f.activeSwitchListErr != nil {
-		return nil, f.activeSwitchListErr
-	}
-	out := make([]domain.AgentSwitch, 0, len(f.activeSwitches))
-	for _, sw := range f.activeSwitches {
-		out = append(out, sw)
-	}
-	return out, nil
 }
 
 func newWorkspaceRepo(t *testing.T) string {
@@ -431,43 +407,6 @@ func TestSessionListAppliesActivityBeforePRFacts(t *testing.T) {
 	}
 }
 
-func TestSessionListProjectsActiveAgentSwitch(t *testing.T) {
-	st := newFakeStore()
-	st.sessions["mer-1"] = domain.SessionRecord{ID: "mer-1", ProjectID: "mer", Activity: domain.Activity{State: domain.ActivityExited}}
-	st.sessions["other-1"] = domain.SessionRecord{ID: "other-1", ProjectID: "other", Activity: domain.Activity{State: domain.ActivityIdle}}
-	st.activeSwitches["mer-1"] = domain.AgentSwitch{
-		ID: "switch-1", SessionID: "mer-1", FromHarness: domain.HarnessClaudeCode,
-		TargetHarness: domain.HarnessCodex, State: domain.AgentSwitchPreparingHandoff,
-	}
-	st.activeSwitches["other-1"] = domain.AgentSwitch{ID: "switch-other", SessionID: "other-1", State: domain.AgentSwitchPreparingHandoff}
-
-	list, err := (&Service{store: st}).List(context.Background(), ListFilter{ProjectID: "mer"})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(list) != 1 || list[0].ActiveAgentSwitch == nil || list[0].ActiveAgentSwitch.ID != "switch-1" {
-		t.Fatalf("list active switch projection = %+v", list)
-	}
-	if list[0].Status != domain.StatusExited {
-		t.Fatalf("session status = %q, want durable activity-derived exited", list[0].Status)
-	}
-	got, err := (&Service{store: st}).Get(context.Background(), "mer-1")
-	if err != nil || got.ActiveAgentSwitch == nil || got.ActiveAgentSwitch.ID != "switch-1" {
-		t.Fatalf("get active switch projection = %+v, err=%v", got.ActiveAgentSwitch, err)
-	}
-
-	st.activeSwitchListErr = errors.New("active switch read failed")
-	if _, err := (&Service{store: st}).List(context.Background(), ListFilter{ProjectID: "mer"}); err == nil || !strings.Contains(err.Error(), "active switch") {
-		t.Fatalf("active switch list error = %v", err)
-	}
-
-	st.activeSwitchListErr = nil
-	st.activeSwitchGetErr = errors.New("active switch read failed")
-	if _, err := (&Service{store: st}).Get(context.Background(), "mer-1"); err == nil || !strings.Contains(err.Error(), "active switch") {
-		t.Fatalf("active switch get error = %v", err)
-	}
-}
-
 func TestSessionRenameUpdatesDisplayName(t *testing.T) {
 	st := newFakeStore()
 	st.sessions["mer-1"] = domain.SessionRecord{ID: "mer-1", ProjectID: "mer"}
@@ -605,11 +544,11 @@ func TestSessionSetReviewerHarnessPersistsPerSession(t *testing.T) {
 	st.sessions["mer-1"] = domain.SessionRecord{ID: "mer-1", ProjectID: "mer", Kind: domain.KindWorker}
 	st.sessions["mer-2"] = domain.SessionRecord{ID: "mer-2", ProjectID: "mer", Kind: domain.KindWorker}
 
-	sess, err := (&Service{store: st}).SetReviewerHarness(context.Background(), "mer-1", domain.ReviewerOpenCode, domain.AgentConfig{})
+	sess, err := (&Service{store: st}).SetReviewerHarness(context.Background(), "mer-1", domain.ReviewerPi, domain.AgentConfig{})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if sess.ReviewerHarness != domain.ReviewerOpenCode || st.sessions["mer-1"].ReviewerHarness != domain.ReviewerOpenCode {
+	if sess.ReviewerHarness != domain.ReviewerPi || st.sessions["mer-1"].ReviewerHarness != domain.ReviewerPi {
 		t.Fatalf("reviewer harness was not persisted: session=%+v stored=%+v", sess, st.sessions["mer-1"])
 	}
 	if got := st.sessions["mer-2"].ReviewerHarness; got != "" {
@@ -2247,19 +2186,6 @@ func (f *fakeCommander) Spawn(_ context.Context, cfg ports.SpawnConfig) (domain.
 	}
 	return domain.SessionRecord{ID: "mer-9", ProjectID: cfg.ProjectID, Kind: cfg.Kind, Harness: cfg.Harness}, len(cfg.Prompt), 0, nil
 }
-func (*fakeCommander) SwitchAgent(context.Context, domain.SessionID, sessionmanager.SwitchAgentConfig) (domain.AgentSwitch, error) {
-	return domain.AgentSwitch{}, nil
-}
-
-func (*fakeCommander) RecoverAgentSwitch(context.Context, domain.SessionID, domain.AgentSwitchID) (domain.AgentSwitch, error) {
-	return domain.AgentSwitch{}, nil
-}
-func (*fakeCommander) ListAgentSwitches(context.Context, domain.SessionID) ([]domain.AgentSwitch, error) {
-	return nil, nil
-}
-func (*fakeCommander) SubmitAgentHandoff(context.Context, domain.SessionID, domain.AgentSwitchID, domain.AgentGenerationID, json.RawMessage) (domain.AgentSwitch, error) {
-	return domain.AgentSwitch{}, nil
-}
 func (f *fakeCommander) RestoreWithMode(context.Context, domain.SessionID) (sessionmanager.RestoreResult, error) {
 	if f.restoreErr != nil {
 		return sessionmanager.RestoreResult{}, f.restoreErr
@@ -2844,7 +2770,7 @@ func TestSpawnEmitsTelemetryOnSuccess(t *testing.T) {
 	_, _, _, err := svc.Spawn(context.Background(), ports.SpawnConfig{
 		ProjectID: "mer",
 		Kind:      domain.KindWorker,
-		Harness:   domain.HarnessCodex,
+		Harness:   domain.HarnessFake,
 	})
 	if err != nil {
 		t.Fatalf("Spawn: %v", err)
@@ -2871,7 +2797,7 @@ func TestSpawnEmitsTelemetryOnFailure(t *testing.T) {
 	_, _, _, err := svc.Spawn(context.Background(), ports.SpawnConfig{
 		ProjectID: "mer",
 		Kind:      domain.KindWorker,
-		Harness:   domain.HarnessCodex,
+		Harness:   domain.HarnessFake,
 	})
 	if err == nil {
 		t.Fatal("Spawn error = nil, want failure")
@@ -2916,7 +2842,7 @@ func TestSpawnEmitsTypedErrorCodeOnFailure(t *testing.T) {
 	_, _, _, err := svc.Spawn(context.Background(), ports.SpawnConfig{
 		ProjectID: "mer",
 		Kind:      domain.KindWorker,
-		Harness:   domain.HarnessCodex,
+		Harness:   domain.HarnessFake,
 	})
 	if err == nil {
 		t.Fatal("Spawn error = nil, want failure")
@@ -2962,7 +2888,7 @@ func TestSpawnEmitsTypedErrorCodeForRuntimeFailure(t *testing.T) {
 	_, _, _, err := svc.Spawn(context.Background(), ports.SpawnConfig{
 		ProjectID: "mer",
 		Kind:      domain.KindWorker,
-		Harness:   domain.HarnessCodex,
+		Harness:   domain.HarnessFake,
 	})
 	if err == nil {
 		t.Fatal("Spawn error = nil, want failure")
@@ -2993,7 +2919,7 @@ func TestEmitSpawnFailedClassifiesRawStageSentinel(t *testing.T) {
 	svc.emitSpawnFailed(context.Background(), ports.SpawnConfig{
 		ProjectID: "mer",
 		Kind:      domain.KindWorker,
-		Harness:   domain.HarnessCodex,
+		Harness:   domain.HarnessFake,
 	}, raw, 42)
 
 	if len(ts.events) != 1 {
@@ -3021,43 +2947,6 @@ func TestToSpawnAPIErrorIsIdempotentForMappedErrors(t *testing.T) {
 	}
 }
 
-func TestToAPIErrorSwitchDeliveryUnconfirmedMessage(t *testing.T) {
-	err := fmt.Errorf("switch agent mer-1: confirm continuation: %w", sessionmanager.ErrSwitchDeliveryUnconfirmed)
-	mapped := toAPIError(err)
-
-	var apiError *apierr.Error
-	if !errors.As(mapped, &apiError) {
-		t.Fatalf("mapped = %v, want *apierr.Error", mapped)
-	}
-	if apiError.Kind != apierr.KindConflict {
-		t.Fatalf("kind = %v, want %v", apiError.Kind, apierr.KindConflict)
-	}
-	if apiError.Code != "AGENT_SWITCH_DELIVERY_UNCONFIRMED" {
-		t.Fatalf("code = %q, want AGENT_SWITCH_DELIVERY_UNCONFIRMED", apiError.Code)
-	}
-	const wantMessage = "The target agent started, but AO could not confirm that it accepted the continuation"
-	if apiError.Message != wantMessage {
-		t.Fatalf("message = %q, want %q", apiError.Message, wantMessage)
-	}
-}
-
-func TestToAPIErrorPreservesReportingOwnerAcrossMapping(t *testing.T) {
-	raw := ownership.Own(
-		fmt.Errorf("switch agent mer-1: %w", sessionmanager.ErrSwitchInProgress),
-		ownership.OwnerAgentSwitchSaga,
-	)
-
-	mapped := toAPIError(raw)
-
-	if got := ownership.OwnerOf(mapped); got != ownership.OwnerAgentSwitchSaga {
-		t.Fatalf("OwnerOf(mapped) = %q, want %q", got, ownership.OwnerAgentSwitchSaga)
-	}
-	var apiError *apierr.Error
-	if !errors.As(mapped, &apiError) || apiError.Code != "AGENT_SWITCH_IN_PROGRESS" {
-		t.Fatalf("mapped = %v, want AGENT_SWITCH_IN_PROGRESS", mapped)
-	}
-}
-
 func TestToAPIErrorDefaultsUnownedErrorsToHTTP(t *testing.T) {
 	mapped := toAPIError(errors.New("pre-admission storage unavailable"))
 	if got := ownership.OwnerOf(mapped); got != ownership.OwnerHTTP {
@@ -3082,7 +2971,7 @@ func TestRestoreMapsManagerModeToServiceView(t *testing.T) {
 		ID:        "mer-1",
 		ProjectID: "mer",
 		Kind:      domain.KindWorker,
-		Harness:   domain.HarnessCodex,
+		Harness:   domain.HarnessFake,
 		Activity:  domain.Activity{State: domain.ActivityIdle},
 	}
 	fc := &fakeCommander{
@@ -3111,7 +3000,7 @@ func TestResumeAgentMapsManagerModeToServiceView(t *testing.T) {
 		ID:        "mer-1",
 		ProjectID: "mer",
 		Kind:      domain.KindWorker,
-		Harness:   domain.HarnessCodex,
+		Harness:   domain.HarnessFake,
 		Activity:  domain.Activity{State: domain.ActivityIdle},
 	}
 	fc := &fakeCommander{
@@ -3137,7 +3026,7 @@ func TestExitAgentPreservesSessionAndMapsExitedReadModel(t *testing.T) {
 		ID:        "mer-1",
 		ProjectID: "mer",
 		Kind:      domain.KindWorker,
-		Harness:   domain.HarnessCodex,
+		Harness:   domain.HarnessFake,
 		Activity:  domain.Activity{State: domain.ActivityIdle},
 	}
 	fc := &fakeCommander{restoreResult: sessionmanager.RestoreResult{Session: rec}}
@@ -3162,7 +3051,7 @@ func TestSpawnGenericOrchestratorReturnsExistingActiveSession(t *testing.T) {
 		ID:        "mer-orch",
 		ProjectID: "mer",
 		Kind:      domain.KindOrchestrator,
-		Harness:   domain.HarnessCodex,
+		Harness:   domain.HarnessFake,
 	}
 	fc := &fakeCommander{}
 	svc := &Service{manager: fc, store: st}
@@ -3170,7 +3059,7 @@ func TestSpawnGenericOrchestratorReturnsExistingActiveSession(t *testing.T) {
 	got, promptBytes, systemPromptBytes, err := svc.Spawn(context.Background(), ports.SpawnConfig{
 		ProjectID:   "mer",
 		Kind:        domain.KindOrchestrator,
-		Harness:     domain.HarnessClaudeCode,
+		Harness:     domain.HarnessFake,
 		Prompt:      "start another orchestrator",
 		DisplayName: "duplicate",
 	})
@@ -3201,13 +3090,13 @@ func TestSpawnGenericOrchestratorAllowsReplacementAfterTermination(t *testing.T)
 		ID:        "mer-new",
 		ProjectID: "mer",
 		Kind:      domain.KindOrchestrator,
-		Harness:   domain.HarnessClaudeCode,
+		Harness:   domain.HarnessFake,
 	}}
 	svc := &Service{manager: fc, store: st}
 	cfg := ports.SpawnConfig{
 		ProjectID:   "mer",
 		Kind:        domain.KindOrchestrator,
-		Harness:     domain.HarnessClaudeCode,
+		Harness:     domain.HarnessFake,
 		Branch:      "feature/orchestrator",
 		Prompt:      "coordinate this project",
 		DisplayName: "coordinator",
@@ -3272,7 +3161,7 @@ func TestSpawnGenericOrchestratorSerializesConcurrentRequests(t *testing.T) {
 		return rec
 	}
 	svc := &Service{manager: fc, store: st}
-	cfg := ports.SpawnConfig{ProjectID: "mer", Kind: domain.KindOrchestrator, Harness: domain.HarnessCodex}
+	cfg := ports.SpawnConfig{ProjectID: "mer", Kind: domain.KindOrchestrator, Harness: domain.HarnessFake}
 
 	start := make(chan struct{})
 	results := make(chan domain.Session, 2)
@@ -3375,22 +3264,22 @@ func TestSpawnOrchestratorVerifiesReplacementHarness(t *testing.T) {
 	st := newFakeStore()
 	st.projects["mer"] = domain.ProjectRecord{
 		ID:     "mer",
-		Config: domain.ProjectConfig{Orchestrator: domain.RoleOverride{Harness: domain.HarnessCodex}},
+		Config: domain.ProjectConfig{Orchestrator: domain.RoleOverride{Harness: domain.HarnessPi}},
 	}
 	fc := &fakeCommander{
 		spawnRecord: domain.SessionRecord{
 			ID:        "mer-9",
 			ProjectID: "mer",
 			Kind:      domain.KindOrchestrator,
-			Harness:   domain.HarnessClaudeCode,
+			Harness:   domain.HarnessFake, // simulated mismatch between recorded and configured harness
 			Metadata:  domain.SessionMetadata{Branch: "ao/mer-orchestrator"},
 		},
 	}
 	svc := &Service{manager: fc, store: st}
 
 	_, err := svc.SpawnOrchestrator(context.Background(), "mer", false, "")
-	if err == nil || !strings.Contains(err.Error(), `uses harness "claude-code", want "codex"`) {
-		t.Fatalf("SpawnOrchestrator err = %v, want harness verification failure", err)
+	if err == nil || !strings.Contains(err.Error(), "harness") {
+		t.Fatalf("SpawnOrchestrator err = %v, want harness verification failure for stale recorded harness", err)
 	}
 }
 
@@ -3406,7 +3295,7 @@ func TestDelegateTaskPassesAttachmentsToSpawnConfig(t *testing.T) {
 	_, err := svc.DelegateTask(context.Background(), DelegateTaskInput{
 		ProjectID:      "mer",
 		Brief:          "Use the attached image.",
-		RequestedAgent: domain.HarnessCodex,
+		RequestedAgent: domain.HarnessPi,
 		Attachments: []ports.SpawnAttachment{
 			{Ext: ".png", Data: []byte{1, 2, 3}},
 		},
@@ -3420,7 +3309,7 @@ func TestDelegateTaskPassesAttachmentsToSpawnConfig(t *testing.T) {
 	if fc.spawnedCfg.ProjectID != "mer" || fc.spawnedCfg.Kind != domain.KindWorker {
 		t.Fatalf("spawned cfg identity = %#v", fc.spawnedCfg)
 	}
-	if fc.spawnedCfg.Harness != domain.HarnessCodex || fc.spawnedCfg.Prompt != "Use the attached image." {
+	if fc.spawnedCfg.Harness != domain.HarnessPi || fc.spawnedCfg.Prompt != "Use the attached image." {
 		t.Fatalf("spawned cfg fields = %#v", fc.spawnedCfg)
 	}
 	if len(fc.spawnedCfg.Attachments) != 1 {

@@ -290,7 +290,7 @@ INSERT INTO projects (
 	rec := domain.SessionRecord{
 		ProjectID: "mer",
 		Kind:      domain.KindWorker,
-		Harness:   domain.HarnessClaudeCode,
+		Harness:   domain.HarnessFake,
 		Activity:  domain.Activity{State: domain.ActivityActive},
 		Metadata: domain.SessionMetadata{
 			Branch:        "ao/mer-1/root",
@@ -320,7 +320,7 @@ INSERT INTO projects (
 		ID:               "review-1",
 		SessionID:        created.ID,
 		ProjectID:        "mer",
-		Harness:          domain.ReviewerCodex,
+		Harness:          domain.ReviewerPi,
 		ReviewerHandleID: "review-mer-1",
 		AgentSessionID:   "reviewer-native-1",
 		CreatedAt:        now,
@@ -328,7 +328,7 @@ INSERT INTO projects (
 	}); err != nil {
 		t.Fatalf("upsert review on repaired schema: %v", err)
 	}
-	review, ok, err := store.GetReviewBySessionAndHarness(ctx, created.ID, domain.ReviewerCodex)
+	review, ok, err := store.GetReviewBySessionAndHarness(ctx, created.ID, domain.ReviewerPi)
 	if err != nil {
 		t.Fatalf("get review on repaired schema: %v", err)
 	}

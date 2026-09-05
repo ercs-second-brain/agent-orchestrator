@@ -34,7 +34,7 @@ const (
 	// DefaultAgent is the compatibility value used when AO_AGENT is unset. The
 	// daemon validates it at startup, but worker/orchestrator spawns resolve from
 	// explicit requests or project role config instead of falling back to it.
-	DefaultAgent = "claude-code"
+	DefaultAgent = "pi"
 )
 
 // TelemetryConfig controls local telemetry behavior.

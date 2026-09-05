@@ -989,49 +989,6 @@ func TestTerminalPersistenceFailureOverridesStaleActiveDurableJob(t *testing.T) 
 	}
 }
 
-func TestDroidInstallIsBlockedWhileDroidSessionIsActive(t *testing.T) {
-	s := newTestService("darwin", "brew")
-	s.sessions = sessionListerStub{sessions: []domain.SessionRecord{{Harness: domain.HarnessDroid, IsTerminated: false}}}
-	_, err := s.StartAgent(context.Background(), TargetDroid, "homebrew")
-	if !errors.Is(err, ErrHarnessActive) {
-		t.Fatalf("StartAgent error = %v, want ErrHarnessActive", err)
-	}
-}
-
-func TestDroidInstallIsBlockedWhileDroidSessionIsStarting(t *testing.T) {
-	s := newTestService("darwin", "brew")
-	release, ok := s.TryBeginHarnessUse(domain.HarnessDroid)
-	if !ok {
-		t.Fatal("TryBeginHarnessUse unexpectedly rejected without an install")
-	}
-	defer release()
-
-	if _, err := s.StartAgent(context.Background(), TargetDroid, "homebrew"); !errors.Is(err, ErrHarnessActive) {
-		t.Fatalf("StartAgent error = %v, want ErrHarnessActive", err)
-	}
-}
-
-func TestDroidInstallAllowsTerminatedSessionAndOtherHarnesses(t *testing.T) {
-	for _, tt := range []struct {
-		name     string
-		target   Target
-		sessions []domain.SessionRecord
-	}{
-		{name: "terminated droid", target: TargetDroid, sessions: []domain.SessionRecord{{Harness: domain.HarnessDroid, IsTerminated: true}}},
-		{name: "active codex does not block droid", target: TargetDroid, sessions: []domain.SessionRecord{{Harness: domain.HarnessCodex, IsTerminated: false}}},
-		{name: "active droid does not block codex", target: TargetCodex, sessions: []domain.SessionRecord{{Harness: domain.HarnessDroid, IsTerminated: false}}},
-	} {
-		t.Run(tt.name, func(t *testing.T) {
-			s := newTestService("darwin", "brew")
-			s.sessions = sessionListerStub{sessions: tt.sessions}
-			s.commands = commandRunnerFunc(func(context.Context, []string, io.Writer, io.Writer) error { return errors.New("stop after guard") })
-			if _, err := s.StartAgent(context.Background(), tt.target, "homebrew"); err != nil {
-				t.Fatalf("StartAgent: %v", err)
-			}
-		})
-	}
-}
-
 func waitForStatus(t *testing.T, s *Service, target Target, want Status) {
 	t.Helper()
 	deadline := time.Now().Add(2 * time.Second)

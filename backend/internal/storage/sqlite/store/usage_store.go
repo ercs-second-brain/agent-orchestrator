@@ -656,10 +656,9 @@ func usageAggregateFromGen(row gen.AggregateUsageBySessionHarnessModelRow) domai
 }
 
 func validateUsageEvent(harness domain.AgentHarness, event domain.ModelUsageEvent) error {
+	// Usage bindings only ever recorded Anthropic-provider events since the
+	// single-agent consolidation; historical rows keep their stored provider.
 	expectedProvider := domain.UsageProviderAnthropic
-	if harness == domain.HarnessCodex {
-		expectedProvider = domain.UsageProviderOpenAI
-	}
 	if event.ProviderID != expectedProvider || event.ModelID == "" || event.SourceEventKey == "" {
 		return fmt.Errorf("invalid usage event identity for %s", harness)
 	}

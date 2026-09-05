@@ -149,8 +149,8 @@ func newStack(t *testing.T) *stack {
 		Path:         "/repo/mer",
 		RegisteredAt: time.Now(),
 		Config: domain.ProjectConfig{
-			Worker:       domain.RoleOverride{Harness: domain.HarnessClaudeCode},
-			Orchestrator: domain.RoleOverride{Harness: domain.HarnessClaudeCode},
+			Worker:       domain.RoleOverride{Harness: domain.HarnessFake},
+			Orchestrator: domain.RoleOverride{Harness: domain.HarnessFake},
 		},
 	}); err != nil {
 		t.Fatal(err)
@@ -291,7 +291,7 @@ func TestReconcile_PreservesFailedLiveSessionAndReapsLeakedTmux(t *testing.T) {
 	recA := domain.SessionRecord{
 		ProjectID:    "mer",
 		Kind:         domain.KindWorker,
-		Harness:      domain.HarnessClaudeCode,
+		Harness:      domain.HarnessFake,
 		IsTerminated: false,
 		Metadata: domain.SessionMetadata{
 			Branch:          "ao/mer-a/root",
@@ -311,7 +311,7 @@ func TestReconcile_PreservesFailedLiveSessionAndReapsLeakedTmux(t *testing.T) {
 	recB := domain.SessionRecord{
 		ProjectID:    "mer",
 		Kind:         domain.KindWorker,
-		Harness:      domain.HarnessClaudeCode,
+		Harness:      domain.HarnessFake,
 		IsTerminated: true,
 		Metadata: domain.SessionMetadata{
 			Branch:          "ao/mer-b/root",

@@ -24,16 +24,6 @@ func readinessAgentsJSON(agent, installation, authentication string) string {
 		`,"effectiveReadiness":"unknown","usageCount":0}]}`
 }
 
-func TestSpawnHelpListsPrimeAgentHarness(t *testing.T) {
-	out, errOut, err := executeCLI(t, Deps{}, "spawn", "--help")
-	if err != nil {
-		t.Fatalf("spawn --help: %v\nstderr: %s", err, errOut)
-	}
-	if !strings.Contains(out, "prime-agent") {
-		t.Fatalf("spawn help does not list prime-agent:\n%s", out)
-	}
-}
-
 // TestSpawnCommand_MissingProjectContext asserts `ao spawn` gives a project
 // setup hint when neither --project, AO_PROJECT_ID, nor cwd can resolve one.
 func TestSpawnCommand_MissingProjectContext(t *testing.T) {
@@ -51,7 +41,7 @@ func TestSpawnCommand_MissingProjectContext(t *testing.T) {
 	t.Cleanup(srv.Close)
 	writeRunFileFor(t, cfg, srv)
 
-	_, _, err := executeCLI(t, Deps{ProcessAlive: func(int) bool { return true }}, "spawn", "--agent", "codex", "--name", "worker")
+	_, _, err := executeCLI(t, Deps{ProcessAlive: func(int) bool { return true }}, "spawn", "--name", "worker")
 	if err == nil {
 		t.Fatal("expected an error when project context is missing")
 	}
@@ -105,7 +95,7 @@ func TestSpawnClaimPRWiring(t *testing.T) {
 	t.Cleanup(srv.Close)
 	writeRunFileFor(t, cfg, srv)
 
-	out, errOut, err := executeCLI(t, Deps{ProcessAlive: func(int) bool { return true }}, "spawn", "--project", "demo", "--agent", "codex", "--name", "worker", "--claim-pr", "142", "--no-takeover")
+	out, errOut, err := executeCLI(t, Deps{ProcessAlive: func(int) bool { return true }}, "spawn", "--project", "demo", "--name", "worker", "--claim-pr", "142", "--no-takeover")
 	if err != nil {
 		t.Fatalf("spawn claim-pr failed: %v stderr=%s", err, errOut)
 	}
@@ -147,7 +137,7 @@ func TestSpawnClaimPR_Draft(t *testing.T) {
 	t.Cleanup(srv.Close)
 	writeRunFileFor(t, cfg, srv)
 
-	out, errOut, err := executeCLI(t, Deps{ProcessAlive: func(int) bool { return true }}, "spawn", "--project", "demo", "--agent", "codex", "--name", "worker", "--claim-pr", "4168")
+	out, errOut, err := executeCLI(t, Deps{ProcessAlive: func(int) bool { return true }}, "spawn", "--project", "demo", "--name", "worker", "--claim-pr", "4168")
 	if err != nil {
 		t.Fatalf("spawn claim-pr draft failed: %v stderr=%s", err, errOut)
 	}
@@ -188,7 +178,7 @@ func TestSpawnClaimPR_GitLab(t *testing.T) {
 	t.Cleanup(srv.Close)
 	writeRunFileFor(t, cfg, srv)
 
-	out, errOut, err := executeCLI(t, Deps{ProcessAlive: func(int) bool { return true }}, "spawn", "--project", "demo", "--agent", "codex", "--name", "worker", "--claim-pr", "https://gitlab.com/castai/ctxd/-/merge_requests/9", "--no-takeover")
+	out, errOut, err := executeCLI(t, Deps{ProcessAlive: func(int) bool { return true }}, "spawn", "--project", "demo", "--name", "worker", "--claim-pr", "https://gitlab.com/castai/ctxd/-/merge_requests/9", "--no-takeover")
 	if err != nil {
 		t.Fatalf("spawn claim-pr gitlab failed: %v stderr=%s", err, errOut)
 	}
@@ -232,7 +222,7 @@ func TestSpawnClaimPRFailureRollsBackSession(t *testing.T) {
 	t.Cleanup(srv.Close)
 	writeRunFileFor(t, cfg, srv)
 
-	_, _, err := executeCLI(t, Deps{ProcessAlive: func(int) bool { return true }}, "spawn", "--project", "demo", "--agent", "codex", "--name", "worker", "--claim-pr", "142")
+	_, _, err := executeCLI(t, Deps{ProcessAlive: func(int) bool { return true }}, "spawn", "--project", "demo", "--name", "worker", "--claim-pr", "142")
 	if err == nil {
 		t.Fatal("expected spawn claim failure")
 	}
@@ -259,7 +249,7 @@ func TestSpawnNoTakeoverRequiresClaimPR(t *testing.T) {
 // TestSpawnCommand_RequiresName asserts `ao spawn` rejects a missing --name
 // without contacting the daemon.
 func TestSpawnCommand_RequiresName(t *testing.T) {
-	_, _, err := executeCLI(t, Deps{}, "spawn", "--project", "demo", "--agent", "codex")
+	_, _, err := executeCLI(t, Deps{}, "spawn", "--project", "demo", )
 	if err == nil || ExitCode(err) != 2 || !strings.Contains(err.Error(), "--name is required") {
 		t.Fatalf("err=%v exit=%d, want --name is required", err, ExitCode(err))
 	}
@@ -313,7 +303,7 @@ func TestSpawnConfirmationIncludesDisplayName(t *testing.T) {
 			writeRunFileFor(t, cfg, srv)
 
 			out, errOut, err := executeCLI(t, Deps{ProcessAlive: func(int) bool { return true }},
-				"spawn", "--project", "demo", "--agent", "codex", "--name", "worker")
+				"spawn", "--project", "demo", "--name", "worker")
 			if err != nil {
 				t.Fatalf("spawn failed: %v stderr=%s", err, errOut)
 			}
@@ -359,7 +349,7 @@ func TestSpawnResolvesProjectFromEnvAndDefaultAgent(t *testing.T) {
 	if !strings.Contains(out, "[prompt 0 B, system 123 B]") {
 		t.Fatalf("output missing system-only prompt metrics: %s", out)
 	}
-	if req.ProjectID != "demo" || req.Harness != "codex" || req.DisplayName != "worker" {
+	if req.ProjectID != "demo" || req.Harness != "pi" || req.DisplayName != "worker" {
 		t.Fatalf("spawn request = %#v", req)
 	}
 	want := []string{"GET /api/v1/projects/demo", "POST /api/v1/agents/readiness/ensure", "POST /api/v1/sessions"}
@@ -399,7 +389,7 @@ func TestSpawnResolvesProjectFromAOSessionID(t *testing.T) {
 	if err != nil {
 		t.Fatalf("spawn failed: %v stderr=%s", err, errOut)
 	}
-	if req.ProjectID != "demo" || req.Harness != "codex" {
+	if req.ProjectID != "demo" || req.Harness != "pi" {
 		t.Fatalf("spawn request = %#v", req)
 	}
 	want := []string{"GET /api/v1/sessions/demo-1", "GET /api/v1/projects/demo", "POST /api/v1/agents/readiness/ensure", "POST /api/v1/sessions"}
@@ -426,7 +416,7 @@ func TestSpawnAOSessionIDFailureRequiresProject(t *testing.T) {
 	writeRunFileFor(t, cfg, srv)
 	t.Setenv("AO_SESSION_ID", "missing")
 
-	_, _, err := executeCLI(t, Deps{ProcessAlive: func(int) bool { return true }}, "spawn", "--agent", "codex", "--name", "worker")
+	_, _, err := executeCLI(t, Deps{ProcessAlive: func(int) bool { return true }}, "spawn", "--name", "worker")
 	if err == nil || !strings.Contains(err.Error(), `project could not be resolved from AO_SESSION_ID "missing"; pass --project`) {
 		t.Fatalf("err=%v, want AO_SESSION_ID project error", err)
 	}
@@ -478,7 +468,7 @@ func TestSpawnResolvesProjectFromCWD(t *testing.T) {
 	if err != nil {
 		t.Fatalf("spawn failed: %v stderr=%s", err, errOut)
 	}
-	if req.ProjectID != "demo" || req.Harness != "codex" {
+	if req.ProjectID != "demo" || req.Harness != "pi" {
 		t.Fatalf("spawn request = %#v", req)
 	}
 }
@@ -516,7 +506,7 @@ func TestSpawnDefaultsToScratchWhenOnlyActiveProject(t *testing.T) {
 	if !strings.Contains(out, "spawned session scratch-1") {
 		t.Fatalf("output missing scratch session: %s", out)
 	}
-	if req.ProjectID != "scratch" || req.Harness != "codex" || req.Branch != "" {
+	if req.ProjectID != "scratch" || req.Harness != "pi" || req.Branch != "" {
 		t.Fatalf("spawn request = %#v", req)
 	}
 	want := []string{"GET /api/v1/projects", "GET /api/v1/projects/scratch", "POST /api/v1/agents/readiness/ensure", "POST /api/v1/sessions"}
@@ -531,8 +521,8 @@ func TestSpawnScratchRejectsGitOnlyFlags(t *testing.T) {
 		args    []string
 		wantErr string
 	}{
-		{name: "branch", args: []string{"spawn", "--project", "scratch", "--agent", "codex", "--name", "Scratch Task", "--branch", "feature/x"}, wantErr: "scratch projects do not support --branch"},
-		{name: "claim pr", args: []string{"spawn", "--project", "scratch", "--agent", "codex", "--name", "Scratch Task", "--claim-pr", "142"}, wantErr: "scratch projects do not support --claim-pr"},
+		{name: "branch", args: []string{"spawn", "--project", "scratch", "--name", "Scratch Task", "--branch", "feature/x"}, wantErr: "scratch projects do not support --branch"},
+		{name: "claim pr", args: []string{"spawn", "--project", "scratch", "--name", "Scratch Task", "--claim-pr", "142"}, wantErr: "scratch projects do not support --claim-pr"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			cfg := setConfigEnv(t)
@@ -586,14 +576,14 @@ func TestSpawnTargetedReadinessAllowsAuthorizedAgent(t *testing.T) {
 	t.Cleanup(srv.Close)
 	writeRunFileFor(t, cfg, srv)
 
-	_, errOut, err := executeCLI(t, Deps{ProcessAlive: func(int) bool { return true }}, "spawn", "--project", "demo", "--agent", "codex", "--name", "worker")
+	_, errOut, err := executeCLI(t, Deps{ProcessAlive: func(int) bool { return true }}, "spawn", "--project", "demo", "--name", "worker")
 	if err != nil {
 		t.Fatalf("spawn failed: %v stderr=%s", err, errOut)
 	}
 	if errOut != "" {
 		t.Fatalf("stderr = %q, want no warning after fresh authorized probe", errOut)
 	}
-	if req.ProjectID != "demo" || req.Harness != "codex" {
+	if req.ProjectID != "demo" || req.Harness != "pi" {
 		t.Fatalf("spawn request = %#v", req)
 	}
 	want := []string{"GET /api/v1/projects/demo", "POST /api/v1/agents/readiness/ensure", "POST /api/v1/sessions"}
@@ -626,14 +616,14 @@ func TestSpawnUnauthorizedReadinessWarnsAndAllows(t *testing.T) {
 	t.Cleanup(srv.Close)
 	writeRunFileFor(t, cfg, srv)
 
-	_, errOut, err := executeCLI(t, Deps{ProcessAlive: func(int) bool { return true }}, "spawn", "--project", "demo", "--agent", "codex", "--name", "worker")
+	_, errOut, err := executeCLI(t, Deps{ProcessAlive: func(int) bool { return true }}, "spawn", "--project", "demo", "--name", "worker")
 	if err != nil {
 		t.Fatalf("spawn failed: %v stderr=%s", err, errOut)
 	}
 	if !strings.Contains(errOut, "may need auth according to daemon readiness") {
 		t.Fatalf("stderr missing warning: %s", errOut)
 	}
-	if req.ProjectID != "demo" || req.Harness != "codex" {
+	if req.ProjectID != "demo" || req.Harness != "pi" {
 		t.Fatalf("spawn request = %#v", req)
 	}
 	want := []string{"GET /api/v1/projects/demo", "POST /api/v1/agents/readiness/ensure", "POST /api/v1/sessions"}
@@ -666,46 +656,17 @@ func TestSpawnUnknownAuthReadinessWarnsAndAllows(t *testing.T) {
 	t.Cleanup(srv.Close)
 	writeRunFileFor(t, cfg, srv)
 
-	_, errOut, err := executeCLI(t, Deps{ProcessAlive: func(int) bool { return true }}, "spawn", "--project", "demo", "--agent", "codex", "--name", "worker")
+	_, errOut, err := executeCLI(t, Deps{ProcessAlive: func(int) bool { return true }}, "spawn", "--project", "demo", "--name", "worker")
 	if err != nil {
 		t.Fatalf("spawn failed: %v stderr=%s", err, errOut)
 	}
 	if !strings.Contains(errOut, "auth status is unknown") {
 		t.Fatalf("stderr missing warning: %s", errOut)
 	}
-	if req.ProjectID != "demo" || req.Harness != "codex" {
+	if req.ProjectID != "demo" || req.Harness != "pi" {
 		t.Fatalf("spawn request = %#v", req)
 	}
 	want := []string{"GET /api/v1/projects/demo", "POST /api/v1/agents/readiness/ensure", "POST /api/v1/sessions"}
-	if !reflect.DeepEqual(requests, want) {
-		t.Fatalf("requests=%#v want %#v", requests, want)
-	}
-}
-
-func TestSpawnUnsupportedAgentReadinessBlocks(t *testing.T) {
-	cfg := setConfigEnv(t)
-	var requests []string
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		appendPrimaryRequest(&requests, r)
-		w.Header().Set("Content-Type", "application/json")
-		switch {
-		case r.Method == http.MethodGet && r.URL.Path == "/api/v1/projects/demo":
-			_, _ = io.WriteString(w, `{"status":"ok","project":{"id":"demo","name":"Demo","path":"/repo/demo"}}`)
-		case r.Method == http.MethodPost && r.URL.Path == "/api/v1/agents/readiness/ensure":
-			w.WriteHeader(http.StatusBadRequest)
-			_, _ = io.WriteString(w, `{"error":"bad_request","message":"Unknown agent adapter: unknown","code":"UNKNOWN_AGENT_ID","requestId":"req-unknown"}`)
-		default:
-			http.NotFound(w, r)
-		}
-	}))
-	t.Cleanup(srv.Close)
-	writeRunFileFor(t, cfg, srv)
-
-	_, _, err := executeCLI(t, Deps{ProcessAlive: func(int) bool { return true }}, "spawn", "--project", "demo", "--agent", "unknown", "--name", "worker")
-	if err == nil || !strings.Contains(err.Error(), "agent \"unknown\" is not supported") {
-		t.Fatalf("err=%v, want unsupported", err)
-	}
-	want := []string{"GET /api/v1/projects/demo", "POST /api/v1/agents/readiness/ensure"}
 	if !reflect.DeepEqual(requests, want) {
 		t.Fatalf("requests=%#v want %#v", requests, want)
 	}
@@ -729,9 +690,9 @@ func TestSpawnNotInstalledAgentReadinessBlocks(t *testing.T) {
 	t.Cleanup(srv.Close)
 	writeRunFileFor(t, cfg, srv)
 
-	_, _, err := executeCLI(t, Deps{ProcessAlive: func(int) bool { return true }}, "spawn", "--project", "demo", "--agent", "codex", "--name", "worker")
-	if err == nil || !strings.Contains(err.Error(), "agent \"codex\" needs install") {
-		t.Fatalf("err=%v, want needs install", err)
+	_, _, err := executeCLI(t, Deps{ProcessAlive: func(int) bool { return true }}, "spawn", "--project", "demo", "--name", "worker")
+	if err == nil || !strings.Contains(err.Error(), "agent \"pi\" needs install") {
+		t.Fatalf("err=%v, want needs install (pi)", err)
 	}
 	want := []string{"GET /api/v1/projects/demo", "POST /api/v1/agents/readiness/ensure"}
 	if !reflect.DeepEqual(requests, want) {
@@ -763,14 +724,14 @@ func TestSpawnInstalledWithUnknownAuthWarnsAndAllows(t *testing.T) {
 	t.Cleanup(srv.Close)
 	writeRunFileFor(t, cfg, srv)
 
-	_, errOut, err := executeCLI(t, Deps{ProcessAlive: func(int) bool { return true }}, "spawn", "--project", "demo", "--agent", "codex", "--name", "worker")
+	_, errOut, err := executeCLI(t, Deps{ProcessAlive: func(int) bool { return true }}, "spawn", "--project", "demo", "--name", "worker")
 	if err != nil {
 		t.Fatalf("spawn failed: %v stderr=%s", err, errOut)
 	}
 	if !strings.Contains(errOut, "auth status is unknown") {
 		t.Fatalf("stderr missing warning: %s", errOut)
 	}
-	if req.ProjectID != "demo" || req.Harness != "codex" {
+	if req.ProjectID != "demo" || req.Harness != "pi" {
 		t.Fatalf("spawn request = %#v", req)
 	}
 	want := []string{"GET /api/v1/projects/demo", "POST /api/v1/agents/readiness/ensure", "POST /api/v1/sessions"}
@@ -803,14 +764,14 @@ func TestSpawnUnknownInstallationWarnsAndAllows(t *testing.T) {
 	t.Cleanup(srv.Close)
 	writeRunFileFor(t, cfg, srv)
 
-	_, errOut, err := executeCLI(t, Deps{ProcessAlive: func(int) bool { return true }}, "spawn", "--project", "demo", "--agent", "codex", "--name", "worker")
+	_, errOut, err := executeCLI(t, Deps{ProcessAlive: func(int) bool { return true }}, "spawn", "--project", "demo", "--name", "worker")
 	if err != nil {
 		t.Fatalf("spawn failed: %v stderr=%s", err, errOut)
 	}
 	if !strings.Contains(errOut, "installation status is unknown") {
 		t.Fatalf("stderr missing warning: %s", errOut)
 	}
-	if req.ProjectID != "demo" || req.Harness != "codex" {
+	if req.ProjectID != "demo" || req.Harness != "pi" {
 		t.Fatalf("spawn request = %#v", req)
 	}
 	want := []string{"GET /api/v1/projects/demo", "POST /api/v1/agents/readiness/ensure", "POST /api/v1/sessions"}
@@ -838,7 +799,7 @@ func TestSpawnReadinessServerErrorBlocks(t *testing.T) {
 	t.Cleanup(srv.Close)
 	writeRunFileFor(t, cfg, srv)
 
-	_, _, err := executeCLI(t, Deps{ProcessAlive: func(int) bool { return true }}, "spawn", "--project", "demo", "--agent", "codex", "--name", "worker")
+	_, _, err := executeCLI(t, Deps{ProcessAlive: func(int) bool { return true }}, "spawn", "--project", "demo", "--name", "worker")
 	if err == nil || !strings.Contains(err.Error(), "probe failed (PROBE_FAILED) [request req-1]") {
 		t.Fatalf("err=%v, want probe server error", err)
 	}
@@ -870,11 +831,11 @@ func TestSpawnSkipAgentCheckBypassesOnlyPreflight(t *testing.T) {
 	t.Cleanup(srv.Close)
 	writeRunFileFor(t, cfg, srv)
 
-	_, errOut, err := executeCLI(t, Deps{ProcessAlive: func(int) bool { return true }}, "spawn", "--project", "demo", "--agent", "unsupported", "--skip-agent-check", "--name", "worker")
+	_, errOut, err := executeCLI(t, Deps{ProcessAlive: func(int) bool { return true }}, "spawn", "--project", "demo", "--skip-agent-check", "--name", "worker")
 	if err != nil {
 		t.Fatalf("spawn failed: %v stderr=%s", err, errOut)
 	}
-	if req.ProjectID != "demo" || req.Harness != "unsupported" {
+	if req.ProjectID != "demo" || req.Harness != "pi" {
 		t.Fatalf("spawn request = %#v", req)
 	}
 	want := []string{"GET /api/v1/projects/demo", "POST /api/v1/sessions"}
@@ -905,14 +866,14 @@ func TestSpawnUnknownAuthEnsureWarnsAndAllows(t *testing.T) {
 	t.Cleanup(srv.Close)
 	writeRunFileFor(t, cfg, srv)
 
-	_, errOut, err := executeCLI(t, Deps{ProcessAlive: func(int) bool { return true }}, "spawn", "--project", "demo", "--agent", "codex", "--name", "worker")
+	_, errOut, err := executeCLI(t, Deps{ProcessAlive: func(int) bool { return true }}, "spawn", "--project", "demo", "--name", "worker")
 	if err != nil {
 		t.Fatalf("spawn failed: %v stderr=%s", err, errOut)
 	}
 	if !strings.Contains(errOut, "auth status is unknown") {
 		t.Fatalf("stderr missing warning: %s", errOut)
 	}
-	if req.ProjectID != "demo" || req.Harness != "codex" {
+	if req.ProjectID != "demo" || req.Harness != "pi" {
 		t.Fatalf("spawn request = %#v", req)
 	}
 }
@@ -930,34 +891,41 @@ func TestSpawnCommand_RejectsInvalidKind(t *testing.T) {
 }
 
 // TestResolveSpawnHarness_OrchestratorDefault asserts the orchestrator role falls
-// back to the project's orchestrator agent (and worker to the worker agent), while
-// an explicit --agent always wins.
+// back to the project's orchestrator agent (and worker to the worker agent).
+// There is no per-invocation --harness flag: pi is the only supported harness
+// and project config is the sole override surface.
 func TestResolveSpawnHarness_OrchestratorDefault(t *testing.T) {
 	project := projectDetails{
+		ID: "demo",
+		Config: &projectConfig{
+			Worker:       roleOverride{Agent: "pi"},
+			Orchestrator: roleOverride{Agent: "pi"},
+		},
+	}
+	if got, err := resolveSpawnHarness("orchestrator", project); err != nil || got != "pi" {
+		t.Fatalf("orchestrator default: got %q err %v, want pi", got, err)
+	}
+	if got, err := resolveSpawnHarness("worker", project); err != nil || got != "pi" {
+		t.Fatalf("worker default: got %q err %v, want pi", got, err)
+	}
+	// Unset kind is the default `ao spawn` path and must resolve to worker.agent.
+	if got, err := resolveSpawnHarness("", project); err != nil || got != "pi" {
+		t.Fatalf("unset kind: got %q err %v, want pi", got, err)
+	}
+	// Stored non-pi role overrides are preserved but ignored (store-and-ignore);
+	// every spawn resolves to pi regardless of what the project recorded.
+	stale := projectDetails{
 		ID: "demo",
 		Config: &projectConfig{
 			Worker:       roleOverride{Agent: "codex"},
 			Orchestrator: roleOverride{Agent: "claude-code"},
 		},
 	}
-	if got, err := resolveSpawnHarness("", "orchestrator", project); err != nil || got != "claude-code" {
-		t.Fatalf("orchestrator default: got %q err %v, want claude-code", got, err)
+	if got, err := resolveSpawnHarness("worker", stale); err != nil || got != "pi" {
+		t.Fatalf("stale worker override: got %q err %v, want pi", got, err)
 	}
-	if got, err := resolveSpawnHarness("", "worker", project); err != nil || got != "codex" {
-		t.Fatalf("worker default: got %q err %v, want codex", got, err)
-	}
-	if got, err := resolveSpawnHarness("aider", "orchestrator", project); err != nil || got != "aider" {
-		t.Fatalf("explicit agent: got %q err %v, want aider", got, err)
-	}
-	// Unset kind is the default `ao spawn` path and must resolve to worker.agent.
-	if got, err := resolveSpawnHarness("", "", project); err != nil || got != "codex" {
-		t.Fatalf("unset kind: got %q err %v, want codex", got, err)
-	}
-	// Orchestrator spawn with no orchestrator.agent configured surfaces the
-	// --orchestrator-agent hint (the error branch this PR adds).
-	noOrch := projectDetails{ID: "demo", Config: &projectConfig{Worker: roleOverride{Agent: "codex"}}}
-	if _, err := resolveSpawnHarness("", "orchestrator", noOrch); err == nil || !strings.Contains(err.Error(), "--orchestrator-agent") {
-		t.Fatalf("missing orchestrator agent: err=%v, want --orchestrator-agent hint", err)
+	if got, err := resolveSpawnHarness("orchestrator", stale); err != nil || got != "pi" {
+		t.Fatalf("stale orchestrator override: got %q err %v, want pi", got, err)
 	}
 }
 
@@ -985,7 +953,7 @@ func TestSpawnModelFlagWiring(t *testing.T) {
 	t.Cleanup(srv.Close)
 	writeRunFileFor(t, cfg, srv)
 
-	_, errOut, err := executeCLI(t, Deps{ProcessAlive: func(int) bool { return true }}, "spawn", "--project", "demo", "--agent", "codex", "--name", "worker", "--model", "gpt-5.6-sol")
+	_, errOut, err := executeCLI(t, Deps{ProcessAlive: func(int) bool { return true }}, "spawn", "--project", "demo", "--name", "worker", "--model", "gpt-5.6-sol")
 	if err != nil {
 		t.Fatalf("spawn failed: %v stderr=%s", err, errOut)
 	}
