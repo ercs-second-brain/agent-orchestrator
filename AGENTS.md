@@ -55,7 +55,12 @@ npm run typecheck
 npm run build
 ```
 
-When showing or demoing frontend changes, run `ao preview [url]` from inside the session so the change renders in the desktop browser panel (the inspector rail's Browser tab); do not just describe it.
+When showing or demoing frontend changes, run the app from a checkout (`npm run
+dev` in `frontend/`) and verify the change in the real Electron window; do not
+just describe it. There is no chat surface, no browser panel, and no preview
+server: sessions are terminal-first — every agent runs in its own tmux/conpty
+TUI attached through the daemon's mux, and [pi](docs/harnesses/pi.md) is the
+supported agent (see [ADR 0005](docs/adr/0005-single-agent-consolidation.md)).
 
 `npm run lint` runs the full backend `golangci-lint` pass, which takes 10-15 minutes cold-cache in a fresh worktree (see the "Lint" section of `docs/development.md`). For most work, do not run it: run the narrow checks instead (`cd backend && go build ./... && go test ./...`, or scoped `go test ./internal/...` for touched packages) and let CI's golangci-lint pass be the authority. Run the full local lint only when (a) CI reports lint findings, (b) you are iterating specifically on lint-sensitive code, or (c) you need fast local verification — and in that case scope it to changed packages, e.g. `golangci-lint run ./internal/cli/... ./internal/service/...`.
 
@@ -84,7 +89,7 @@ For code entry points:
 
 - The **desktop app** (GitHub Releases on `ercs-second-brain/agent-orchestrator`) is the install and auto-update path. `ao start` and electron-updater both read that repo. See `docs/release-repo.md`.
 - Tag `vX.Y.Z` to publish via `.github/workflows/release.yml`. Do not point updates at another owner's releases.
-- **npm is legacy.** `0.10.0` was the last `@aoagents/ao` publish; `ao start` now fetches *this* repo's desktop build.
+- **npm is legacy.** The last npm publish was `0.10.0` of the old `ao` package; `ao start` now fetches *this* repo's desktop build.
 - **Verify macOS artifacts with `frontend/scripts/verify-mac-artifact.sh`, never by hand.** Plain `unzip` breaks the seal.
 - **macOS ships both a `.zip` and a `.dmg`.** The dmg is first install only. The zip and `latest-mac.yml` must keep publishing: electron-updater cannot install an update from a dmg.
 
