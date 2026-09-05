@@ -491,8 +491,6 @@ func (r *SetSessionAutoReviewRequest) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-
-
 // SetSessionMergePolicyRequest is the body of PATCH /api/v1/sessions/{sessionId}/merge-policy.
 type SetSessionMergePolicyRequest struct {
 	TerminateOnPRMerge bool `json:"terminateOnPrMerge"`
