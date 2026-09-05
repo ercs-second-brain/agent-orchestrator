@@ -2433,55 +2433,8 @@ func TestSpawnOrchestratorCleanContinuesWhenRetireNoticeFails(t *testing.T) {
 	}
 }
 
-func TestSpawnOrchestratorCleanPreservesPersistedMode(t *testing.T) {
-	st := newFakeStore()
-	st.projects["mer"] = domain.ProjectRecord{ID: "mer"}
-	st.sessions["mer-1"] = domain.SessionRecord{
-		ID: "mer-1", ProjectID: "mer", Kind: domain.KindOrchestrator,
-		Mode: domain.SessionModeChat, CreatedAt: time.Unix(100, 0).UTC(),
-	}
-	fc := &fakeCommander{}
-	svc := &Service{manager: fc, store: st}
 
-	if _, err := svc.SpawnOrchestrator(context.Background(), "mer", true, ""); err != nil {
-		t.Fatalf("SpawnOrchestrator: %v", err)
-	}
-	if fc.spawnedCfg.RequestedMode != domain.SessionModeChat {
-		t.Fatalf("replacement mode = %q, want persisted chat", fc.spawnedCfg.RequestedMode)
-	}
-}
 
-func TestSpawnOrchestratorCleanHonorsExplicitReplacementMode(t *testing.T) {
-	st := newFakeStore()
-	st.projects["mer"] = domain.ProjectRecord{ID: "mer"}
-	st.sessions["mer-1"] = domain.SessionRecord{
-		ID: "mer-1", ProjectID: "mer", Kind: domain.KindOrchestrator,
-		Mode: domain.SessionModeTUI, CreatedAt: time.Unix(100, 0).UTC(),
-	}
-	fc := &fakeCommander{}
-	svc := &Service{manager: fc, store: st}
-
-	if _, err := svc.SpawnOrchestrator(context.Background(), "mer", true, domain.SessionModeChat); err != nil {
-		t.Fatalf("SpawnOrchestrator: %v", err)
-	}
-	if fc.spawnedCfg.RequestedMode != domain.SessionModeChat {
-		t.Fatalf("replacement mode = %q, want explicit chat", fc.spawnedCfg.RequestedMode)
-	}
-}
-
-func TestSpawnOrchestratorUsesExplicitModeForNewProjectOrchestrator(t *testing.T) {
-	st := newFakeStore()
-	st.projects["mer"] = domain.ProjectRecord{ID: "mer"}
-	fc := &fakeCommander{}
-	svc := &Service{manager: fc, store: st}
-
-	if _, err := svc.SpawnOrchestrator(context.Background(), "mer", false, domain.SessionModeChat); err != nil {
-		t.Fatalf("SpawnOrchestrator: %v", err)
-	}
-	if fc.spawnedCfg.RequestedMode != domain.SessionModeChat {
-		t.Fatalf("requested mode = %q, want chat", fc.spawnedCfg.RequestedMode)
-	}
-}
 
 func TestSpawnOrchestratorCleanRetireNoticeIsBranchNeutral(t *testing.T) {
 	st := newFakeStore()
@@ -2561,40 +2514,6 @@ func TestSpawnTreatsUnauthorizedReadinessAsAdvisory(t *testing.T) {
 	}
 }
 
-func TestSpawnInvalidatesReadinessAfterTypedLaunchFailure(t *testing.T) {
-	tests := []struct {
-		name             string
-		err              error
-		wantInstallation bool
-		wantAuth         bool
-	}{
-		{name: "binary missing", err: ports.ErrAgentBinaryNotFound, wantInstallation: true},
-		{name: "auth required", err: ports.ErrChatAuthRequired, wantAuth: true},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			st := newFakeStore()
-			st.projects["mer"] = domain.ProjectRecord{ID: "mer"}
-			fc := &fakeCommander{spawnErr: tt.err}
-			readiness := &fakeAgentReadiness{snapshot: domain.AgentReadinessSnapshot{
-				ID: "codex", Installation: domain.AgentInstallationObservation{State: domain.AgentInstallationInstalled},
-				Authentication: domain.AgentAuthenticationObservation{State: domain.AgentAuthenticationAuthorized},
-			}}
-			svc := NewWithDeps(Deps{Manager: fc, Store: st, AgentReadiness: readiness})
-
-			_, _, _, _ = svc.Spawn(context.Background(), ports.SpawnConfig{ProjectID: "mer", Kind: domain.KindWorker, Harness: "codex"})
-			if got := len(readiness.installationInvalidated) == 1; got != tt.wantInstallation {
-				t.Fatalf("installation invalidated = %v, want %v", got, tt.wantInstallation)
-			}
-			if got := len(readiness.authInvalidated) == 1; got != tt.wantAuth {
-				t.Fatalf("auth invalidated = %v, want %v", got, tt.wantAuth)
-			}
-			if len(readiness.rechecks) != 1 || readiness.rechecks[0] != "codex" {
-				t.Fatalf("rechecks = %#v, want codex", readiness.rechecks)
-			}
-		})
-	}
-}
 
 func TestSpawnEmitsFirstSessionOnboardingAndDuration(t *testing.T) {
 	st := newFakeStore()
@@ -3035,136 +2954,7 @@ func TestSpawnOrchestratorUnknownProjectReturns404(t *testing.T) {
 	}
 }
 
-// TestToAPIErrorMapsWorkspaceBranchSentinels covers Bug 3: the workspace
-// adapter's typed branch errors map to typed envelope errors instead of
-// collapsing to a 500.
-func TestToAPIErrorMapsWorkspaceBranchSentinels(t *testing.T) {
-	cases := []struct {
-		name     string
-		err      error
-		wantKind apierr.Kind
-		wantCode string
-	}{
-		{"checked out elsewhere", fmt.Errorf("spawn mer-1: workspace: %w: \"x\" is checked out at \"/tmp\"", ports.ErrWorkspaceBranchCheckedOutElsewhere), apierr.KindConflict, "BRANCH_CHECKED_OUT_ELSEWHERE"},
-		{"default branch unresolved", fmt.Errorf("spawn mer-1: %w: configure defaultBranch", ports.ErrWorkspaceDefaultBranchUnresolved), apierr.KindInvalid, "DEFAULT_BRANCH_UNRESOLVED"},
-		{"not fetched", fmt.Errorf("spawn mer-1: workspace: %w: \"x\" has no local head", ports.ErrWorkspaceBranchNotFetched), apierr.KindInvalid, "BRANCH_NOT_FETCHED"},
-		{"invalid branch", fmt.Errorf("spawn mer-1: workspace: %w: \"bad!!\" (exit 1)", ports.ErrWorkspaceBranchInvalid), apierr.KindInvalid, "INVALID_BRANCH"},
-		{"agent binary not found", fmt.Errorf("spawn mer-1: %w", ports.ErrAgentBinaryNotFound), apierr.KindInvalid, "AGENT_BINARY_NOT_FOUND"},
-		{"runtime prerequisite missing", fmt.Errorf("spawn: %w: tmux required on macOS/Linux but not in PATH", ports.ErrRuntimePrerequisite), apierr.KindInvalid, "RUNTIME_PREREQUISITE_MISSING"},
-		{"runtime workspace cwd mismatch", fmt.Errorf("spawn mer-1: runtime: %w: session mer-1 started in \"/deleted/shipit\", want \"/tmp/ws\"", ports.ErrRuntimeWorkspaceCwdMismatch), apierr.KindConflict, "WORKSPACE_CWD_MISMATCH"},
-		{"workspace locked", fmt.Errorf("restore mer-1: %w: \"/tmp/ws\" (branch \"ao/mer-1\") is registered but its directory is missing", ports.ErrWorkspaceLocked), apierr.KindConflict, "WORKSPACE_LOCKED"},
-		{"unknown harness", fmt.Errorf("spawn: %w: %q", sessionmanager.ErrUnknownHarness, "bogus"), apierr.KindInvalid, "UNKNOWN_HARNESS"},
-		{"missing harness", fmt.Errorf("spawn: %w: configure project worker.agent or pass --harness", sessionmanager.ErrMissingHarness), apierr.KindInvalid, "AGENT_REQUIRED"},
-		{"harness install active", fmt.Errorf("spawn: %w", sessionmanager.ErrHarnessInstallActive), apierr.KindConflict, "HARNESS_INSTALL_ACTIVE"},
-		{"awaiting decision", fmt.Errorf("send mer-1: %w", sessionmanager.ErrAwaitingDecision), apierr.KindConflict, "SESSION_AWAITING_DECISION"},
-		{"startup pending", fmt.Errorf("send mer-1: %w", sessionmanager.ErrStartupPending), apierr.KindConflict, "SESSION_STARTUP_PENDING"},
-		{"agent exited", fmt.Errorf("send mer-1: %w", sessionmanager.ErrAgentExited), apierr.KindConflict, "AGENT_EXITED"},
-		{"agent not exited", fmt.Errorf("resume agent mer-1: %w", sessionmanager.ErrAgentNotExited), apierr.KindConflict, "AGENT_NOT_EXITED"},
-		{"resume in progress", fmt.Errorf("resume agent mer-1: %w", sessionmanager.ErrResumeInProgress), apierr.KindConflict, "AGENT_RESUME_IN_PROGRESS"},
-		{"target agent unauthorized", fmt.Errorf("switch agent mer-1: %w", sessionmanager.ErrTargetAgentUnauthorized), apierr.KindInvalid, "TARGET_AGENT_UNAUTHORIZED"},
-		{"worker session required", fmt.Errorf("switch agent mer-orchestrator: %w", sessionmanager.ErrUnsupportedSwitchKind), apierr.KindInvalid, "WORKER_SESSION_REQUIRED"},
-		{"unsupported switch harness", fmt.Errorf("switch agent mer-1: %w", sessionmanager.ErrUnsupportedSwitchHarness), apierr.KindInvalid, "UNSUPPORTED_SWITCH_HARNESS"},
-		{"already using harness", fmt.Errorf("switch agent mer-1: %w", sessionmanager.ErrAlreadyUsingHarness), apierr.KindConflict, "ALREADY_USING_HARNESS"},
-		{"switch not found", fmt.Errorf("get switch: %w", sessionmanager.ErrSwitchNotFound), apierr.KindNotFound, "AGENT_SWITCH_NOT_FOUND"},
-		{"stale handoff", fmt.Errorf("submit handoff: %w", sessionmanager.ErrStaleHandoff), apierr.KindConflict, "STALE_AGENT_HANDOFF"},
-		{"invalid handoff", fmt.Errorf("submit handoff: %w", sessionmanager.ErrInvalidAgentHandoff), apierr.KindInvalid, "INVALID_AGENT_HANDOFF"},
-		{"switch delivery unconfirmed", fmt.Errorf("switch agent mer-1: %w", sessionmanager.ErrSwitchDeliveryUnconfirmed), apierr.KindConflict, "AGENT_SWITCH_DELIVERY_UNCONFIRMED"},
-		{"manager switch in progress", fmt.Errorf("switch agent mer-1: %w", sessionmanager.ErrSwitchInProgress), apierr.KindConflict, "AGENT_SWITCH_IN_PROGRESS"},
-		{"manager switch shutting down", fmt.Errorf("switch agent mer-1: %w", sessionmanager.ErrSwitchShuttingDown), apierr.KindConflict, "AGENT_SWITCH_UNAVAILABLE"},
-		{"manager switch unavailable", fmt.Errorf("switch agent mer-1: %w", sessionmanager.ErrSwitchUnavailable), apierr.KindConflict, "AGENT_SWITCH_UNAVAILABLE"},
-		{"switch in progress", fmt.Errorf("switch agent mer-1: %w", domain.ErrAgentSwitchInProgress), apierr.KindConflict, "AGENT_SWITCH_IN_PROGRESS"},
-		{"switch idempotency conflict", fmt.Errorf("switch agent mer-1: %w", domain.ErrAgentSwitchIdempotencyConflict), apierr.KindConflict, "AGENT_SWITCH_IDEMPOTENCY_CONFLICT"},
-		{"chat mode unsupported", fmt.Errorf("spawn: %w", ports.ErrChatUnsupported), apierr.KindConflict, "SESSION_MODE_UNSUPPORTED"},
-		{"chat driver unavailable", fmt.Errorf("spawn: %w", ports.ErrChatDriverUnavailable), apierr.KindConflict, "CHAT_DRIVER_UNAVAILABLE"},
-		{"chat driver incompatible", fmt.Errorf("spawn: %w", ports.ErrChatDriverIncompatible), apierr.KindConflict, "CHAT_DRIVER_INCOMPATIBLE"},
-		{"chat auth required", fmt.Errorf("spawn: %w", ports.ErrChatAuthRequired), apierr.KindConflict, "CHAT_AUTH_REQUIRED"},
-		{"interface notice not acknowledgeable", fmt.Errorf("acknowledge interface notice: %w", sessionmanager.ErrInterfaceTransitionNoticeNotAcknowledgeable), apierr.KindConflict, "INTERFACE_TRANSITION_NOTICE_NOT_ACKNOWLEDGEABLE"},
-		{"native conversation missing", fmt.Errorf("switch interface: %w", sessionmanager.ErrNativeConversationMissing), apierr.KindConflict, "NATIVE_SESSION_MISSING"},
-		{"native conversation unverified", fmt.Errorf("switch interface: %w", sessionmanager.ErrNativeConversationUnverified), apierr.KindConflict, "NATIVE_SESSION_UNVERIFIED"},
-	}
-	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
-			mapped := toAPIError(tc.err)
-			var e *apierr.Error
-			if !errors.As(mapped, &e) || e.Kind != tc.wantKind || e.Code != tc.wantCode {
-				t.Fatalf("mapped = %v, want %s %s", mapped, tc.wantCode, e)
-			}
-		})
-	}
-}
 
-func TestToSpawnAPIErrorMapsSpawnStageSentinels(t *testing.T) {
-	cases := []struct {
-		name     string
-		err      error
-		wantKind apierr.Kind
-		wantCode string
-	}{
-		{
-			"workspace create",
-			fmt.Errorf("spawn mer-1: %w: git worktree add failed", sessionmanager.ErrWorkspaceCreate),
-			apierr.KindConflict,
-			"WORKSPACE_CREATE_FAILED",
-		},
-		{
-			"workspace provision",
-			fmt.Errorf("spawn mer-1: %w: postCreate \"pnpm install\": exit 1", sessionmanager.ErrWorkspaceProvision),
-			apierr.KindConflict,
-			"WORKSPACE_PROVISION_FAILED",
-		},
-		{
-			"runtime create",
-			fmt.Errorf("spawn mer-1: %w: tmux runtime: create session mer-1: context deadline exceeded", sessionmanager.ErrRuntimeCreate),
-			apierr.KindInternal,
-			"RUNTIME_CREATE_FAILED",
-		},
-		{
-			"chat controller",
-			fmt.Errorf("spawn mer-1: %w: app-server exited", sessionmanager.ErrChatController),
-			apierr.KindConflict,
-			"CHAT_CONTROLLER_FAILED",
-		},
-		{
-			"spawn timeout",
-			context.DeadlineExceeded,
-			apierr.KindConflict,
-			"SPAWN_TIMEOUT",
-		},
-		{
-			"timeout wins over runtime stage",
-			fmt.Errorf("spawn mer-1: %w: %w", sessionmanager.ErrRuntimeCreate, context.DeadlineExceeded),
-			apierr.KindConflict,
-			"SPAWN_TIMEOUT",
-		},
-		{
-			"spawn cancelled",
-			context.Canceled,
-			apierr.KindConflict,
-			"SPAWN_CANCELLED",
-		},
-		{
-			"branch sentinel wins over workspace stage",
-			fmt.Errorf("spawn mer-1: %w: %w", sessionmanager.ErrWorkspaceCreate, ports.ErrWorkspaceBranchNotFetched),
-			apierr.KindInvalid,
-			"BRANCH_NOT_FETCHED",
-		},
-		{
-			"unclassified fallback",
-			errors.New("boom"),
-			apierr.KindInternal,
-			"SPAWN_INTERNAL",
-		},
-	}
-	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
-			mapped := toSpawnAPIError(tc.err)
-			var e *apierr.Error
-			if !errors.As(mapped, &e) || e.Kind != tc.wantKind || e.Code != tc.wantCode {
-				t.Fatalf("mapped = %v, want kind=%v code=%s", mapped, tc.wantKind, tc.wantCode)
-			}
-		})
-	}
-}
 
 func TestSpawnEmitsTypedErrorCodeForRuntimeFailure(t *testing.T) {
 	st := newFakeStore()
@@ -3281,29 +3071,6 @@ func TestToAPIErrorDefaultsUnownedErrorsToHTTP(t *testing.T) {
 	}
 }
 
-func TestToAPIErrorPreservesMissingChatCapabilityRecoveryDetails(t *testing.T) {
-	mapped := toAPIError(fmt.Errorf("spawn: %w", &ports.ChatCapabilityError{
-		Harness:                domain.HarnessPi,
-		Missing:                []ports.ChatCapability{ports.ChatCapabilityApprovals},
-		AllowedPermissionModes: []ports.PermissionMode{ports.PermissionModeBypassPermissions},
-	}))
-
-	var apiError *apierr.Error
-	if !errors.As(mapped, &apiError) {
-		t.Fatalf("mapped = %v, want *apierr.Error", mapped)
-	}
-	if apiError.Code != "SESSION_MODE_UNSUPPORTED" {
-		t.Fatalf("code = %q, want SESSION_MODE_UNSUPPORTED", apiError.Code)
-	}
-	missing, ok := apiError.Details["missingCapabilities"].([]string)
-	if !ok || len(missing) != 1 || missing[0] != "approvals" {
-		t.Fatalf("missingCapabilities = %#v, want [approvals]", apiError.Details["missingCapabilities"])
-	}
-	allowed, ok := apiError.Details["allowedApprovalModes"].([]string)
-	if !ok || len(allowed) != 1 || allowed[0] != "bypass-permissions" {
-		t.Fatalf("allowedApprovalModes = %#v, want [bypass-permissions]", apiError.Details["allowedApprovalModes"])
-	}
-}
 
 // TestToAPIError_NotResumable asserts that ErrNotResumable (promptless worker
 // with no adapter resume handle) maps to a Conflict with code SESSION_NOT_RESUMABLE.

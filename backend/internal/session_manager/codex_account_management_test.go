@@ -216,41 +216,6 @@ type ambiguousCodexSwitchStore struct {
 	session      domain.CodexAccountSwitchSession
 }
 
-type settlingSwitchChatLauncher struct {
-	*recordingLauncher
-	attempts int
-}
-
-func (l *settlingSwitchChatLauncher) StartChat(ctx context.Context, cfg ChatStart) (ChatStarted, error) {
-	var err error
-	cfg, err = prepareTestChatStart(ctx, cfg)
-	if err != nil {
-		return ChatStarted{}, err
-	}
-	l.started = append(l.started, cfg)
-	l.attempts++
-	if l.attempts == 1 {
-		return ChatStarted{}, fmt.Errorf("history is still flushing: %w", ports.ErrChatHistoryUnsettled)
-	}
-	started := ChatStarted{
-		ProviderConversationID: cfg.ProviderConversationID,
-		ControllerGeneration:   cfg.ControllerGeneration,
-	}
-	if cfg.ControllerReady != nil {
-		if _, err := cfg.ControllerReady(started); err != nil {
-			return ChatStarted{}, err
-		}
-	}
-	l.live = true
-	return started, nil
-}
-
-func (l *settlingSwitchChatLauncher) StopChat(_ context.Context, id domain.SessionID) error {
-	l.stopped = append(l.stopped, id)
-	l.live = false
-	return nil
-}
-
 func (s *ambiguousCodexSwitchStore) CreateCodexAccountSwitch(_ context.Context, rec domain.CodexAccountSwitch) (domain.CodexAccountSwitch, bool, error) {
 	s.switchRecord = rec
 	return rec, true, nil
@@ -493,28 +458,6 @@ func TestCodexAccountSwitchNativeRestartPolicyRemainsExact(t *testing.T) {
 	}
 }
 
-func TestCodexAccountSwitchInterruptsChatInsteadOfWaitingForDrain(t *testing.T) {
-	launcher := &recordingLauncher{}
-	manager := New(Deps{Chat: launcher})
-	sessions := []domain.CodexAccountSwitchSession{{
-		SessionID: "chat-session", InterfaceMode: domain.SessionModeChat, WasRunning: true,
-	}}
-	abort, err := manager.armCodexSwitchChatInterrupt(context.Background(), sessions)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer abort()
-	if err := manager.prepareCodexSwitchChatInterrupt(context.Background(), sessions); err != nil {
-		t.Fatal(err)
-	}
-	if !slices.Equal(launcher.armPolicy, []domain.SessionInterfaceTransitionPolicy{domain.SessionInterfaceTransitionInterrupt}) {
-		t.Fatalf("arm policies = %v, want interrupt", launcher.armPolicy)
-	}
-	if !slices.Equal(launcher.preparePolicy, []domain.SessionInterfaceTransitionPolicy{domain.SessionInterfaceTransitionInterrupt}) {
-		t.Fatalf("prepare policies = %v, want interrupt", launcher.preparePolicy)
-	}
-}
-
 func TestCodexAccountSwitchFreezesActiveTUIInputWithoutWaitingForIdle(t *testing.T) {
 	store := newFakeStore()
 	store.sessions["active-codex"] = domain.SessionRecord{
@@ -642,51 +585,5 @@ func TestCodexAccountSwitchRestartContinuesAfterEarlierSessionFailure(t *testing
 	}
 	if sessions[1].RestartState != "restarted" {
 		t.Fatalf("second restart state = %q, want restarted", sessions[1].RestartState)
-	}
-}
-
-func TestCodexAccountSwitchRetriesUnsettledHistoryAfterInterruptingActiveChat(t *testing.T) {
-	base := newFakeStore()
-	base.projects["mer"] = domain.ProjectRecord{ID: "mer", Config: testRoleAgents()}
-	base.sessions["chat-session"] = domain.SessionRecord{
-		ID: "chat-session", ProjectID: "mer", Kind: domain.KindWorker,
-		Harness: domain.HarnessCodex, Mode: domain.SessionModeChat,
-		Activity: domain.Activity{State: domain.ActivityActive},
-		Metadata: domain.SessionMetadata{
-			WorkspacePath: "/ws/chat-session", Branch: "ao/chat-session",
-			ProviderConversationID: "native-chat", ControllerGeneration: "source-generation",
-		},
-	}
-	journal := &collectingCodexSwitchStore{}
-	store := &bootstrapOrderingStore{fakeStore: base, collectingCodexSwitchStore: journal}
-	launcher := &settlingSwitchChatLauncher{recordingLauncher: &recordingLauncher{live: true}}
-	manager := New(Deps{
-		Store: store, Runtime: &fakeRuntime{}, Agents: fakeAgents{}, Workspace: &fakeWorkspace{}, Chat: launcher,
-		Lifecycle: &fakeLCM{store: base}, DataDir: t.TempDir(), LookPath: func(string) (string, error) { return "/bin/true", nil },
-		NewLaunchID: func() string { return "target-generation" },
-	})
-	sessions := []domain.CodexAccountSwitchSession{{
-		SessionID: "chat-session", InterfaceMode: domain.SessionModeChat, WasRunning: true,
-		NativeSessionID: "native-chat", SourceGeneration: "source-generation",
-		StopState: "pending", RestartState: "pending", ReviewerStopState: "skipped", ReviewerRestartState: "skipped",
-	}}
-
-	if err := manager.prepareCodexSwitchChatInterrupt(context.Background(), sessions); err != nil {
-		t.Fatalf("prepare interrupt: %v", err)
-	}
-	if err := manager.stopCodexSwitchSessions(context.Background(), store, "switch-1", sessions); err != nil {
-		t.Fatalf("stop active Chat controller: %v", err)
-	}
-	if err := manager.restartCodexSwitchSessions(context.Background(), store, "switch-1", sessions); err != nil {
-		t.Fatalf("restart active Chat controller: %v", err)
-	}
-	if launcher.attempts != 2 {
-		t.Fatalf("Chat restart attempts = %d, want one bounded retry", launcher.attempts)
-	}
-	if sessions[0].RestartState != "restarted" {
-		t.Fatalf("restart state = %q, want restarted", sessions[0].RestartState)
-	}
-	if got := base.sessions["chat-session"].Metadata.ProviderConversationID; got != "native-chat" {
-		t.Fatalf("native Chat ID = %q, want native-chat", got)
 	}
 }

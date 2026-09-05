@@ -17,18 +17,13 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/google/uuid"
-
 	codexagent "github.com/ercs-second-brain/agent-orchestrator/backend/internal/adapters/agent/codex"
 	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/adapters/agent/modelcatalog"
-	chatdriveracp "github.com/ercs-second-brain/agent-orchestrator/backend/internal/adapters/chatdriver/acp"
-	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/adapters/chatdriver/codexappserver"
-	chatdriverregistry "github.com/ercs-second-brain/agent-orchestrator/backend/internal/adapters/chatdriver/registry"
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/adapters/codexappserver"
 	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/adapters/runtime/runtimeselect"
 	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/adapters/systemexec"
 	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/adapters/telemetry/policyauthority"
 	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/autoreview"
-	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/browserruntime"
 	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/codexops"
 	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/config"
 	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/daemon/supervisor"
@@ -42,19 +37,14 @@ import (
 	usagepipeline "github.com/ercs-second-brain/agent-orchestrator/backend/internal/observe/usage"
 	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/ports"
 	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/presence"
-	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/preview"
-	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/previewserver"
 	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/push"
 	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/runfile"
 	agentsvc "github.com/ercs-second-brain/agent-orchestrator/backend/internal/service/agent"
 	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/service/agentauth"
-	browsersvc "github.com/ercs-second-brain/agent-orchestrator/backend/internal/service/browser"
-	chatsvc "github.com/ercs-second-brain/agent-orchestrator/backend/internal/service/chat"
 	importsvc "github.com/ercs-second-brain/agent-orchestrator/backend/internal/service/importer"
 	notificationsvc "github.com/ercs-second-brain/agent-orchestrator/backend/internal/service/notification"
 	prsvc "github.com/ercs-second-brain/agent-orchestrator/backend/internal/service/pr"
 	projectsvc "github.com/ercs-second-brain/agent-orchestrator/backend/internal/service/project"
-	settingssvc "github.com/ercs-second-brain/agent-orchestrator/backend/internal/service/settings"
 	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/service/systemcheck"
 	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/service/systeminstall"
 	usagesvc "github.com/ercs-second-brain/agent-orchestrator/backend/internal/service/usage"
@@ -174,21 +164,6 @@ func Run() error {
 	ignoreBrokenPipeSignal()
 
 	log := newLogger()
-	var browserRuntimeToken string
-	if os.Getenv(browserruntime.RuntimeTokenStdinEnv) == "1" {
-		browserRuntimeToken, err = browserruntime.ReadRuntimeToken(os.Stdin)
-		if err != nil {
-			return err
-		}
-	}
-	if browserRuntimeToken == "" {
-		browserRuntimeToken, err = browserruntime.NewToken()
-		if err != nil {
-			return err
-		}
-	}
-	browserAuthority := browsersvc.NewAuthority()
-	browserBroker := browserruntime.New(log, browserRuntimeToken)
 
 	// Fail fast only if a daemon is genuinely still serving the recorded port.
 	// CheckStale confirms the run-file's PID is alive, but that alone is not
@@ -312,7 +287,6 @@ func Run() error {
 	// is handed to httpd, which mounts it at /mux. Raw PTY bytes never flow
 	// through the CDC change_log -- only session-state events do.
 	runtimeAdapter := runtimeselect.New(log, cfg.RunFilePath)
-	managedPreview := previewserver.New(log, cfg.DataDir)
 	termMgr := terminal.NewManager(runtimeAdapter, cdcPipe.Broadcaster, log)
 	defer termMgr.Close()
 
@@ -357,102 +331,13 @@ func Run() error {
 	// selected runtime, routed git/scratch workspaces, the per-session agent
 	// resolver (AO_AGENT validated here for compatibility), and the agent
 	// messenger, then mount it on the API.
-	chatDrivers := chatdriverregistry.Build(log)
 
-	// Daemon-owned preferences. The store's type is field-compatible with the
-	// service's, adapted here so neither package imports the other.
-	settingsSvc := settingssvc.New(
-		settingsStore{store: store},
-		chatDrivers,
-		func() time.Time { return time.Now().UTC() },
-	)
-
-	// Chat service. The driver registry is the capability gate: a harness with no
-	// registered driver cannot start in chat mode, so an unsupported request fails
-	// loudly instead of silently becoming a TUI session.
 	var agentSvc *agentsvc.Service
 	var sessMgr sessionLifecycle
-	chatSvc := chatsvc.New(chatsvc.Options{
-		Store:    store,
-		Sessions: store,
-		// Adapts the store's own snapshot type, so the chat service never has to
-		// import the storage layer.
-		Reader: chatsvc.SnapshotReaderFunc(func(ctx context.Context, conversationID string) (chatsvc.ConversationRows, error) {
-			rows, err := store.LoadConversationSnapshot(ctx, conversationID)
-			if err != nil {
-				return chatsvc.ConversationRows{}, err
-			}
-			return chatsvc.ConversationRows{
-				Conversation:                     rows.Conversation,
-				ActiveBranch:                     rows.ActiveBranch,
-				EditFloorSequence:                rows.EditFloorSequence,
-				NativeForkAvailableAfterSequence: rows.NativeForkAvailableAfterSequence,
-				Turns:                            rows.Turns,
-				Messages:                         rows.Messages,
-				Activities:                       rows.Activities,
-				BranchPoints:                     rows.BranchPoints,
-				BranchedFromEarlierMessage:       rows.BranchedFromEarlierMessage,
-			}, nil
-		}),
-		PageReader: chatsvc.SnapshotPageReaderFunc(func(ctx context.Context, conversationID string, beforeSequence, limit int64) (chatsvc.ConversationRows, error) {
-			rows, err := store.LoadConversationSnapshotPage(ctx, conversationID, beforeSequence, limit)
-			if err != nil {
-				return chatsvc.ConversationRows{}, err
-			}
-			return chatsvc.ConversationRows{
-				Conversation:                     rows.Conversation,
-				ActiveBranch:                     rows.ActiveBranch,
-				EditFloorSequence:                rows.EditFloorSequence,
-				NativeForkAvailableAfterSequence: rows.NativeForkAvailableAfterSequence,
-				Turns:                            rows.Turns,
-				Messages:                         rows.Messages,
-				Activities:                       rows.Activities,
-				BranchPoints:                     rows.BranchPoints,
-				BranchedFromEarlierMessage:       rows.BranchedFromEarlierMessage,
-				OldestSequence:                   rows.OldestSequence,
-				HasMoreBefore:                    rows.HasMoreBefore,
-			}, nil
-		}),
-		Drivers: chatDrivers,
-		// The LCM satisfies ActivityRecorder directly: a chat turn is a pure
-		// lifecycle reduction, same as a hook signal from a terminal session.
-		Activity: lcStack.LCM,
-		Log:      log,
-		NewID:    uuid.NewString,
-		OnAccountChanged: func(sessionID domain.SessionID, generation string, harness domain.AgentHarness) {
-			if harness != domain.HarnessCodex || agentSvc == nil || sessMgr == nil || sessMgr.CodexAccountSwitchInProgress() {
-				return
-			}
-			rec, ok, readErr := store.GetSession(ctx, sessionID)
-			if readErr == nil && ok && rec.Harness == domain.HarnessCodex && rec.Metadata.ControllerGeneration == generation {
-				agentSvc.InvalidateCodexAccountAuthentication()
-			}
-		},
-		OnCodexCapacityChanged: func(sessionID domain.SessionID, generation string, observation ports.CodexCapacityObservation) {
-			if agentSvc == nil || sessMgr == nil || sessMgr.CodexAccountSwitchInProgress() {
-				return
-			}
-			rec, ok, readErr := store.GetSession(ctx, sessionID)
-			if readErr != nil || !ok || rec.Harness != domain.HarnessCodex || rec.Metadata.ControllerGeneration != generation {
-				return
-			}
-			agentSvc.ObserveActiveCodexAccountCapacity(observation)
-		},
-	})
-
-	codexModelDriver := codexappserver.New(codexagent.New(), log)
-	modelDiscoverer := modelcatalog.Discoverer{
-		CodexModels: func(listCtx context.Context, request ports.AgentModelDiscoveryRequest) ([]ports.ChatModel, error) {
-			return codexModelDriver.DiscoverModels(listCtx, request.WorkingDir, request.Env)
-		},
-		ClineOptions: func(listCtx context.Context, request ports.AgentModelDiscoveryRequest) ([]ports.ChatConfigOption, error) {
-			return chatdriveracp.DiscoverConfigOptions(listCtx, chatdriveracp.Launch{
-				Command: request.Binary,
-				Args:    []string{"--acp"},
-				Env:     request.Env,
-			}, request.WorkingDir, log)
-		},
-	}
+	// Model discovery falls back to adapter-declared catalogs for harnesses
+	// whose pickers were provider-side chat controls; terminal agents pick
+	// models inside their own TUI.
+	modelDiscoverer := modelcatalog.Discoverer{}
 	// Build the multi-tracker dispatching to both GitHub and GitLab once,
 	// shared between the session service and the intake observer below.
 	// Env-configured tokens are validated eagerly here; CLI credential probing
@@ -486,7 +371,7 @@ func Run() error {
 	agentSvc = agentsvc.NewWithDeps(agentDeps)
 	agentSvc.WarmModelCatalogs(ctx)
 
-	sessionSvc, reviewSvc, wiredSessMgr, err := startSession(ctx, cfg, runtimeAdapter, store, lcStack.LCM, messenger, telemetrySink, agents, agentSvc, managedPreview, browserBroker, browserAuthority, chatLauncher{svc: chatSvc}, settingsSvc, policyCoordinator, tracker, codexOperationGate, log)
+	sessionSvc, reviewSvc, wiredSessMgr, err := startSession(ctx, cfg, runtimeAdapter, store, lcStack.LCM, messenger, telemetrySink, agents, agentSvc, policyCoordinator, tracker, codexOperationGate, log)
 	if err != nil {
 		stop()
 		lcStack.Stop()
@@ -497,8 +382,6 @@ func Run() error {
 	}
 	sessMgr = wiredSessMgr
 
-	// servers isn't clobbered. See preview_wiring.go (issue #4500).
-	wireManagedPreviewExit(managedPreview, sessionSvc, log)
 	sessMgr.SetTerminalInputGate(termMgr)
 	agentSvc.SetCodexAccountSwitchCoordinator(sessMgr)
 	sessMgr.SetCodexAccountSwitchObserver(agentSvc.PublishCodexAccounts)
@@ -556,7 +439,6 @@ func Run() error {
 	}
 	// HostID is assigned below, once the identity file has been read.
 	mc := &controllers.MobileController{Bridge: bs}
-	browserService := browsersvc.New(sessionSvc, browserBroker, browserAuthority)
 
 	// Standalone shell terminals: user-opened shells with no agent session
 	// behind them. They reuse the same runtime adapter (and therefore the same
@@ -614,7 +496,6 @@ func Run() error {
 	// restoration follows in the background after the listener is live.
 	if reconcileErr := sessMgr.ReconcileStartupSafety(ctx); reconcileErr != nil {
 		stop()
-		managedPreview.Close()
 		lcStack.Stop()
 		if cdcErr := cdcPipe.Stop(); cdcErr != nil {
 			log.Error("cdc pipeline shutdown", "err", cdcErr)
@@ -727,8 +608,6 @@ func Run() error {
 		Import:              importsvc.New(),
 		ShellTerminals:      shellTermSvc,
 		AgentAuth:           agentAuthSvc,
-		Conversations:       chatSvc,
-		Settings:            settingsSvc,
 		CDC:                 store,
 		Events:              cdcPipe.Broadcaster,
 		Activity:            lcStack.LCM,
@@ -736,9 +615,6 @@ func Run() error {
 		UsageSummary:        usagesvc.NewSummaryReader(store),
 		Telemetry:           telemetrySink,
 		Mobile:              mc,
-		Browser:             browserService,
-		PreviewServer:       managedPreview,
-		SessionCapabilities: browserAuthority,
 		AgentSwitchPolicy:   policyCoordinator,
 	})
 	if err != nil {
@@ -748,22 +624,6 @@ func Run() error {
 			log.Error("cdc pipeline shutdown", "err", cdcErr)
 		}
 		return err
-	}
-	previewDone := preview.NewPoller(store, sessionSvc, "http://"+srv.Addr().String(), preview.PollerConfig{Logger: log}).Start(ctx)
-	_ = os.Unsetenv(browserruntime.RuntimeAddressEnv)
-	if ln, addr, err := browserruntime.Listen(cfg.RunFilePath); err != nil {
-		log.Warn("browser runtime: listener unavailable; agent browser control disabled", "err", err)
-	} else {
-		if err := os.Setenv(browserruntime.RuntimeAddressEnv, addr); err != nil {
-			_ = ln.Close()
-			return fmt.Errorf("publish browser runtime address: %w", err)
-		}
-		log.Info("browser runtime: listening", "addr", addr)
-		go func() {
-			if err := browserBroker.Serve(ctx, ln); err != nil {
-				log.Warn("browser runtime: serve stopped with error", "err", err)
-			}
-		}()
 	}
 	var usageDone <-chan struct{}
 
@@ -809,9 +669,6 @@ func Run() error {
 		startupReconcileDone = done
 		go func() {
 			defer close(done)
-			if reconcileErr := reconcilePersistentChatHosts(ctx, cfg.DataDir, store); reconcileErr != nil {
-				log.Error("persistent chat host reconciliation on boot failed", "err", reconcileErr)
-			}
 			if reconcileErr := sessMgr.ReconcileBackground(ctx); reconcileErr != nil {
 				log.Error("background session reconciliation on boot failed", "err", reconcileErr)
 			}
@@ -859,16 +716,6 @@ func Run() error {
 		log.Error("agent switch worker shutdown", "err", err)
 	}
 	switchCancel()
-	managedPreview.Close()
-	<-previewDone
-	// Detach chat controllers before stopping the lifecycle stack. Persistent
-	// provider hosts deliberately survive this daemon and preserve in-flight
-	// turns; the replacement daemon reconnects to the same initialized stream and
-	// consumes host-replayed output. Explicit session termination, not daemon
-	// shutdown, destroys them.
-	chatStopCtx, chatCancel := context.WithTimeout(context.Background(), cfg.ShutdownTimeout)
-	chatSvc.StopAll(chatStopCtx)
-	chatCancel()
 	if usageDone != nil {
 		<-usageDone
 	}
