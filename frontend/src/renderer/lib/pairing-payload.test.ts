@@ -41,9 +41,9 @@ describe("pairingCodeUrl", () => {
 	// scanned https link must not put the connection token into web logs or a
 	// referrer header.
 	it("puts the payload in the fragment, not the query", () => {
-		const url = pairingCodeUrl(buildPairingOffer(base), "https://aoagents.dev/pair");
+		const url = pairingCodeUrl(buildPairingOffer(base), "https://ao.example.com/pair");
 
-		expect(url.split("#")[0]).toBe("https://aoagents.dev/pair");
+		expect(url.split("#")[0]).toBe("https://ao.example.com/pair");
 		expect(url.split("#")[0]).not.toContain("pw-123");
 	});
 

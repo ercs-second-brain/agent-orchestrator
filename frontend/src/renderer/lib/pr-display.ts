@@ -9,7 +9,7 @@ import type {
 	PRStatusRow,
 	PRSummaryLink,
 	PRSummaryPart,
-} from "@aoagents/product-ui";
+} from "@ercs-second-brain/product-ui";
 
 export type {
 	PRCardPresentation,
@@ -19,7 +19,7 @@ export type {
 	PRSummaryLink,
 	PRSummaryPart,
 	PRSummaryPartKey,
-} from "@aoagents/product-ui";
+} from "@ercs-second-brain/product-ui";
 
 function detectProviderFromUrl(url: string): "github" | "gitlab" {
 	if (url.includes("/-/merge_requests/")) return "gitlab";

@@ -239,7 +239,7 @@ func timelineScript(sleepSeconds float64) string {
 	phase("active", "user-prompt-submit", true)
 	// Print a realistic PR URL on the push line: real agents surface a link here,
 	// and the desktop watches terminal output for URLs to glow the Browser tab.
-	phase("pushed PR https://github.com/aoagents/agent-orchestrator/pull/2483", "pr-push", true)
+	phase("pushed PR https://github.com/ercs-second-brain/agent-orchestrator/pull/2483", "pr-push", true)
 	phase("blocked", "permission-request", true)
 	phase("done", "session-end", false)
 	return b.String()

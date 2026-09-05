@@ -2,7 +2,7 @@ import {
 	AgentAvatar as ProductAgentAvatar,
 	type AgentAvatarProps,
 	type AgentLogoSources,
-} from "@aoagents/product-ui";
+} from "@ercs-second-brain/product-ui";
 import agyLogo from "../assets/agents/agy.png";
 import aiderLogo from "../assets/agents/aider.png";
 import ampLogo from "../assets/agents/amp.svg";

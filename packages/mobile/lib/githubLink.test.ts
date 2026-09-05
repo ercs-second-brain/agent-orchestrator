@@ -3,8 +3,8 @@ import { githubAppUrl } from "./githubLink";
 
 describe("githubAppUrl", () => {
 	it("maps a repo URL", () => {
-		expect(githubAppUrl("https://github.com/AgentWrapper/agent-orchestrator")).toBe(
-			"github://repo/AgentWrapper/agent-orchestrator",
+		expect(githubAppUrl("https://github.com/ercs-second-brain/agent-orchestrator")).toBe(
+			"github://repo/ercs-second-brain/agent-orchestrator",
 		);
 	});
 
@@ -25,7 +25,7 @@ describe("githubAppUrl", () => {
 	// The case that motivated the null branch: the app cannot accept a prefilled
 	// issue body, so "Report a problem" has to stay in the browser.
 	it("refuses the prefilled new-issue URL", () => {
-		expect(githubAppUrl("https://github.com/AgentWrapper/agent-orchestrator/issues/new?body=hello")).toBeNull();
+		expect(githubAppUrl("https://github.com/ercs-second-brain/agent-orchestrator/issues/new?body=hello")).toBeNull();
 		expect(githubAppUrl("https://github.com/o/r/issues/new")).toBeNull();
 	});
 

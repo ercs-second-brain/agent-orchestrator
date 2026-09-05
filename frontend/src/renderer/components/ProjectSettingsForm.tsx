@@ -7,7 +7,7 @@ import {
 	ProjectSettingsSection,
 	ProjectWorkflowSettingsView,
 	validateProjectSettings,
-} from "@aoagents/product-ui";
+} from "@ercs-second-brain/product-ui";
 import { useTranslation } from "react-i18next";
 import type { TFunction } from "i18next";
 import { useEffect, useState } from "react";

@@ -2,7 +2,7 @@ import {
 	canSubmitProjectSetup,
 	ProjectSetupFormView,
 	ProjectSetupHeaderView,
-} from "@aoagents/product-ui";
+} from "@ercs-second-brain/product-ui";
 import { useTranslation } from "react-i18next";
 import * as Dialog from "@radix-ui/react-dialog";
 import { ChevronLeft, TriangleAlert, X, type LucideIcon } from "lucide-react";

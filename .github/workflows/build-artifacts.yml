@@ -86,9 +86,10 @@ jobs:
         env:
           # Bake the update feed's owner/repo from the repo this build runs in.
           # Without this, forge.config.ts falls back to DEFAULT_RELEASE_REPO,
-          # which went stale across the AgentWrapper -> Untrivial-ai transfer and
-          # left every published build pointing its updater at the old owner,
-          # alive only through GitHub's rename redirect (#3523).
+          # which went stale across this repo's earlier owner transfer and left
+          # every published build pointing its updater at the old owner, alive
+          # only through GitHub's rename redirect (see docs/scm-observer.md for
+          # the transfer-incident history).
           AO_RELEASE_REPO: ${{ github.repository }}
         run: npm run make
       - name: Verify baked update feed repo

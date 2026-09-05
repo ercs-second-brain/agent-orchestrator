@@ -6,7 +6,7 @@ import {
 	SessionsArchiveView,
 	SessionsBoardGridView,
 	archiveToggleOffsetClassName,
-} from "@aoagents/product-ui";
+} from "@ercs-second-brain/product-ui";
 import { AlertTriangle, LayoutDashboard, Plus, RotateCw } from "lucide-react";
 import {
 	type WorkspaceSession,

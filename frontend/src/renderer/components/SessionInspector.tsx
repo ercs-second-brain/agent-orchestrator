@@ -21,7 +21,7 @@ import {
 	type InspectorReviewSummaryAction,
 	type InspectorTimelineEvent,
 	type InspectorView,
-} from "@aoagents/product-ui";
+} from "@ercs-second-brain/product-ui";
 import {
 	ArrowUpRight,
 	ChevronDown,
@@ -85,7 +85,7 @@ import { useRemoteConnection } from "../hooks/useRemoteConnection";
 type ProjectConfig = components["schemas"]["ProjectConfig"];
 type OpenReviewerTerminal = (target: { handleId: string; harness: string }) => void;
 
-export type { InspectorView } from "@aoagents/product-ui";
+export type { InspectorView } from "@ercs-second-brain/product-ui";
 
 const VIEW_DEFS: {
 	id: InspectorView;

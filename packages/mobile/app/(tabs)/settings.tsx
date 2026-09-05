@@ -26,7 +26,7 @@ import { useTabScrollToTop } from "../../lib/useTabScrollToTop";
 import { Dot, ScreenHeader, SettingsGroup, SettingsRow, SettingsToggle } from "../../lib/ui";
 import { useTheme, useThemedStyles, useThemeState } from "../../lib/ThemeProvider";
 
-const ISSUES_URL = "https://github.com/AgentWrapper/agent-orchestrator/issues/new";
+const ISSUES_URL = "https://github.com/ercs-second-brain/agent-orchestrator/issues/new";
 
 export default function SettingsScreen() {
 	const t = useTheme();

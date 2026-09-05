@@ -88,7 +88,7 @@ export default defineConfig({
 	resolve: {
 		alias: {
 			"@": fileURLToPath(new URL("./src/renderer", import.meta.url)),
-			"@aoagents/product-ui": fileURLToPath(
+			"@ercs-second-brain/product-ui": fileURLToPath(
 				new URL("../packages/product-ui/src/index.ts", import.meta.url),
 			),
 			// The alias above resolves product-ui to its source, so that package's

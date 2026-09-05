@@ -1,5 +1,5 @@
 {
-	"name": "@aoagents/ao",
+	"name": "@ercs-second-brain/ao",
 	"version": "0.10.0",
 	"description": "Agent Orchestrator CLI. Resolves and runs the prebuilt Go binary for your platform.",
 	"license": "MIT",
@@ -10,9 +10,9 @@
 		"bin/"
 	],
 	"optionalDependencies": {
-		"@aoagents/ao-darwin-arm64": "0.10.0",
-		"@aoagents/ao-darwin-x64": "0.10.0",
-		"@aoagents/ao-linux-x64": "0.10.0",
-		"@aoagents/ao-win32-x64": "0.10.0"
+		"@ercs-second-brain/ao-darwin-arm64": "0.10.0",
+		"@ercs-second-brain/ao-darwin-x64": "0.10.0",
+		"@ercs-second-brain/ao-linux-x64": "0.10.0",
+		"@ercs-second-brain/ao-win32-x64": "0.10.0"
 	}
 }

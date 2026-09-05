@@ -197,7 +197,13 @@ dispatched on.
 
 ## Case Study: the Rename Bug Cluster
 
-Four issues in six weeks, all facets of the same distributed invariant:
+Four issues in six weeks, all facets of the same distributed invariant.
+
+> Note: the incident links below deliberately point at this repository's
+> previous owners (`AgentWrapper`, then `Untrivial-ai/agent-orchestrator`).
+> Those issues live in the pre-transfer repository's history and were not
+> renumbered when the project moved to `ercs-second-brain`, so the old URLs
+> are the only stable citations for them.
 
 | Issue | Facet | Derivations that disagreed |
 |-------|-------|---------------------------|

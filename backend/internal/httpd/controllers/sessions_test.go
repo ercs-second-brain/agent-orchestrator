@@ -470,7 +470,7 @@ func (f *fakeSessionService) ListPRs(_ context.Context, id domain.SessionID) ([]
 	if _, ok := f.sessions[id]; !ok {
 		return nil, apierr.NotFound("SESSION_NOT_FOUND", "Unknown session")
 	}
-	return []domain.PRFacts{{URL: "https://github.com/aoagents/agent-orchestrator/pull/142", Number: 142, CI: domain.CIPassing, Review: domain.ReviewRequired, Mergeability: domain.MergeMergeable, UpdatedAt: time.Date(2026, 6, 4, 12, 0, 0, 0, time.UTC)}}, nil
+	return []domain.PRFacts{{URL: "https://github.com/ercs-second-brain/agent-orchestrator/pull/142", Number: 142, CI: domain.CIPassing, Review: domain.ReviewRequired, Mergeability: domain.MergeMergeable, UpdatedAt: time.Date(2026, 6, 4, 12, 0, 0, 0, time.UTC)}}, nil
 }
 
 func (f *fakeSessionService) ListPRSummaries(_ context.Context, id domain.SessionID) ([]sessionsvc.PRSummary, error) {
@@ -481,13 +481,13 @@ func (f *fakeSessionService) ListPRSummaries(_ context.Context, id domain.Sessio
 		return nil, apierr.NotFound("SESSION_NOT_FOUND", "Unknown session")
 	}
 	return []sessionsvc.PRSummary{{
-		URL:          "https://github.com/aoagents/agent-orchestrator/pull/142",
-		HTMLURL:      "https://github.com/aoagents/agent-orchestrator/pull/142",
+		URL:          "https://github.com/ercs-second-brain/agent-orchestrator/pull/142",
+		HTMLURL:      "https://github.com/ercs-second-brain/agent-orchestrator/pull/142",
 		Number:       142,
 		Title:        "Wire SCM summaries",
 		State:        domain.PRStateOpen,
 		Provider:     "github",
-		Repo:         "aoagents/agent-orchestrator",
+		Repo:         "ercs-second-brain/agent-orchestrator",
 		Author:       "ada",
 		SourceBranch: "codex/scm-observer-v1",
 		TargetBranch: "main",
@@ -496,7 +496,7 @@ func (f *fakeSessionService) ListPRSummaries(_ context.Context, id domain.Sessio
 			Name:       "unit",
 			Status:     domain.PRCheckFailed,
 			Conclusion: "failure",
-			URL:        "https://github.com/aoagents/agent-orchestrator/actions/runs/1",
+			URL:        "https://github.com/ercs-second-brain/agent-orchestrator/actions/runs/1",
 		}}},
 		Review: sessionsvc.PRReviewSummary{
 			Decision:                   domain.ReviewChangesRequest,
@@ -504,14 +504,14 @@ func (f *fakeSessionService) ListPRSummaries(_ context.Context, id domain.Sessio
 			UnresolvedBy: []sessionsvc.PRUnresolvedReviewer{{
 				ReviewerID: "reviewer-a",
 				Count:      1,
-				ReviewURL:  "https://github.com/aoagents/agent-orchestrator/pull/142#pullrequestreview-1",
-				Links:      []sessionsvc.PRReviewCommentLink{{URL: "https://github.com/aoagents/agent-orchestrator/pull/142#discussion_r1", File: "main.go", Line: 12}},
+				ReviewURL:  "https://github.com/ercs-second-brain/agent-orchestrator/pull/142#pullrequestreview-1",
+				Links:      []sessionsvc.PRReviewCommentLink{{URL: "https://github.com/ercs-second-brain/agent-orchestrator/pull/142#discussion_r1", File: "main.go", Line: 12}},
 			}},
 		},
 		Mergeability: sessionsvc.PRMergeabilitySummary{
 			State:   domain.MergeConflicting,
 			Reasons: []string{"conflicts"},
-			PRURL:   "https://github.com/aoagents/agent-orchestrator/pull/142",
+			PRURL:   "https://github.com/ercs-second-brain/agent-orchestrator/pull/142",
 		},
 		StateChangedAt: time.Date(2026, 6, 4, 11, 30, 0, 0, time.UTC),
 		CreatedAt:      time.Date(2026, 6, 4, 9, 0, 0, 0, time.UTC),

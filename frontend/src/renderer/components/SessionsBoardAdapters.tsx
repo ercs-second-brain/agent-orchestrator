@@ -10,7 +10,7 @@ import {
 	type BoardColumnLabels,
 	type BoardUsagePresentation,
 	type ProductUITranslator,
-} from "@aoagents/product-ui";
+} from "@ercs-second-brain/product-ui";
 import { Check, Copy, GitBranch, LoaderCircle, RotateCcw, Trash2 } from "lucide-react";
 import type { MessageKey } from "../i18n";
 import { aoBridge } from "../lib/bridge";

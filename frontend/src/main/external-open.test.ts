@@ -5,7 +5,7 @@ describe("isAllowedAppExternalURL", () => {
 	it("allows web and mail handoff URLs from the app renderer", () => {
 		expect(isAllowedAppExternalURL("https://github.com/ercs-second-brain/agent-orchestrator/issues/new")).toBe(true);
 		expect(isAllowedAppExternalURL("http://localhost:5173/help")).toBe(true);
-		expect(isAllowedAppExternalURL("mailto:prateek@untrivial.ai?subject=AO%20feedback")).toBe(true);
+		expect(isAllowedAppExternalURL("mailto:support@ao.invalid?subject=AO%20feedback")).toBe(true);
 	});
 
 	it("blocks local, privileged, and script schemes", () => {
@@ -17,9 +17,9 @@ describe("isAllowedAppExternalURL", () => {
 	it("opens allowed URLs through the native shell opener", async () => {
 		const openExternal = vi.fn().mockResolvedValue(undefined);
 
-		await openAllowedAppExternalURL("mailto:prateek@untrivial.ai?subject=AO%20feedback", { openExternal });
+		await openAllowedAppExternalURL("mailto:support@ao.invalid?subject=AO%20feedback", { openExternal });
 
-		expect(openExternal).toHaveBeenCalledWith("mailto:prateek@untrivial.ai?subject=AO%20feedback");
+		expect(openExternal).toHaveBeenCalledWith("mailto:support@ao.invalid?subject=AO%20feedback");
 	});
 
 	it("rejects unsupported URLs before reaching the shell opener", async () => {

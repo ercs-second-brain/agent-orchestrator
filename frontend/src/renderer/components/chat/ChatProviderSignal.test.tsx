@@ -89,7 +89,7 @@ describe("MCP tool call", () => {
 		detail: {
 			server: "github",
 			toolName: "search_issues",
-			arguments: { repo: "aoagents/ao", state: "open" },
+			arguments: { repo: "ercs-second-brain/agent-orchestrator", state: "open" },
 			result: { total: 2 },
 			success: true,
 		},
@@ -108,7 +108,7 @@ describe("MCP tool call", () => {
 		await userEvent.click(screen.getByRole("button"));
 		expect(screen.getByText("Arguments")).toBeInTheDocument();
 		expect(screen.getByText("Result")).toBeInTheDocument();
-		expect(screen.getByText(/aoagents\/ao/)).toBeInTheDocument();
+		expect(screen.getByText(/ercs-second-brain\/agent-orchestrator/)).toBeInTheDocument();
 	});
 
 	it("reports a failed call as failed", () => {

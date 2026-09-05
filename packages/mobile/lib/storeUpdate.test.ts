@@ -45,18 +45,18 @@ describe("compareVersions", () => {
 
 describe("lookupUrl", () => {
 	it("queries by bundle id, so no App Store id has to be configured", () => {
-		expect(lookupUrl("aoagents.ao")).toBe("https://itunes.apple.com/lookup?bundleId=aoagents.ao");
+		expect(lookupUrl("dev.ao.mobile")).toBe("https://itunes.apple.com/lookup?bundleId=dev.ao.mobile");
 	});
 
 	// Without a storefront the API answers for the US store only, so a user
 	// elsewhere reads as "no update" while their own store has one.
 	it("adds the storefront when one is known", () => {
-		expect(lookupUrl("aoagents.ao", "GB")).toBe("https://itunes.apple.com/lookup?bundleId=aoagents.ao&country=gb");
+		expect(lookupUrl("dev.ao.mobile", "GB")).toBe("https://itunes.apple.com/lookup?bundleId=dev.ao.mobile&country=gb");
 	});
 
 	it("drops a region it cannot use rather than guessing", () => {
 		for (const bad of [undefined, null, "", "  ", "eng", "1"]) {
-			expect(lookupUrl("aoagents.ao", bad)).toBe("https://itunes.apple.com/lookup?bundleId=aoagents.ao");
+			expect(lookupUrl("dev.ao.mobile", bad)).toBe("https://itunes.apple.com/lookup?bundleId=dev.ao.mobile");
 		}
 	});
 });
@@ -75,7 +75,9 @@ describe("parseLookup", () => {
 		expect(parseLookup(lookup(), "1.4.0").updateAvailable).toBe(false);
 	});
 
-	// This is today's real answer for aoagents.ao: not on the App Store yet.
+	// `dev.ao.mobile` is a placeholder store identity (issue #26 removed the
+	// old owner's ids; distribution moves to sideloaded APKs per issue #41),
+	// so there is no real listing to look up: not on the App Store yet.
 	it("treats an empty result set as no update, not an error", () => {
 		expect(parseLookup({ resultCount: 0, results: [] }, "1.2.1")).toEqual({ updateAvailable: false });
 	});
@@ -186,9 +188,9 @@ describe("floorTarget", () => {
 
 describe("playStoreUrls", () => {
 	it("prefers the Play app and keeps a browsable fallback", () => {
-		expect(playStoreUrls("aoagents.dev")).toEqual({
-			app: "market://details?id=aoagents.dev",
-			web: "https://play.google.com/store/apps/details?id=aoagents.dev",
+		expect(playStoreUrls("dev.ao.mobile")).toEqual({
+			app: "market://details?id=dev.ao.mobile",
+			web: "https://play.google.com/store/apps/details?id=dev.ao.mobile",
 		});
 	});
 });

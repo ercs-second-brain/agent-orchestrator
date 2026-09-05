@@ -169,8 +169,8 @@ jobs:
         # app follows GitHub's actual redirect chain to fetch the manifest and
         # asset). This step closes the remaining gap from #3523: the freshly
         # installed version N must bake an app-update.yml whose owner/repo is
-        # the repo the release was published from. A stale baked owner (as after
-        # the AgentWrapper -> Untrivial-ai transfer) keeps working only through
+        # the repo the release was published from. A stale baked owner (as
+        # after this repo's earlier owner transfer) keeps working only through
         # GitHub's rename redirect, so nothing else fails until that redirect
         # dies. This assertion turns the drift into a red run instead.
         run: |
