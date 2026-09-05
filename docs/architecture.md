@@ -879,6 +879,30 @@ stream only for targeted invalidation/reconnect. Sends, approvals, input,
 provider configuration, compaction, rollback, and shell creation remain daemon
 commands; no provider or lifecycle policy is implemented in React Native.
 
+The desktop app can act as a thin client over the same LAN listener. In
+Settings → General → AO server, the user switches from "This computer" to
+"This network" and pastes the pairing payload printed by `ao mobile
+pairing-code` (or opens an `aomobile://pair` / `https://host/pair` deep link).
+The parser accepts v1 single-endpoint JSON and v2 multi-endpoint payloads,
+preferring endpoint kinds in lan → tailscale → tunnel → relay order. Before
+storing anything, the app probes the unauthenticated `GET /api/v1/identity`
+route to confirm the host is an AO daemon and that its host id matches the
+pairing code, then verifies the bearer password against a lightweight
+authenticated route. The resulting config is persisted as `desktop-remote.json`
+under `~/.ao/electron`.
+
+While a remote config is active, the shell reports `connectionMode: "remote"`
+to the renderer, which branches to remote-safe behavior (for example, hiding
+local file pickers in project creation). The Electron main process injects
+`Authorization: Bearer <password>` into requests to the paired daemon's
+http(s) and ws(s) origins — including the `/mux` terminal WebSocket — and the
+renderer's CSP `connect-src` is extended with those origins. The desktop never
+starts a local daemon in this mode, and the daemon's loopback listener remains
+local-only: a remote desktop sees exactly the routes the LAN listener serves,
+never `/shutdown`, telemetry, or mobile control. The daemon side of this flow
+(`ao mobile`, pairing codes, LAN listener lifecycle) is documented in
+`docs/cli/README.md` and `docs/headless-vm.md`.
+
 For implementation details and security model, consult `docs/adr/0001-lan-listener-for-mobile.md` and the glossary in `CONTEXT.md`.
 
 ### Request Flow

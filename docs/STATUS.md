@@ -87,9 +87,9 @@ surface (`npm run sqlc`, `npm run api`).
   lazy/non-blocking auth, per-PR polling with ETag guards and semantic diffing,
   feeding PR facts into lifecycle, which sends agent nudges for CI failures,
   review feedback, and merge conflicts
-  ([#75](https://github.com/aoagents/agent-orchestrator/issues/75),
-  [#108](https://github.com/aoagents/agent-orchestrator/issues/108),
-  [#109](https://github.com/aoagents/agent-orchestrator/issues/109)).
+  ([#75](https://github.com/ercs-second-brain/agent-orchestrator/issues/75),
+  [#108](https://github.com/ercs-second-brain/agent-orchestrator/issues/108),
+  [#109](https://github.com/ercs-second-brain/agent-orchestrator/issues/109)).
 - Terminal mux over WebSocket (`/mux`): detached native PTY host for new macOS
   sessions, per-client `tmux attach` for Linux and persisted legacy macOS
   handles, and a ConPTY loopback host on Windows.
@@ -174,6 +174,11 @@ surface (`npm run sqlc`, `npm run api`).
   REST catch-up, live notification stream updates, separate PR/session target
   actions, persistent read history, mark-read controls, and Electron app toasts
   while the app is running.
+- Desktop remote-daemon mode: the app can pair with a remote host's opt-in LAN
+  listener from Settings → General → AO server (paste the `ao mobile
+  pairing-code` payload or an `aomobile://pair` link), attach over the
+  authenticated bearer endpoint without starting a local daemon, and drive
+  sessions, terminal, and chat remotely — see [`headless-vm.md`](headless-vm.md).
 
 ### Mobile (Expo + React Native)
 
@@ -221,13 +226,13 @@ surface (`npm run sqlc`, `npm run api`).
 
 - **Tracker lane**: GitHub tracker adapter exists, but there is no daemon
   observer loop or agent-lifecycle→issue mirroring yet, so the tracker does
-  nothing at runtime ([#112](https://github.com/aoagents/agent-orchestrator/issues/112)).
+  nothing at runtime ([#112](https://github.com/ercs-second-brain/agent-orchestrator/issues/112)).
 - **Full raw PR/tracker fact surfacing**: the SCM observer writes facts and the
   desktop consumes concise PR summaries, but exposing the full raw `pr_*` /
   `tracker_*` CDC events to live consumers
-  ([#110](https://github.com/aoagents/agent-orchestrator/issues/110)) and in
-  `ao session get` ([#111](https://github.com/aoagents/agent-orchestrator/issues/111))
+  ([#110](https://github.com/ercs-second-brain/agent-orchestrator/issues/110)) and in
+  `ao session get` ([#111](https://github.com/ercs-second-brain/agent-orchestrator/issues/111))
   is still open.
 
 Tracking milestone:
-[`rewrite`](https://github.com/aoagents/agent-orchestrator/milestone/1).
+[`rewrite`](https://github.com/ercs-second-brain/agent-orchestrator/milestone/1).

@@ -45,10 +45,10 @@ app present? if not, fetch it; then open it."
 | Bundle id                    | `dev.agent-orchestrator.desktop`                                       | `frontend/forge.config.ts:8`    |
 | Executable name              | `agent-orchestrator`                                                   | `frontend/forge.config.ts`      |
 | **Release repo (canonical)** | **`AgentWrapper/agent-orchestrator`**                                  | per release owner               |
-| Forge publisher repo (TODAY) | `aoagents/agent-orchestrator` — **stale, must change to AgentWrapper** | `frontend/forge.config.ts:86`   |
+| Forge publisher repo (TODAY) | `ercs-second-brain/agent-orchestrator` — **stale, must change to AgentWrapper** | `frontend/forge.config.ts:86`   |
 | GitHub release mode          | **`draft: true`**, `prerelease: false`                                 | `frontend/forge.config.ts`      |
 
-> `aoagents/agent-orchestrator` was the **temporary** home during the rewrite; the
+> `ercs-second-brain/agent-orchestrator` was the **temporary** home during the rewrite; the
 > code is now ported and releases land on **`AgentWrapper/agent-orchestrator`**.
 > The forge publisher still points at `aoagents` and must be corrected (task T3).
 > The Go **module path** is also `github.com/aoagents/agent-orchestrator`; renaming
