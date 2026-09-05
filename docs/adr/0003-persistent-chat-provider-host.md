@@ -1,7 +1,11 @@
 # 3. Persistent provider hosts for Chat sessions
 
 Date: 2026-08-26
-Status: Accepted (Codex slice implemented; ACP bindings follow)
+Status: Superseded by [#39](https://github.com/ercs-second-brain/agent-orchestrator/issues/39)
+(2026-09): the chat feature was removed in full — there is no chat controller,
+no chat driver, and no provider host to persist. Retained as permanent history.
+The Codex app-server client that this ADR's implementation extracted lives on in
+`backend/internal/adapters/codexappserver` for Codex account management.
 
 ## Context
 
