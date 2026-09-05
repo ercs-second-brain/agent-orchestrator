@@ -22,6 +22,7 @@ import {
 import type { WorkspaceSession, WorkspaceSummary } from "../types/workspace";
 import { agentReadinessQueryKey } from "../hooks/useAgentReadinessQuery";
 import { agentReadiness } from "../test/agent-readiness-fixtures";
+import { ShellProvider, type ShellContextValue } from "../lib/shell-context";
 import { useUiStore } from "../stores/ui-store";
 
 type DragOverTestEvent = {
@@ -276,6 +277,7 @@ function renderSidebar({
 	initialOpen = true,
 	topbarOffset = "toolbar",
 	expandedProjectIds,
+	daemonStatus,
 }: {
 	onCloneProject?: CloneProjectHandler;
 	onCreateProject?: CreateProjectHandler;
@@ -286,6 +288,7 @@ function renderSidebar({
 	initialOpen?: boolean;
 	topbarOffset?: "toolbar" | "titlebar" | "trafficLights" | "session";
 	expandedProjectIds?: string[];
+	daemonStatus?: { state: string; connectionMode: string };
 } = {}) {
 	// Most legacy sidebar tests exercise session rows and assume their fixture
 	// project was previously open. Tests for the empty-store behavior opt out.
@@ -301,7 +304,7 @@ function renderSidebar({
 			agents: [agentReadiness("claude-code", "Claude Code"), agentReadiness("codex", "Codex")],
 		});
 	}
-	render(
+	const sidebar = (
 		<QueryClientProvider client={queryClient}>
 			<TooltipProvider>
 				<SidebarProvider defaultOpen={initialOpen}>
@@ -309,13 +312,34 @@ function renderSidebar({
 						topbarOffset={topbarOffset}
 						onCloneProject={onCloneProject}
 						onCreateProject={onCreateProject}
+						onCreateRepository={vi.fn().mockResolvedValue(undefined)}
 						onInitializeProject={onInitializeProject}
 						onRemoveProject={onRemoveProject}
 						workspaces={workspaces}
 					/>
 				</SidebarProvider>
 			</TooltipProvider>
-		</QueryClientProvider>,
+		</QueryClientProvider>
+	);
+	render(
+		daemonStatus ? (
+			<ShellProvider
+				value={
+					{
+						daemonStatus,
+						workspaceStartupState: "ready",
+						createProject: async () => undefined,
+						cloneProject: async () => undefined,
+						createRepository: async () => undefined,
+						initializeProjectRepository: async () => undefined,
+					} as ShellContextValue
+				}
+			>
+				{sidebar}
+			</ShellProvider>
+		) : (
+			sidebar
+		),
 	);
 	return onRemoveProject;
 }
@@ -935,6 +959,44 @@ describe("Sidebar", () => {
 			),
 		);
 		expect(onCloneProject).not.toHaveBeenCalled();
+	});
+
+	it("clones a Git URL into ~/ on a remote daemon without a local folder picker", async () => {
+		const user = userEvent.setup();
+		const onCloneProject = vi.fn().mockResolvedValue(undefined) as CloneProjectHandler;
+		window.localStorage.setItem("ao.clone.lastDestinationParent", "/Users/me/Code");
+		window.ao!.app.chooseDirectory = vi.fn().mockResolvedValue("/Users/me/Code");
+		renderSidebar({
+			onCloneProject,
+			daemonStatus: { state: "ready", connectionMode: "remote" },
+		});
+
+		await user.click(screen.getByLabelText("New project"));
+		await user.click(screen.getByRole("button", { name: "Clone from Git" }));
+		expect(await screen.findByRole("dialog", { name: "Clone a Git repository" })).toBeInTheDocument();
+		expect(screen.queryByRole("button", { name: "Choose" })).not.toBeInTheDocument();
+		expect(screen.getByText("~/")).toBeInTheDocument();
+		expect(screen.queryByText("/Users/me/Code")).not.toBeInTheDocument();
+
+		await user.type(
+			await screen.findByRole("textbox", { name: "Repository URL" }),
+			"git@github.com:acme/web-app.git",
+		);
+		expect(screen.getByText("~/web-app")).toBeInTheDocument();
+		await user.click(screen.getByRole("button", { name: "Continue" }));
+
+		expect(await screen.findByRole("dialog", { name: "Set up project" })).toBeInTheDocument();
+		await user.click(screen.getByRole("button", { name: "Clone" }));
+		await waitFor(() =>
+			expect(onCloneProject).toHaveBeenCalledWith({
+				remoteUrl: "git@github.com:acme/web-app.git",
+				destinationParent: "~",
+				workerAgent: "claude-code",
+				orchestratorAgent: "claude-code",
+				trackerIntake: undefined,
+			}),
+		);
+		expect(window.ao!.app.chooseDirectory).not.toHaveBeenCalled();
 	});
 
 	it("prioritizes authorized project agents by preferred agent order", async () => {

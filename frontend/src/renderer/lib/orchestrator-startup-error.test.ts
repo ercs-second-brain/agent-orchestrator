@@ -15,4 +15,18 @@ describe("formatOrchestratorStartupError", () => {
 		expect(formatOrchestratorStartupError("Project added, but orchestrator did not start: branch is already checked out"))
 			.toBe("Project added, but orchestrator did not start: branch is already checked out");
 	});
+
+	it("explains a Pi probe that failed because the daemon PATH omitted Node", () => {
+		expect(
+			formatOrchestratorStartupError(
+				"spawn webreadr-1: prepare: install hooks: pi.GetAgentHooks: probe pi --version: exit status 127",
+			),
+		).toMatch(/cannot run Pi/);
+	});
+
+	it("explains AGENT_BINARY_NOT_FOUND", () => {
+		expect(formatOrchestratorStartupError("pi: agent: binary not found on PATH (AGENT_BINARY_NOT_FOUND)")).toMatch(
+			/cannot run Pi/,
+		);
+	});
 });

@@ -22,6 +22,13 @@ export type ShellContextValue = {
 		orchestratorAgent: string;
 		trackerIntake?: components["schemas"]["TrackerIntakeConfig"];
 	}) => Promise<void>;
+	createRepository: (input: {
+		name: string;
+		private: boolean;
+		workerAgent: string;
+		orchestratorAgent: string;
+		trackerIntake?: components["schemas"]["TrackerIntakeConfig"];
+	}) => Promise<void>;
 	initializeProjectRepository: (path: string) => Promise<void>;
 };
 

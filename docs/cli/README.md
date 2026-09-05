@@ -32,7 +32,8 @@ Every product command resolves to a daemon HTTP route. Run `ao <command>
 | `ao doctor` / `--json`        | Check config, data directory, DB-file presence, daemon state, `git`, and (on Darwin/Linux) `tmux`; on Windows conpty is built in. |
 | `ao completion <shell>`       | Generate completions for `bash`, `zsh`, `fish`, or `powershell`.                                                                  |
 | `ao version` / `ao --version` | Print build metadata.                                                                                                             |
-| `ao daemon`                   | Hidden internal daemon entrypoint used by `ao start`.                                                                             |
+| `ao daemon`                   | Run the AO backend daemon in the foreground (headless VM/systemd entrypoint). See [headless-vm.md](../headless-vm.md).          |
+| `ao mobile`                   | Manage the Connect Mobile LAN listener (`status`, `enable`, `disable`, `regenerate`, `pairing-code`).                               |
 
 ### Product commands
 

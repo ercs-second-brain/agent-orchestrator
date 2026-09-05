@@ -207,6 +207,7 @@ func NewRootCommand(deps Deps) *cobra.Command {
 	root.AddCommand(newSendCommand(ctx))
 	root.AddCommand(newPreviewCommand(ctx))
 	root.AddCommand(newBrowserCommand(ctx))
+	root.AddCommand(newMobileCommand(ctx))
 	root.AddCommand(newHooksCommand(ctx))
 	root.AddCommand(newAgentProcessCommand(ctx))
 	root.AddCommand(newChatHostCommand())
@@ -334,10 +335,15 @@ func atMostOneArg(cmd *cobra.Command, args []string) error {
 
 func newDaemonCommand() *cobra.Command {
 	return &cobra.Command{
-		Use:    "daemon",
-		Short:  "Run the AO backend daemon",
-		Hidden: true,
-		Args:   noArgs,
+		Use:   "daemon",
+		Short: "Run the AO backend daemon",
+		Long: "Run the AO backend daemon in the foreground.\n\n" +
+			"This is the headless deployment entrypoint: a server (systemd, container,\n" +
+			"or a plain SSH session) runs `ao daemon` and desktops, phones, and browsers\n" +
+			"connect to it over the network. Without a supervising desktop app the\n" +
+			"daemon runs until signalled (SIGINT/SIGTERM) and stays persistent across\n" +
+			"client quits. See docs/headless-vm.md.",
+		Args: noArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return daemon.Run()
 		},

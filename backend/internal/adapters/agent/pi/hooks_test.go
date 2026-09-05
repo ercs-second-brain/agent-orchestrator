@@ -2,12 +2,15 @@ package pi
 
 import (
 	"context"
+	"errors"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"runtime"
 	"strings"
 	"testing"
+
+	"github.com/aoagents/agent-orchestrator/backend/internal/ports"
 )
 
 func TestPiExtensionOnlyEndsSessionOnQuit(t *testing.T) {
@@ -36,6 +39,20 @@ func TestParsePiVersion(t *testing.T) {
 		if ok != tc.wantOK || got != tc.want {
 			t.Fatalf("parsePiVersion(%q) = %v, %v; want %v, %v", tc.output, got, ok, tc.want, tc.wantOK)
 		}
+	}
+}
+
+func TestPiAgentSettledSupportedExit127IsBinaryNotFound(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("fake pi fixture uses a Unix shebang")
+	}
+	path := filepath.Join(t.TempDir(), "pi")
+	if err := os.WriteFile(path, []byte("#!/usr/bin/env sh\nexit 127\n"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	_, err := (&Plugin{resolvedBinary: path}).piAgentSettledSupported(context.Background())
+	if !errors.Is(err, ports.ErrAgentBinaryNotFound) {
+		t.Fatalf("err = %v, want ports.ErrAgentBinaryNotFound", err)
 	}
 }
 

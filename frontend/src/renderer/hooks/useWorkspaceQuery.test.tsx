@@ -4,20 +4,31 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { ReactNode } from "react";
 import type { WorkspaceSummary } from "../types/workspace";
 
-const { captureRendererEventMock, cloudState, getMock, hasTrustedApiBaseUrlMock, listProjectsMock, setQueryHealthyMock } = vi.hoisted(
-	() => ({
-		captureRendererEventMock: vi.fn().mockResolvedValue(undefined),
-		cloudState: { ready: false, org: undefined as { id: string } | undefined },
-		getMock: vi.fn(),
-		hasTrustedApiBaseUrlMock: vi.fn(() => true),
-		listProjectsMock: vi.fn(),
-		setQueryHealthyMock: vi.fn(),
-	}),
-);
+const {
+	captureRendererEventMock,
+	cloudState,
+	getApiBaseUrlMock,
+	getMock,
+	hasTrustedApiBaseUrlMock,
+	listProjectsMock,
+	setQueryHealthyMock,
+	subscribeApiBaseUrlMock,
+} = vi.hoisted(() => ({
+	captureRendererEventMock: vi.fn().mockResolvedValue(undefined),
+	cloudState: { ready: false, org: undefined as { id: string } | undefined },
+	getApiBaseUrlMock: vi.fn(() => "http://127.0.0.1:3001"),
+	getMock: vi.fn(),
+	hasTrustedApiBaseUrlMock: vi.fn(() => true),
+	listProjectsMock: vi.fn(),
+	setQueryHealthyMock: vi.fn(),
+	subscribeApiBaseUrlMock: vi.fn(() => () => undefined),
+}));
 
 vi.mock("../lib/api-client", () => ({
 	apiClient: { GET: getMock },
+	getApiBaseUrl: getApiBaseUrlMock,
 	hasTrustedApiBaseUrl: hasTrustedApiBaseUrlMock,
+	subscribeApiBaseUrl: subscribeApiBaseUrlMock,
 }));
 
 vi.mock("../lib/telemetry", () => ({ captureRendererEvent: captureRendererEventMock }));
@@ -57,7 +68,9 @@ function respondWith(payload: {
 beforeEach(() => {
 	captureRendererEventMock.mockClear();
 	getMock.mockReset();
+	getApiBaseUrlMock.mockReset().mockReturnValue("http://127.0.0.1:3001");
 	hasTrustedApiBaseUrlMock.mockReset().mockReturnValue(true);
+	subscribeApiBaseUrlMock.mockReset().mockReturnValue(() => undefined);
 	cloudState.ready = false;
 	cloudState.org = undefined;
 	listProjectsMock.mockReset();
@@ -65,13 +78,12 @@ beforeEach(() => {
 });
 
 describe("useWorkspaceQuery", () => {
-	it("rejects workspace reads while the daemon base URL is untrusted", async () => {
-		hasTrustedApiBaseUrlMock.mockReturnValue(false);
+	it("does not fetch workspaces while the daemon base URL is untrusted", async () => {
+		getApiBaseUrlMock.mockReturnValue("");
 
 		const { result } = renderHook(() => useWorkspaceQuery(), { wrapper });
 
-		await waitFor(() => expect(result.current.isError).toBe(true));
-		expect(result.current.error).toEqual(new Error("AO daemon API is not ready"));
+		await waitFor(() => expect(result.current.fetchStatus).toBe("idle"));
 		expect(getMock).not.toHaveBeenCalled();
 	});
 
@@ -251,6 +263,66 @@ describe("useWorkspaceQuery", () => {
 		});
 	});
 
+	it("stays loading when the routed session is missing from a cached workspace list", async () => {
+		let finishGet: ((value: { data: { session: Record<string, unknown> }; error: undefined }) => void) | undefined;
+		getMock.mockImplementation(async (url: string, options?: { params?: { path?: { sessionId?: string } } }) => {
+			if (url === "/api/v1/projects") {
+				return {
+					data: { projects: [{ id: "proj-1", name: "workspace3", path: "/tmp/workspace3" }] },
+					error: undefined,
+				};
+			}
+			if (url === "/api/v1/sessions") {
+				return { data: { sessions: [] }, error: undefined };
+			}
+			if (url === "/api/v1/sessions/{sessionId}") {
+				expect(options?.params?.path?.sessionId).toBe("sess-orch");
+				return await new Promise((resolve) => {
+					finishGet = resolve;
+				});
+			}
+			throw new Error(`unexpected GET ${url}`);
+		});
+
+		const queryClient = new QueryClient({ defaultOptions: { queries: { retryDelay: 0 } } });
+		const localWrapper = ({ children }: { children: ReactNode }) => (
+			<QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+		);
+		const { result } = renderHook(() => useWorkspaceSession("sess-orch"), { wrapper: localWrapper });
+
+		await waitFor(() => expect(result.current.isLoading).toBe(true));
+		expect(result.current.data).toBeUndefined();
+		expect(finishGet).toBeTypeOf("function");
+		finishGet?.({
+			data: {
+				session: {
+					id: "sess-orch",
+					projectId: "proj-1",
+					displayName: "orchestrate",
+					harness: "codex",
+					kind: "orchestrator",
+					mode: "tui",
+					status: "working",
+					kanbanColumn: "building",
+					displayStatus: "Working",
+					autoInjectReview: true,
+					autoInjectCI: true,
+					autoReviewEnabled: false,
+					isPinned: false,
+					isTerminated: false,
+					terminateOnPrMerge: false,
+					prs: [],
+					activity: { state: "idle", lastActivityAt: "2026-09-04T10:00:00Z" },
+					createdAt: "2026-09-04T10:00:00Z",
+					updatedAt: "2026-09-04T10:00:01Z",
+				},
+			},
+			error: undefined,
+		});
+		await waitFor(() => expect(result.current.data?.id).toBe("sess-orch"));
+		expect(result.current.isLoading).toBe(false);
+	});
+
 	it("falls back to the direct session read while the workspace list has not caught up", async () => {
 		getMock.mockImplementation(async (url: string, options?: { params?: { path?: { sessionId?: string } } }) => {
 			if (url === "/api/v1/projects") {
@@ -313,7 +385,7 @@ describe("useWorkspaceQuery", () => {
 			kind: "orchestrator",
 		});
 		await waitFor(() => {
-			const cached = queryClient.getQueryData<WorkspaceSummary[]>(workspaceQueryKey);
+			const cached = queryClient.getQueryData<WorkspaceSummary[]>([...workspaceQueryKey, "http://127.0.0.1:3001"]);
 			expect(Array.isArray(cached)).toBe(true);
 			expect(cached?.[0]?.sessions.some((session: { id: string }) => session.id === "sess-orch")).toBe(true);
 		});

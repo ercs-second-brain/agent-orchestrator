@@ -9,7 +9,7 @@ import { OrchestratorIcon } from "./icons";
 // Board empty states: first-launch welcome (`BoardWelcome`) and project board
 // with no worker sessions yet (`ProjectBoardEmpty`).
 export function BoardWelcome() {
-	const { cloneProject, createProject, initializeProjectRepository } = useShell();
+	const { cloneProject, createProject, createRepository, initializeProjectRepository } = useShell();
 	return (
 		<WelcomePanel>
 			<div
@@ -21,6 +21,7 @@ export function BoardWelcome() {
 					mode="choose"
 					onCloneProject={cloneProject}
 					onCreateProject={createProject}
+					onCreateRepository={createRepository}
 					onInitializeProject={initializeProjectRepository}
 				/>
 			</div>

@@ -20,12 +20,17 @@ vi.mock("../hooks/useSystemRequirementsGate", () => ({
 	useSystemRequirementsGate: () => ({ blocked: false }),
 }));
 
+const shellMocks = vi.hoisted(() => ({
+	daemonStatus: { state: "ready" as string, connectionMode: undefined as string | undefined },
+}));
+
 vi.mock("../lib/shell-context", () => ({
 	useShell: () => ({
-		daemonStatus: { state: "ready" },
+		daemonStatus: shellMocks.daemonStatus,
 		workspaceStartupState: "ready",
 		cloneProject: vi.fn(),
 		createProject: vi.fn(),
+		createRepository: vi.fn(),
 		initializeProjectRepository: vi.fn(),
 	}),
 }));
@@ -43,6 +48,7 @@ import { HomePage } from "../components/HomePage";
 beforeEach(() => {
 	routeMocks.navigate.mockReset();
 	routeMocks.workspaces = [];
+	shellMocks.daemonStatus = { state: "ready", connectionMode: undefined };
 });
 
 describe("shell index route", () => {
@@ -99,5 +105,19 @@ describe("shell index route", () => {
 		expect(screen.getByRole("button", { name: /Project One/ })).toBeInTheDocument();
 		expect(screen.getByRole("button", { name: /Project Three/ })).toBeInTheDocument();
 		expect(screen.queryByRole("button", { name: /Project Four/ })).not.toBeInTheDocument();
+	});
+
+	it("hides local folder import actions when attached to a remote daemon", () => {
+		shellMocks.daemonStatus = { state: "ready", connectionMode: "remote" };
+		routeMocks.workspaces = [
+			{ id: "scratch", name: "Scratch", kind: "scratch", path: "/home/eric/scratch", sessions: [] },
+		];
+
+		render(<HomePage />);
+
+		expect(screen.getByRole("button", { name: "Create a new Git repository" })).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: "Clone from Git" })).toBeInTheDocument();
+		expect(screen.queryByRole("button", { name: "Import an existing project" })).not.toBeInTheDocument();
+		expect(screen.queryByRole("button", { name: "Import a workspace folder" })).not.toBeInTheDocument();
 	});
 });

@@ -14,6 +14,8 @@ const initialApiBaseUrl = explicitApiBaseUrl ?? (import.meta.env.DEV ? devApiBas
 
 let runtimeApiBaseUrl: string | null = explicitApiBaseUrl ?? null;
 let daemonStatus: DaemonStatus = { state: "stopped" };
+let remoteAuthHeaders: Record<string, string> | null = null;
+let remoteAuthHeadersPromise: Promise<void> | null = null;
 
 const baseUrlListeners = new Set<() => void>();
 
@@ -49,6 +51,20 @@ export function setApiBaseUrl(nextBaseUrl: string | null): void {
 // availability message.
 export function setApiDaemonStatus(nextStatus: DaemonStatus): void {
 	daemonStatus = nextStatus;
+	if (nextStatus.connectionMode === "remote" && nextStatus.state === "ready") {
+		remoteAuthHeaders = null;
+		remoteAuthHeadersPromise = import("./bridge")
+			.then(({ aoBridge }) => aoBridge.desktopRemote.getAuthHeader())
+			.then((headers) => {
+				remoteAuthHeaders = headers;
+			})
+			.catch(() => {
+				remoteAuthHeaders = null;
+			});
+	} else {
+		remoteAuthHeaders = null;
+		remoteAuthHeadersPromise = null;
+	}
 }
 
 // Route templates from the generated OpenAPI schema (frontend/src/api/schema.ts).
@@ -98,6 +114,7 @@ const ROUTE_TEMPLATES = [
 	"/api/v1/orchestrators/{id}",
 	"/api/v1/projects",
 	"/api/v1/projects/clone",
+	"/api/v1/projects/create-repository",
 	"/api/v1/projects/initialize",
 	"/api/v1/projects/{id}",
 	"/api/v1/projects/{id}/config",
@@ -256,8 +273,14 @@ async function runtimeFetch(input: Request): Promise<Response> {
 
 		const url = new URL(input.url);
 		const target = new URL(url.pathname + url.search + url.hash, baseUrl);
-		if (target.href === input.url) {
-			return fetch(input);
+		if (remoteAuthHeadersPromise) {
+			await remoteAuthHeadersPromise;
+		}
+		const headers = new Headers(input.headers);
+		if (remoteAuthHeaders) {
+			for (const [key, value] of Object.entries(remoteAuthHeaders)) {
+				headers.set(key, value);
+			}
 		}
 
 		// Rebase onto the runtime base URL by copying fields explicitly and
@@ -269,7 +292,7 @@ async function runtimeFetch(input: Request): Promise<Response> {
 		const body = input.method === "GET" || input.method === "HEAD" ? undefined : await input.arrayBuffer();
 		return fetch(target, {
 			method: input.method,
-			headers: input.headers,
+			headers,
 			body,
 			signal: input.signal,
 			credentials: input.credentials,

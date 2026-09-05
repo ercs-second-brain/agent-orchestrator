@@ -1,3 +1,4 @@
+import { GITHUB_ISSUES_NEW_URL } from "../../shared/github-repo";
 import { aoBridge } from "./bridge";
 import { routeSurface } from "./telemetry";
 
@@ -22,7 +23,7 @@ const REDACTED_LOCAL_PATH = "[redacted-local-path]";
 const REDACTED_LOCAL_URL = "[redacted-local-url]";
 const REDACTED_SECRET = "[redacted-secret]";
 const DISCORD_INVITE_URL = "https://discord.com/invite/UZv7JjxbwG";
-const GITHUB_NEW_ISSUE_URL = "https://github.com/Untrivial-ai/agent-orchestrator/issues/new";
+const GITHUB_NEW_ISSUE_URL = GITHUB_ISSUES_NEW_URL;
 const SUPPORT_EMAIL = "prateek@untrivial.ai";
 
 const LOCAL_URL_PATTERN =

@@ -75,6 +75,7 @@ import {
 	openSessionFile,
 	type SessionFileTabState,
 } from "../lib/session-file-tabs";
+import { formatOrchestratorStartupError } from "../lib/orchestrator-startup-error";
 import { hidesShellTopbar, isMacPlatform } from "../lib/platform";
 import { useShell } from "../lib/shell-context";
 import { cn } from "../lib/utils";
@@ -235,6 +236,7 @@ function reviewerTerminalFromReviews(data?: ReviewsResponse): ReviewerTerminalTa
 
 type SessionViewProps = {
 	sessionId: string;
+	projectId?: string;
 };
 
 // Mirrors the left sidebar: a Motion gap takes layout width while a sibling
@@ -370,7 +372,7 @@ function SessionInspectorRail({
 // x-transform). Summary/Reviews/Files share a utility width, while Browser
 // automatically grows into a co-work canvas. Chat readability clamps either
 // profile before the conversation can become unusably narrow.
-export function SessionView({ sessionId }: SessionViewProps) {
+export function SessionView({ sessionId, projectId }: SessionViewProps) {
 	const { t } = useTranslation();
 	const queryClient = useQueryClient();
 	const refreshWorkspaces = useCallback(
@@ -390,6 +392,9 @@ export function SessionView({ sessionId }: SessionViewProps) {
 	const setBrowserContentRevealed = useUiStore((state) => state.setBrowserContentRevealed);
 	const setBrowserUnseen = useUiStore((state) => state.setBrowserUnseen);
 	const { daemonStatus } = useShell();
+	const orchestratorStartupError = useUiStore((state) =>
+		projectId ? (state.orchestratorStartupErrors[projectId] ?? null) : null,
+	);
 	const previewBaselineRef = useRef<{ sessionId: string; key: string } | null>(null);
 	const sessionSplitRef = useRef<HTMLDivElement | null>(null);
 	const terminalLiveResizeTimerRef = useRef<number | null>(null);
@@ -1442,10 +1447,13 @@ export function SessionView({ sessionId }: SessionViewProps) {
 			inspectorMotionReadyRef.current = false;
 		};
 	}, [hasInspector]);
-	if (!session && !workspaceQuery.isLoading) {
+	if (!session) {
+		const settledError = formatOrchestratorStartupError(orchestratorStartupError ?? "");
 		return (
 			<div className="grid h-full place-items-center p-6 text-center font-mono text-xs text-passive">
-				{t("session.notFound")}
+				{workspaceQuery.isLoading
+					? t("terminal.preparingOrchestrator")
+					: settledError || t("session.notFound")}
 			</div>
 		);
 	}

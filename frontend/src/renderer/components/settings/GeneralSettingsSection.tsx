@@ -17,6 +17,7 @@ import { useSettings, useUpdateCloudOffering, useUpdateSessionInterface } from "
 import type { SessionMode } from "../../types/workspace";
 import type { TerminalShellKind } from "../../../shared/ui-locale";
 import { isWindowsPlatform } from "../../lib/platform";
+import { RemoteConnectionSection } from "./RemoteConnectionSection";
 
 /**
  * Default interface for new sessions. Daemon-owned so `ao spawn` and mobile
@@ -173,6 +174,7 @@ export function GeneralSettingsSection({
 
 	return (
 		<>
+			<RemoteConnectionSection titleHidden={titleHidden} />
 			{/* Appearance */}
 			<SettingsSection title={t("settings.appearance")} titleHidden={titleHidden} grouped>
 				<SettingsRow label={t("settings.theme")}>

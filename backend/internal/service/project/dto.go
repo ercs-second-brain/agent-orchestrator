@@ -29,6 +29,17 @@ type CloneInput struct {
 	Config            *domain.ProjectConfig `json:"config,omitempty"`
 }
 
+// CreateRepositoryInput is the body shape for POST /api/v1/projects/create-repository.
+// The daemon creates a hosted GitHub repository (private by default), checks it
+// out under DestinationParent (or ~/projects), and registers the project.
+type CreateRepositoryInput struct {
+	Name              string                `json:"name" minLength:"1" maxLength:"128"`
+	Private           *bool                 `json:"private,omitempty"`
+	DestinationParent string                `json:"destinationParent,omitempty"`
+	ProjectID         *string               `json:"projectId,omitempty"`
+	Config            *domain.ProjectConfig `json:"config,omitempty"`
+}
+
 // InitializeRepositoryInput is the body shape for POST /api/v1/projects/initialize.
 type InitializeRepositoryInput struct {
 	Path string `json:"path"`

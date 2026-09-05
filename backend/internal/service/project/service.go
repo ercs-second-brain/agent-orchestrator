@@ -39,6 +39,10 @@ type Manager interface {
 	// local repository as a project.
 	Clone(ctx context.Context, in CloneInput) (Project, error)
 
+	// CreateRepository creates a new hosted Git repository, checks it out on
+	// this machine, and registers the resulting project.
+	CreateRepository(ctx context.Context, in CreateRepositoryInput) (Project, error)
+
 	// InitializeRepository prepares a selected folder for project registration.
 	InitializeRepository(ctx context.Context, in InitializeRepositoryInput) (InitializeRepositoryResult, error)
 
@@ -63,12 +67,13 @@ type SessionTeardowner interface {
 
 // Service implements project registration and lookup use-cases for controllers.
 type Service struct {
-	store          Store
-	sessions       SessionTeardowner
-	clock          func() time.Time
-	telemetry      ports.EventSink
-	defaultHarness domain.AgentHarness
-	logger         *slog.Logger
+	store                  Store
+	sessions               SessionTeardowner
+	clock                  func() time.Time
+	telemetry              ports.EventSink
+	defaultHarness         domain.AgentHarness
+	logger                 *slog.Logger
+	createHostedRepository CreateHostedRepositoryFunc
 	// addMu serialises the whole body of Add. Workspace registration performs
 	// filesystem mutations (git init, .gitignore writes, commits) that are not
 	// covered by the store's own writeMu, so path/id conflict checks plus the
@@ -92,6 +97,9 @@ type Deps struct {
 	// Logger receives structured logs. Left nil, the service falls back to
 	// slog.Default, keeping service-focused tests logger-free.
 	Logger *slog.Logger
+	// CreateHostedRepository creates the GitHub (or compatible) remote and
+	// pushes the local checkout. Tests inject a fake; production uses `gh`.
+	CreateHostedRepository CreateHostedRepositoryFunc
 }
 
 // New returns a project service backed by the given durable store.
@@ -106,12 +114,13 @@ func NewWithDeps(d Deps) *Service {
 		defaultHarness = domain.AgentHarness(config.DefaultAgent)
 	}
 	s := &Service{
-		store:          d.Store,
-		sessions:       d.Sessions,
-		clock:          d.Clock,
-		telemetry:      d.Telemetry,
-		defaultHarness: defaultHarness,
-		logger:         d.Logger,
+		store:                  d.Store,
+		sessions:               d.Sessions,
+		clock:                  d.Clock,
+		telemetry:              d.Telemetry,
+		defaultHarness:         defaultHarness,
+		logger:                 d.Logger,
+		createHostedRepository: d.CreateHostedRepository,
 	}
 	if s.clock == nil {
 		s.clock = time.Now

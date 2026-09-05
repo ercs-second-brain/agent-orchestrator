@@ -1,0 +1,189 @@
+# Publish a GitHub Release this repo's updater and `ao start` can consume.
+# Tag vX.Y.Z (or dispatch with a version) to build unsigned desktop artifacts
+# and upload them with electron-updater feed files. See docs/release-repo.md.
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to stamp (e.g. 0.10.4). Required when not tagging."
+        type: string
+        required: false
+
+permissions:
+  contents: write
+
+env:
+  VITE_WORKOS_CLIENT_ID: ${{ vars.VITE_WORKOS_CLIENT_ID }}
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            platform: darwin-arm64
+            artifact: mac-arm64
+          - os: macos-15-intel
+            platform: darwin-x64
+            artifact: mac-x64
+          - os: windows-latest
+            platform: win32-x64
+            artifact: win
+          - os: ubuntu-latest
+            platform: linux-x64
+            artifact: linux
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            frontend/package-lock.json
+            packages/product-ui/package-lock.json
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: backend/go.mod
+          cache-dependency-path: backend/go.sum
+      - run: npm ci
+      - name: Install product UI dependencies
+        run: npm ci
+        working-directory: packages/product-ui
+      - name: Resolve version
+        id: version
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "${GITHUB_REF_TYPE}" == "tag" ]]; then
+            raw="${GITHUB_REF_NAME}"
+          else
+            raw="${{ inputs.version }}"
+          fi
+          raw="${raw#v}"
+          if [[ ! "$raw" =~ ^[0-9]+\.[0-9]+\.[0-9]+ ]]; then
+            echo "::error::version must look like 1.2.3 (got '$raw')" >&2
+            exit 1
+          fi
+          echo "version=$raw" >> "$GITHUB_OUTPUT"
+      - name: Stamp version
+        shell: bash
+        env:
+          BUILD_VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          node -e "const v=process.env.BUILD_VERSION.split('+')[0]; const fs=require('fs'); const p=require('./package.json'); p.version=v; fs.writeFileSync('./package.json', JSON.stringify(p,null,'\t')+'\n');"
+      - name: Build (unsigned)
+        shell: bash
+        env:
+          AO_RELEASE_REPO: ${{ github.repository }}
+        run: npm run make
+      - name: Verify baked update feed repo
+        shell: bash
+        run: |
+          set -euo pipefail
+          owner="$(sed -n 's/^owner:[[:space:]]*//p' app-update.yml)"
+          repo="$(sed -n 's/^repo:[[:space:]]*//p' app-update.yml)"
+          echo "baked feed: $owner/$repo (expected $GITHUB_REPOSITORY)"
+          if [ "$owner/$repo" != "$GITHUB_REPOSITORY" ]; then
+            echo "::error::app-update.yml bakes $owner/$repo but this build publishes from $GITHUB_REPOSITORY" >&2
+            exit 1
+          fi
+      - name: Collect artifacts
+        shell: bash
+        env:
+          PLATFORM: ${{ matrix.platform }}
+        run: |
+          set -euo pipefail
+          mkdir -p dist-artifact
+          case "$PLATFORM" in
+            darwin-*)
+              zip="$(find out/make/zip/darwin -name '*.zip' | head -n1)"
+              dmg="$(find out/make -name '*.dmg' | head -n1 || true)"
+              if [ -z "$zip" ]; then echo "no zip for $PLATFORM" >&2; exit 1; fi
+              cp "$zip" "dist-artifact/agent-orchestrator-$PLATFORM.zip"
+              if [ -n "$dmg" ]; then cp "$dmg" "dist-artifact/agent-orchestrator-$PLATFORM.dmg"; fi
+              ;;
+            win32-x64)
+              src="$(find out/make -maxdepth 1 -name '*Setup*.exe' | head -n1)"
+              if [ -z "$src" ]; then echo "no exe for $PLATFORM" >&2; exit 1; fi
+              cp "$src" "dist-artifact/agent-orchestrator-win32-x64.exe"
+              ;;
+            linux-x64)
+              appimage="$(find out/make -maxdepth 1 -name '*.AppImage' | head -n1)"
+              deb="$(find out/make -name '*.deb' | head -n1 || true)"
+              rpm="$(find out/make -name '*.rpm' | head -n1 || true)"
+              if [ -z "$appimage" ]; then echo "no AppImage for $PLATFORM" >&2; exit 1; fi
+              cp "$appimage" "dist-artifact/agent-orchestrator-linux-x64.AppImage"
+              if [ -n "$deb" ]; then cp "$deb" "dist-artifact/agent-orchestrator-linux-x64.deb"; fi
+              if [ -n "$rpm" ]; then cp "$rpm" "dist-artifact/agent-orchestrator-linux-x64.rpm"; fi
+              ;;
+            *)
+              echo "unknown platform: $PLATFORM" >&2
+              exit 1
+              ;;
+          esac
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: frontend/dist-artifact/*
+          if-no-files-found: error
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          path: release-assets
+          merge-multiple: true
+      - name: Resolve version
+        id: version
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "${GITHUB_REF_TYPE}" == "tag" ]]; then
+            raw="${GITHUB_REF_NAME}"
+          else
+            raw="${{ inputs.version }}"
+          fi
+          echo "version=${raw#v}" >> "$GITHUB_OUTPUT"
+          echo "tag=v${raw#v}" >> "$GITHUB_OUTPUT"
+      - name: Write updater feeds
+        shell: bash
+        env:
+          RELEASE_VERSION: ${{ steps.version.outputs.version }}
+          UPDATER_YML_DIR: release-assets
+          MAC_ARM64_ZIP: release-assets/agent-orchestrator-darwin-arm64.zip
+          WIN_EXE: release-assets/agent-orchestrator-win32-x64.exe
+          LINUX_APPIMAGE: release-assets/agent-orchestrator-linux-x64.AppImage
+        run: node frontend/scripts/write-updater-yml.mjs
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.version.outputs.tag }}
+          VERSION: ${{ steps.version.outputs.version }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          notes="Agent Orchestrator ${VERSION}
+
+          Desktop + daemon build. The app and \`ao start\` update from this repository's GitHub Releases."
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release upload "$TAG" release-assets/* --repo "$GITHUB_REPOSITORY" --clobber
+          else
+            gh release create "$TAG" release-assets/* \
+              --repo "$GITHUB_REPOSITORY" \
+              --title "v${VERSION}" \
+              --notes "$notes"
+          fi

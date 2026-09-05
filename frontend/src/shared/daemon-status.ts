@@ -13,10 +13,17 @@ export type DaemonFailureCode =
 	| "port_unconfirmed"
 	| "not_ready"
 	| "identity_mismatch"
-	| "datadir_unwritable";
+	| "datadir_unwritable"
+	| "remote_unreachable"
+	| "remote_auth_failed";
+
+export type DaemonConnectionMode = "local" | "remote";
 
 export type DaemonStatus = {
 	state: "starting" | "ready" | "stopped" | "error";
+	connectionMode?: DaemonConnectionMode;
+	remoteApiBase?: string;
+	remoteHostId?: string;
 	port?: number;
 	pid?: number;
 	executablePath?: string;

@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/aoagents/agent-orchestrator/backend/internal/config"
 	"github.com/aoagents/agent-orchestrator/backend/internal/mobilebridge"
 )
 
@@ -178,5 +179,35 @@ func TestLANManagerServesIdentityProbeWithoutAPassword(t *testing.T) {
 	}
 	if code := get("/api/v1/sessions"); code != http.StatusUnauthorized {
 		t.Errorf("unauthenticated GET /api/v1/sessions got %d, want 401", code)
+	}
+}
+
+// Desktop remote attach crosses from app://renderer to the LAN listener with a
+// bearer token, so Chromium sends an unauthenticated OPTIONS preflight first.
+func TestLANManagerAllowsDesktopCorsPreflight(t *testing.T) {
+	router := newTestRouter(config.Config{AllowedOrigins: []string{"app://renderer"}}, slog.Default(), nil)
+	st := &authState{}
+	st.setHash(mobilebridge.HashPassword("secret12"))
+	m := NewLANManager(router, st, 0, slog.Default(), nil)
+	port, err := m.Start(0)
+	if err != nil {
+		t.Fatalf("start: %v", err)
+	}
+	defer m.Stop(context.Background())
+
+	req, _ := http.NewRequest(http.MethodOptions, fmt.Sprintf("http://127.0.0.1:%d/api/v1/projects", port), nil)
+	req.Header.Set("Origin", "app://renderer")
+	req.Header.Set("Access-Control-Request-Method", "GET")
+	req.Header.Set("Access-Control-Request-Headers", "authorization")
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatalf("preflight: %v", err)
+	}
+	defer func() { _ = resp.Body.Close() }()
+	if resp.StatusCode != http.StatusNoContent {
+		t.Fatalf("preflight got %d, want 204", resp.StatusCode)
+	}
+	if got := resp.Header.Get("Access-Control-Allow-Origin"); got != "app://renderer" {
+		t.Fatalf("ACAO = %q, want app://renderer", got)
 	}
 }

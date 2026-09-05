@@ -27,7 +27,13 @@ import {
 } from "../hooks/useSessionUsageSummaries";
 import { useRestoreSession } from "../hooks/useRestoreSession";
 import { useTerminateSession } from "../hooks/useTerminateSession";
-import { cloudSessionsQueryKey, useWorkspaceQuery, workspaceQueryKey } from "../hooks/useWorkspaceQuery";
+import {
+	cloudSessionsQueryKey,
+	pendingOrchestratorSession,
+	seedWorkspaceSession,
+	useWorkspaceQuery,
+	workspaceQueryKey,
+} from "../hooks/useWorkspaceQuery";
 import { NotificationCenter } from "./NotificationCenter";
 import { BoardWelcome, ProjectBoardEmpty } from "./BoardEmptyStates";
 import { OrchestratorIcon } from "./icons";
@@ -230,6 +236,17 @@ export function SessionsBoard({ projectId }: SessionsBoardProps) {
 		try {
 			const sessionId = await spawnOrchestrator(projectId, "board", false, mode);
 			await queryClient.invalidateQueries({ queryKey: workspaceQueryKey });
+			if (workspace) {
+				seedWorkspaceSession(
+					queryClient,
+					pendingOrchestratorSession({
+						sessionId,
+						projectId,
+						projectName: workspace.name,
+						provider: workspace.orchestratorAgent,
+					}),
+				);
+			}
 			setOrchestratorStartupError(projectId, null);
 			void navigate({
 				to: "/projects/$projectId/sessions/$sessionId",

@@ -2189,6 +2189,43 @@ paths:
       summary: Clone and register a project from a git repository URL
       tags:
       - projects
+  /api/v1/projects/create-repository:
+    post:
+      operationId: createRepository
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateRepositoryInput'
+        required: true
+      responses:
+        "201":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectResponse'
+          description: Created
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIError'
+          description: Bad Request
+        "409":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIError'
+          description: Conflict
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIError'
+          description: Internal Server Error
+      summary: Create a hosted Git repository and register it as a project
+      tags:
+      - projects
   /api/v1/projects/initialize:
     post:
       operationId: initializeProjectRepository
@@ -8648,6 +8685,27 @@ components:
       - outputTokens
       - cachedTokens
       - totalTokens
+      type: object
+    CreateRepositoryInput:
+      properties:
+        config:
+          $ref: '#/components/schemas/ProjectConfig'
+        destinationParent:
+          type: string
+        name:
+          maxLength: 128
+          minLength: 1
+          type: string
+        private:
+          type:
+          - "null"
+          - boolean
+        projectId:
+          type:
+          - "null"
+          - string
+      required:
+      - name
       type: object
     DegradedProject:
       properties:

@@ -12,7 +12,13 @@ import {
 	sessionIsActive,
 	type WorkspaceSession,
 } from "../types/workspace";
-import { cloudSessionsQueryKey, useWorkspaceScope, workspaceQueryKey } from "../hooks/useWorkspaceQuery";
+import {
+	cloudSessionsQueryKey,
+	pendingOrchestratorSession,
+	seedWorkspaceSession,
+	useWorkspaceScope,
+	workspaceQueryKey,
+} from "../hooks/useWorkspaceQuery";
 import {
 	clearTerminateSessionState,
 	useProjectTerminateSessionStates,
@@ -194,6 +200,17 @@ export function ShellTopbar({
 		try {
 			const sessionId = await spawnOrchestrator(projectId, "topbar");
 			await queryClient.invalidateQueries({ queryKey: workspaceQueryKey });
+			if (project) {
+				seedWorkspaceSession(
+					queryClient,
+					pendingOrchestratorSession({
+						sessionId,
+						projectId,
+						projectName: project.name,
+						provider: project.orchestratorAgent,
+					}),
+				);
+			}
 			void navigate({
 				to: "/projects/$projectId/sessions/$sessionId",
 				params: { projectId, sessionId },

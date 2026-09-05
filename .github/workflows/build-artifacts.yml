@@ -76,12 +76,11 @@ jobs:
       - name: Install product UI dependencies
         run: npm ci
         working-directory: packages/product-ui
-      - name: Verify WorkOS build configuration
+      - name: Note WorkOS build configuration
         shell: bash
         run: |
           if [ -z "$VITE_WORKOS_CLIENT_ID" ]; then
-            echo "::error::Repository variable VITE_WORKOS_CLIENT_ID is required for desktop artifacts." >&2
-            exit 1
+            echo "VITE_WORKOS_CLIENT_ID is unset; cloud login will be unavailable in this build."
           fi
       # Stamp the conductor-supplied version into package.json for this build,
       # dropping any +build metadata.

@@ -434,6 +434,7 @@ var schemaNames = map[string]string{ //nolint:gosec // Public OpenAPI type names
 	"ProjectDegraded":                   "DegradedProject",
 	"ProjectAddInput":                   "AddProjectInput",
 	"ProjectCloneInput":                 "CloneProjectInput",
+	"ProjectCreateRepositoryInput":      "CreateRepositoryInput",
 	"ProjectInitializeRepositoryInput":  "InitializeRepositoryInput",
 	"ProjectInitializeRepositoryResult": "InitializeRepositoryResult",
 	"ProjectRemoveResult":               "RemoveProjectResult",
@@ -1699,6 +1700,17 @@ func projectOperations() []operation {
 			method: http.MethodPost, path: "/api/v1/projects/clone", id: "cloneProject", tag: "projects",
 			summary: "Clone and register a project from a git repository URL",
 			reqBody: projectsvc.CloneInput{},
+			resps: []respUnit{
+				{http.StatusCreated, controllers.ProjectResponse{}},
+				{http.StatusBadRequest, envelope.APIError{}},
+				{http.StatusConflict, envelope.APIError{}},
+				{http.StatusInternalServerError, envelope.APIError{}},
+			},
+		},
+		{
+			method: http.MethodPost, path: "/api/v1/projects/create-repository", id: "createRepository", tag: "projects",
+			summary: "Create a hosted Git repository and register it as a project",
+			reqBody: projectsvc.CreateRepositoryInput{},
 			resps: []respUnit{
 				{http.StatusCreated, controllers.ProjectResponse{}},
 				{http.StatusBadRequest, envelope.APIError{}},

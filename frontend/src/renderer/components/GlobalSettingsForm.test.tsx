@@ -620,7 +620,7 @@ describe("GlobalSettingsForm", () => {
 		expect(copied).not.toContain("## Type");
 		expect(copied).not.toContain("Generated locally by AO");
 		expect(openExternal).toHaveBeenCalledWith(
-			expect.stringContaining("https://github.com/Untrivial-ai/agent-orchestrator/issues/new"),
+			expect.stringContaining("https://github.com/ercs-second-brain/agent-orchestrator/issues/new"),
 		);
 		expect(open).not.toHaveBeenCalled();
 		expect(screen.getByLabelText("Title")).toHaveValue("");

@@ -1,8 +1,8 @@
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient, type QueryClient } from "@tanstack/react-query";
 import type { TraySessionEntry } from "../../shared/tray";
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useSyncExternalStore } from "react";
 import type { components } from "../../api/schema";
-import { apiClient, apiErrorCode, hasTrustedApiBaseUrl } from "../lib/api-client";
+import { apiClient, apiErrorCode, getApiBaseUrl, hasTrustedApiBaseUrl, subscribeApiBaseUrl } from "../lib/api-client";
 import type { CloudCpProject, CloudCpSession } from "../lib/cloud-cp";
 import { useCloudCp } from "./useCloudCp";
 import { useCloudOrg } from "./useCloudOrg";
@@ -16,6 +16,7 @@ import {
 	type PRState,
 	type PullRequestFacts,
 	toAgentProvider,
+	type AgentProvider,
 	toKanbanColumn,
 	toProjectKind,
 	toSessionActivity,
@@ -109,6 +110,45 @@ function toWorkspaceSession(
 }
 
 export const workspaceQueryKey = ["workspaces"] as const;
+
+/** React-query key for the active daemon base URL (loopback or remote). */
+export function resolveWorkspaceQueryKey(): readonly unknown[] {
+	if (usesPreviewWorkspaceData) return workspaceQueryKey;
+	const apiBaseUrl = getApiBaseUrl();
+	return apiBaseUrl ? [...workspaceQueryKey, apiBaseUrl] : [...workspaceQueryKey, "pending"];
+}
+
+/** Placeholder row so a just-spawned orchestrator stays selectable while the list catches up. */
+export function pendingOrchestratorSession(input: {
+	sessionId: string;
+	projectId: string;
+	projectName: string;
+	provider?: AgentProvider;
+}): WorkspaceSession {
+	return {
+		id: input.sessionId,
+		workspaceId: input.projectId,
+		workspaceName: input.projectName,
+		title: input.projectName,
+		provider: input.provider ?? "pi",
+		kind: "orchestrator",
+		status: "working",
+		kanbanColumn: "building",
+		updatedAt: new Date().toISOString(),
+		prs: [],
+	};
+}
+
+export function seedWorkspaceSession(queryClient: QueryClient, session: WorkspaceSession) {
+	queryClient.setQueryData<WorkspaceSummary[]>(resolveWorkspaceQueryKey(), (current) => {
+		if (!current) return current;
+		return current.map((workspace) => {
+			if (workspace.id !== session.workspaceId) return workspace;
+			if (workspace.sessions.some((item) => item.id === session.id)) return workspace;
+			return { ...workspace, sessions: [...workspace.sessions, session] };
+		});
+	});
+}
 const reportedUnknownSessionFields = new Set<string>();
 
 function reportUnknownSessionField(field: "status" | "activity", value?: string): void {
@@ -235,6 +275,18 @@ type WorkspaceSubscriptionOptions = {
 	subscribed?: boolean;
 };
 
+function useWorkspaceQueryBase(): { apiBaseUrl: string; enabled: boolean; queryKey: readonly unknown[] } {
+	const apiBaseUrl = useSyncExternalStore(subscribeApiBaseUrl, getApiBaseUrl, () => "");
+	if (usesPreviewWorkspaceData) {
+		return { apiBaseUrl: "", enabled: true, queryKey: workspaceQueryKey };
+	}
+	return {
+		apiBaseUrl,
+		enabled: apiBaseUrl !== "",
+		queryKey: resolveWorkspaceQueryKey(),
+	};
+}
+
 export function useCloudProjectsQuery(options: WorkspaceSubscriptionOptions = {}) {
 	const { client, ready, baseUrl } = useCloudCp();
 	const { org } = useCloudOrg();
@@ -275,7 +327,13 @@ export function useCloudSessionsQuery(options: WorkspaceSubscriptionOptions = {}
 }
 
 export function useWorkspaceQuery(options: WorkspaceSubscriptionOptions = {}) {
-	const local = useQuery({ ...workspaceQueryOptions, subscribed: options.subscribed });
+	const workspaceQueryBase = useWorkspaceQueryBase();
+	const local = useQuery({
+		...workspaceQueryOptions,
+		queryKey: workspaceQueryBase.queryKey,
+		enabled: workspaceQueryBase.enabled,
+		subscribed: options.subscribed,
+	});
 	const cloud = useCloudProjectsQuery(options);
 	const cloudSessions = useCloudSessionsQuery(options);
 	const { org, ready } = useCloudOrg();
@@ -304,18 +362,29 @@ export function useWorkspaceQuery(options: WorkspaceSubscriptionOptions = {}) {
  */
 export function useWorkspaceSession(sessionId: string) {
 	const queryClient = useQueryClient();
+	const workspaceQueryBase = useWorkspaceQueryBase();
 	const selectLocalSession = useMemo(
 		() => (workspaces: WorkspaceSummary[]) =>
 			workspaces.flatMap((workspace) => workspace.sessions).find((session) => session.id === sessionId),
 		[sessionId],
 	);
-	const local = useQuery({ ...workspaceQueryOptions, select: selectLocalSession });
-	const localWorkspaces = useQuery({ ...workspaceQueryOptions, subscribed: false, enabled: Boolean(sessionId) });
+	const local = useQuery({
+		...workspaceQueryOptions,
+		queryKey: workspaceQueryBase.queryKey,
+		enabled: workspaceQueryBase.enabled,
+		select: selectLocalSession,
+	});
+	const localWorkspaces = useQuery({
+		...workspaceQueryOptions,
+		queryKey: workspaceQueryBase.queryKey,
+		enabled: workspaceQueryBase.enabled && Boolean(sessionId),
+		subscribed: false,
+	});
 	const direct = useQuery({
 		queryKey: ["session", sessionId],
 		enabled: Boolean(sessionId) && local.data === undefined,
-		retry: (attempt, error) => apiErrorCode(error) === "SESSION_NOT_FOUND" && attempt < 4,
-		retryDelay: 250,
+		retry: (attempt, error) => apiErrorCode(error) === "SESSION_NOT_FOUND" && attempt < 8,
+		retryDelay: (attempt) => Math.min(400 * (attempt + 1), 1_200),
 		queryFn: async () => {
 			const { data, error } = await apiClient.GET("/api/v1/sessions/{sessionId}", {
 				params: { path: { sessionId } },
@@ -347,7 +416,7 @@ export function useWorkspaceSession(sessionId: string) {
 	}, [cloud.data, cloudSessions.data, org?.id, ready, sessionId]);
 	useEffect(() => {
 		if (!resolvedDirectSession) return;
-		queryClient.setQueryData<WorkspaceSummary[]>(workspaceQueryKey, (current) => {
+		queryClient.setQueryData<WorkspaceSummary[]>(workspaceQueryBase.queryKey, (current) => {
 			if (!current) return current;
 			let changed = false;
 			const next = current.map((workspace) => {
@@ -358,11 +427,20 @@ export function useWorkspaceSession(sessionId: string) {
 			});
 			return changed ? next : current;
 		});
-	}, [queryClient, resolvedDirectSession]);
+	}, [queryClient, resolvedDirectSession, workspaceQueryBase.queryKey]);
+	const data = local.data ?? resolvedDirectSession ?? cloudSession;
+	// The workspace list can be cached (so local.isLoading is false) while this
+	// session is still missing — just after spawn, or for a refetch that raced
+	// the insert. Keep the route in a loading state until the direct read
+	// settles so SessionView does not flash "no session selected" / "not found".
+	const resolving =
+		Boolean(sessionId) &&
+		data === undefined &&
+		(local.isLoading || direct.isLoading || direct.isFetching || direct.isPending);
 	return {
 		...local,
-		data: local.data ?? resolvedDirectSession ?? cloudSession,
-		isLoading: local.isLoading || direct.isLoading,
+		data,
+		isLoading: resolving,
 	};
 }
 
@@ -401,11 +479,17 @@ function selectWorkspaceScope(
  * redrawing the topbar for streamed activity from every other project.
  */
 export function useWorkspaceScope(projectId?: string, sessionId?: string) {
+	const workspaceQueryBase = useWorkspaceQueryBase();
 	const selectLocalScope = useMemo(
 		() => (workspaces: WorkspaceSummary[]) => selectWorkspaceScope(workspaces, projectId, sessionId),
 		[projectId, sessionId],
 	);
-	const local = useQuery({ ...workspaceQueryOptions, select: selectLocalScope });
+	const local = useQuery({
+		...workspaceQueryOptions,
+		queryKey: workspaceQueryBase.queryKey,
+		enabled: workspaceQueryBase.enabled,
+		select: selectLocalScope,
+	});
 	const cloud = useCloudProjectsQuery();
 	const cloudSessions = useCloudSessionsQuery();
 	const { org, ready } = useCloudOrg();
@@ -443,7 +527,13 @@ function selectTraySessions(workspaces: WorkspaceSummary[]): TraySessionEntry[] 
  * query boundary so ordinary streamed activity does not wake the runtime.
  */
 export function useWorkspaceTraySessions() {
-	const local = useQuery({ ...workspaceQueryOptions, select: selectTraySessions });
+	const workspaceQueryBase = useWorkspaceQueryBase();
+	const local = useQuery({
+		...workspaceQueryOptions,
+		queryKey: workspaceQueryBase.queryKey,
+		enabled: workspaceQueryBase.enabled,
+		select: selectTraySessions,
+	});
 	const cloud = useCloudProjectsQuery();
 	const cloudSessions = useCloudSessionsQuery();
 	const { org, ready } = useCloudOrg();

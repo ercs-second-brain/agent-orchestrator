@@ -20,7 +20,7 @@
  * This is a public project key. It ships in every client bundle by design and is
  * not a credential.
  */
-export const DESKTOP_PROJECT_KEY = "phc_uXAqS8nokL2QLSGBZSEMHTUNVXsFeXu3SrcWG7fjEyVH";
+export const DESKTOP_PROJECT_KEY = "";
 
 /** The only path permitted to record. */
 export const REPLAY_PATH = "/design-partners";

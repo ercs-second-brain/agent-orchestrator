@@ -146,6 +146,10 @@ func (f *fakeProjectManager) Clone(_ context.Context, in projectsvc.CloneInput) 
 	return projectsvc.Project{ID: "cloned", Repo: in.RemoteURL}, nil
 }
 
+func (f *fakeProjectManager) CreateRepository(_ context.Context, in projectsvc.CreateRepositoryInput) (projectsvc.Project, error) {
+	return projectsvc.Project{ID: "created", Name: in.Name}, nil
+}
+
 func (f *fakeProjectManager) InitializeRepository(_ context.Context, in projectsvc.InitializeRepositoryInput) (projectsvc.InitializeRepositoryResult, error) {
 	return projectsvc.InitializeRepositoryResult(in), nil
 }

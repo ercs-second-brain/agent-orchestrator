@@ -51,7 +51,7 @@ one), never a bare PATH lookup.
 ## 1. Pre-flight
 
 - **Pull latest code:** `git pull origin main`. Stale code = bad triage.
-- **Target repo:** Always file on **`Untrivial-ai/agent-orchestrator`** (the current product repo, not
+- **Target repo:** Always file on **`ercs-second-brain/agent-orchestrator`** (the current product repo, not
   a fork). Agent Orchestrator is the product, not a thin fork of upstream.
 - **Verify your binary:** confirm `ao status` shows port **3001** (see warning above).
 - **Record source:** chat URL, reporter name, attachments.
@@ -63,7 +63,7 @@ one), never a bare PATH lookup.
 | Source                   | How to gather                                                                                                                        |
 | ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------ |
 | **Discord/Slack thread** | Read full thread. Extract: reporter name, original description (the thread starter, not whoever tagged you), screenshots, follow-ups |
-| **GitHub issue**         | `gh issue view <number> --repo Untrivial-ai/agent-orchestrator --json body,comments`                                                             |
+| **GitHub issue**         | `gh issue view <number> --repo ercs-second-brain/agent-orchestrator --json body,comments`                                                             |
 | **Live observation**     | Pull live state via the daemon: `ao status`, `ao session ls`, `ao session get <id>`                                                  |
 
 ### 2b. Minimum viable report gate
@@ -177,16 +177,16 @@ Stop and ask for more info if:
 Search with multiple strategies, always using `--state all` (closed bugs regress):
 
 ```bash
-gh issue list --repo Untrivial-ai/agent-orchestrator --state all --search "<symptom>"
-gh issue list --repo Untrivial-ai/agent-orchestrator --state all --search "<component-name>"
-gh issue list --repo Untrivial-ai/agent-orchestrator --state all --search "<error-message>"
-gh pr list --repo Untrivial-ai/agent-orchestrator --state all --search "<keywords>"
+gh issue list --repo ercs-second-brain/agent-orchestrator --state all --search "<symptom>"
+gh issue list --repo ercs-second-brain/agent-orchestrator --state all --search "<component-name>"
+gh issue list --repo ercs-second-brain/agent-orchestrator --state all --search "<error-message>"
+gh pr list --repo ercs-second-brain/agent-orchestrator --state all --search "<keywords>"
 ```
 
 ### Duplicate found → comment on existing issue
 
 ```bash
-gh issue comment <number> --repo Untrivial-ai/agent-orchestrator --body "$(cat <<'EOF'
+gh issue comment <number> --repo ercs-second-brain/agent-orchestrator --body "$(cat <<'EOF'
 ## New Report
 **Reported by:** @<reporter> in [chat](<url>)
 **Date:** <YYYY-MM-DD> | **Checkout:** `<commit-hash>`
@@ -217,23 +217,23 @@ EOF
 ```bash
 SLUG="descriptive-slug"
 # Create asset branch
-gh api -X POST repos/Untrivial-ai/agent-orchestrator/git/refs \
+gh api -X POST repos/ercs-second-brain/agent-orchestrator/git/refs \
   -f ref="refs/heads/issue-assets-${SLUG}" \
   -f sha=$(git rev-parse origin/main)
 
 # Upload (portable base64)
 IMG_B64=$(base64 < /path/to/screenshot.png | tr -d '\n')
-gh api -X PUT "repos/Untrivial-ai/agent-orchestrator/contents/.issue-assets/${SLUG}/name.png" \
+gh api -X PUT "repos/ercs-second-brain/agent-orchestrator/contents/.issue-assets/${SLUG}/name.png" \
   -f message="chore: upload screenshot" \
   -f content="$IMG_B64" \
   -f branch="issue-assets-${SLUG}"
-# Use: ![screenshot](https://raw.githubusercontent.com/Untrivial-ai/agent-orchestrator/issue-assets-<slug>/.issue-assets/<file>)
+# Use: ![screenshot](https://raw.githubusercontent.com/ercs-second-brain/agent-orchestrator/issue-assets-<slug>/.issue-assets/<file>)
 ```
 
 ### 5c. Create the issue
 
 ```bash
-gh issue create --repo Untrivial-ai/agent-orchestrator --title "<title>" --body "$(cat <<'EOF'
+gh issue create --repo ercs-second-brain/agent-orchestrator --title "<title>" --body "$(cat <<'EOF'
 ## Bug
 <summary>
 
@@ -260,8 +260,8 @@ EOF
 **Check which labels actually exist first**, then apply only those:
 
 ```bash
-gh label list --repo Untrivial-ai/agent-orchestrator          # source of truth — apply only these
-gh issue edit <number> --repo Untrivial-ai/agent-orchestrator --add-label "bug"
+gh label list --repo ercs-second-brain/agent-orchestrator          # source of truth — apply only these
+gh issue edit <number> --repo ercs-second-brain/agent-orchestrator --add-label "bug"
 ```
 
 The repo currently carries `bug`, `enhancement`, `priority: critical/high/medium/low`,
@@ -312,7 +312,7 @@ There is no remote-patch script.
 
   Fixes #<n>"
   git push -u origin fix/<slug>
-  gh pr create --repo Untrivial-ai/agent-orchestrator --fill \
+  gh pr create --repo ercs-second-brain/agent-orchestrator --fill \
     --title "fix(<scope>): <summary>" \
     --body "Fixes #<n>
 
@@ -330,7 +330,7 @@ There is no remote-patch script.
   ```bash
   ao spawn --project agent-orchestrator --prompt "Fix #<n>: <one-line problem statement>. \
   Root cause: <file:line + mechanism>. Suggested approach: <approach>. \
-  Build with 'cd backend && go build ./... && go test ./...' before opening a PR against Untrivial-ai/agent-orchestrator."
+  Build with 'cd backend && go build ./... && go test ./...' before opening a PR against ercs-second-brain/agent-orchestrator."
   ```
 
   Note the issue with which path you took (PR or spawned worker).
@@ -372,10 +372,10 @@ any priority/confidence stated in the body), root cause summary.
 ### B. Remote Code Inspection (no local clone)
 
 ```bash
-gh api repos/Untrivial-ai/agent-orchestrator/git/trees/main?recursive=1 --jq '.tree[].path'    # list files
-gh api repos/Untrivial-ai/agent-orchestrator/contents/{path} --jq '.content' | python3 -c "import base64,sys; sys.stdout.buffer.write(base64.b64decode(sys.stdin.read()))"  # read file
-gh search code "term" --repo Untrivial-ai/agent-orchestrator --json path --jq '.[].path'        # search code
-gh api "repos/Untrivial-ai/agent-orchestrator/commits?path={path}&per_page=10" --jq '.[] | "\(.sha[0:8]) \(.commit.message | split("\n")[0])"'  # file history
+gh api repos/ercs-second-brain/agent-orchestrator/git/trees/main?recursive=1 --jq '.tree[].path'    # list files
+gh api repos/ercs-second-brain/agent-orchestrator/contents/{path} --jq '.content' | python3 -c "import base64,sys; sys.stdout.buffer.write(base64.b64decode(sys.stdin.read()))"  # read file
+gh search code "term" --repo ercs-second-brain/agent-orchestrator --json path --jq '.[].path'        # search code
+gh api "repos/ercs-second-brain/agent-orchestrator/commits?path={path}&per_page=10" --jq '.[] | "\(.sha[0:8]) \(.commit.message | split("\n")[0])"'  # file history
 ```
 
 ### C. Build / Version Diagnostics
@@ -401,7 +401,7 @@ git checkout - ; git stash pop
 
 ## Formatting Rules
 
-- **Linkify all issue/PR refs:** `[#123](https://github.com/Untrivial-ai/agent-orchestrator/issues/123)`, `[PR #456](url)`. Never bare `#123`.
+- **Linkify all issue/PR refs:** `[#123](https://github.com/ercs-second-brain/agent-orchestrator/issues/123)`, `[PR #456](url)`. Never bare `#123`.
 
 ## Pitfalls
 
@@ -412,7 +412,7 @@ git checkout - ; git stash pop
 - **Reporter ≠ person who tagged you.** Always attribute to the original reporter.
 - **Record the commit hash** you analyzed — code changes fast.
 - **GitHub issue is mandatory** — every triaged bug gets one, even if fix is trivial.
-- **Only apply labels that exist** (`gh label list --repo Untrivial-ai/agent-orchestrator`).
+- **Only apply labels that exist** (`gh label list --repo ercs-second-brain/agent-orchestrator`).
   State priority/confidence in the body when no matching label exists.
 - **Build before you push.** `cd backend && go build ./... && go test ./...` must
   pass; never open a PR with an unverified Go change.

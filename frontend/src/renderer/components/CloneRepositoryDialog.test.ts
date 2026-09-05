@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { joinCloneDestination, repositoryNameFromGitUrl } from "./CloneRepositoryDialog";
+import { formatLockedCloneDestination, joinCloneDestination, repositoryNameFromGitUrl } from "./CloneRepositoryDialog";
 
 describe("clone repository input", () => {
 	it.each([
@@ -29,5 +29,12 @@ describe("clone repository input", () => {
 	it("joins POSIX and Windows destinations", () => {
 		expect(joinCloneDestination("/Users/me/Code/", "web-app")).toBe("/Users/me/Code/web-app");
 		expect(joinCloneDestination("C:\\Code\\", "web-app")).toBe("C:\\Code\\web-app");
+		expect(joinCloneDestination("~", "web-app")).toBe("~/web-app");
+	});
+
+	it("previews a locked remote destination as ~/", () => {
+		expect(formatLockedCloneDestination("~", null)).toBe("~/");
+		expect(formatLockedCloneDestination("~/", null)).toBe("~/");
+		expect(formatLockedCloneDestination("~", "web-app")).toBe("~/web-app");
 	});
 });

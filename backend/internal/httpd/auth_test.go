@@ -318,3 +318,34 @@ func TestIdentityProbeDoesNotCountTowardLockout(t *testing.T) {
 		t.Fatalf("authenticated request after probes got %d, want 200", w.Code)
 	}
 }
+
+// Desktop LAN attach sends an unauthenticated OPTIONS preflight before the
+// bearer-authenticated GET. authMiddleware must not 401 it or Electron shows
+// "Failed to fetch".
+func TestAuthExemptsCorsPreflight(t *testing.T) {
+	h, _ := newAuthUnderTest("secret12", time.Now)
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodOptions, "/api/v1/projects", nil)
+	r.RemoteAddr = "192.168.1.50:5555"
+	r.Header.Set("Origin", "app://renderer")
+	r.Header.Set("Access-Control-Request-Method", "GET")
+	r.Header.Set("Access-Control-Request-Headers", "authorization")
+	h.ServeHTTP(w, r)
+	if w.Code != http.StatusOK {
+		t.Fatalf("CORS preflight through auth-only stack got %d, want 200", w.Code)
+	}
+}
+
+func TestAuthCorsPreflightDoesNotCountTowardLockout(t *testing.T) {
+	h, lock := newAuthUnderTest("secret12", time.Now)
+	for range 10 {
+		w := httptest.NewRecorder()
+		r := httptest.NewRequest(http.MethodOptions, "/api/v1/projects", nil)
+		r.RemoteAddr = "192.168.1.50:5555"
+		r.Header.Set("Access-Control-Request-Method", "GET")
+		h.ServeHTTP(w, r)
+	}
+	if lock.blocked("192.168.1.50") {
+		t.Fatal("CORS preflights triggered the lockout")
+	}
+}

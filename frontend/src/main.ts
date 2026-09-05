@@ -104,7 +104,7 @@ import {
 } from "./main/cloud-auth";
 import { installCloudLocalAuthIPC } from "./main/cloud-auth-local";
 import { installCloudCpProxy } from "./main/cloud-cp-proxy";
-import { DEFAULT_POSTHOG_HOST, DEFAULT_POSTHOG_PROJECT_KEY } from "./shared/posthog-config";
+import { DEFAULT_POSTHOG_HOST } from "./shared/posthog-config";
 import { DEFAULT_SENTRY_DSN } from "./shared/sentry-config";
 import { buildTelemetryBootstrap, rendererTelemetryEnabled } from "./shared/telemetry";
 import {
@@ -129,6 +129,9 @@ import {
 } from "./main/browser-profile-ipc";
 import type { BrowserProfileMenuInput } from "./shared/browser-profiles";
 import { createWindowComposition, type WindowComposition } from "./main/window-composition";
+import { createRemoteDaemonController } from "./main/desktop-remote-ipc";
+import { getActiveRemoteConfig, readDesktopRemoteConfig, remoteCspConnectOrigins } from "./main/desktop-remote";
+import { patchRendererCspHtml } from "./shared/desktop-remote-csp";
 import { AgentBrowserRuntime } from "./main/agent-browser-runtime";
 import { sameBrowserRuntimeIdentity, type BrowserRuntimeIdentity } from "./main/browser-runtime-identity";
 import { connectSupervisor, type SupervisorLinkHandle } from "./main/supervisor-link";
@@ -208,6 +211,13 @@ app.setPath(
 // absolute value is shared by policy bootstrap and every daemon spawn.
 const desktopLaunchWorkingDirectory = process.cwd();
 const desktopDataDir = resolveDesktopDataDir(process.env, os.homedir(), desktopLaunchWorkingDirectory, app.isPackaged);
+const remoteDaemonController = createRemoteDaemonController({
+	dataDir: desktopDataDir,
+	getShellWebContents,
+	setDaemonStatus,
+	startLocalDaemon: startDaemon,
+	stopLocalDaemon: stopDaemon,
+});
 let telemetryPolicyController: DesktopTelemetryController | null = null;
 let agentSwitchVisibilityController: AgentSwitchVisibilityController | null = null;
 const trustedShellWebContents = new Map<number, WebContents>();
@@ -390,6 +400,14 @@ function registerRendererProtocol(): void {
 		}
 		const target = path.extname(resolved) === "" ? path.join(distRoot, "index.html") : resolved;
 		try {
+			if (target.endsWith(`${path.sep}index.html`)) {
+				const stored = await readDesktopRemoteConfig(desktopDataDir);
+				let html = readFileSync(target, "utf8");
+				if (stored?.enabled) {
+					html = patchRendererCspHtml(html, remoteCspConnectOrigins(stored));
+				}
+				return new Response(html, { headers: { "Content-Type": "text/html; charset=utf-8" } });
+			}
 			return await net.fetch(pathToFileURL(target).toString());
 		} catch {
 			return new Response("Not found", { status: 404 });
@@ -857,29 +875,21 @@ let cachedShellEnv: Record<string, string> | null = null;
 let shellEnvPromise: Promise<void> | null = null;
 let terminalShellPreference: TerminalShellPreference = { ...DEFAULT_TERMINAL_SHELL };
 
-// Telemetry defaults stamped on the daemon env on every platform; explicit env
-// always wins.
-//
-// Unpackaged builds keep local event recording but never export to PostHog: a
-// dev loop or a CI job driving the real app would otherwise bill production
-// events and inflate install/DAU counts. Set AO_TELEMETRY_REMOTE explicitly to
-// exercise the export path from a dev build.
+// Local event recording stays on so settings and diagnostics still work.
+// Remote export is off unless the operator sets AO_TELEMETRY_REMOTE and a key;
+// this build does not ship a third-party PostHog/Sentry phone-home.
 function telemetryOverrides(): Record<string, string> {
 	return {
 		AO_TELEMETRY_EVENTS: process.env.AO_TELEMETRY_EVENTS ?? "on",
-		AO_TELEMETRY_REMOTE: process.env.AO_TELEMETRY_REMOTE ?? (isDev ? "off" : "posthog"),
-		AO_TELEMETRY_POSTHOG_KEY: process.env.AO_TELEMETRY_POSTHOG_KEY ?? DEFAULT_POSTHOG_PROJECT_KEY,
-		AO_TELEMETRY_POSTHOG_HOST: process.env.AO_TELEMETRY_POSTHOG_HOST ?? DEFAULT_POSTHOG_HOST,
-		// Daemon-side Sentry (5xx + panics with Go stacks). Stamped on the daemon
-		// env so the spawned daemon inherits the DSN; off in dev to match the
-		// PostHog remote gate, and an explicit env always wins. A blank value
-		// leaves the daemon's Sentry a no-op.
-		AO_SENTRY_DSN: process.env.AO_SENTRY_DSN ?? (isDev ? "" : DEFAULT_SENTRY_DSN),
-		// The daemon binary has no version of its own that release tooling sets,
-		// so without this every daemon event lands unattributable to a release.
+		AO_TELEMETRY_REMOTE: process.env.AO_TELEMETRY_REMOTE ?? "off",
+		...(process.env.AO_TELEMETRY_POSTHOG_KEY
+			? { AO_TELEMETRY_POSTHOG_KEY: process.env.AO_TELEMETRY_POSTHOG_KEY }
+			: {}),
+		...(process.env.AO_TELEMETRY_POSTHOG_HOST
+			? { AO_TELEMETRY_POSTHOG_HOST: process.env.AO_TELEMETRY_POSTHOG_HOST }
+			: { AO_TELEMETRY_POSTHOG_HOST: DEFAULT_POSTHOG_HOST }),
+		AO_SENTRY_DSN: process.env.AO_SENTRY_DSN ?? DEFAULT_SENTRY_DSN,
 		AO_TELEMETRY_APP_VERSION: process.env.AO_TELEMETRY_APP_VERSION ?? app.getVersion(),
-		// Kill switch: forwarded so a noisy stream can be silenced by env on an
-		// install that already exists, without shipping a new build.
 		...(process.env.AO_TELEMETRY_DISABLED_EVENTS
 			? { AO_TELEMETRY_DISABLED_EVENTS: process.env.AO_TELEMETRY_DISABLED_EVENTS }
 			: {}),
@@ -1254,6 +1264,19 @@ async function gracefullyReplaceDaemonForBrowser(status: DaemonStatus): Promise<
 }
 
 async function refreshDaemonStatus(): Promise<DaemonStatus> {
+	if (daemonStatus.connectionMode === "remote") {
+		// attachRemoteDaemon runs on boot and on explicit connect only. Re-probing
+		// the LAN listener on every renderer poll rewrote config, rebroadcast status,
+		// and kept the shell in a loading/remount loop.
+		if (daemonStatus.state === "ready") {
+			return daemonStatus;
+		}
+		const stored = getActiveRemoteConfig() ?? (await readDesktopRemoteConfig(desktopDataDir));
+		if (stored?.enabled) {
+			await remoteDaemonController.attachRemoteDaemon(stored);
+		}
+		return daemonStatus;
+	}
 	if (daemonProcess) {
 		return daemonStatus;
 	}
@@ -2514,7 +2537,8 @@ app.whenReady().then(async () => {
 		});
 	}
 	await createWindow();
-	void startDaemon();
+	remoteDaemonController.installIpc();
+	void remoteDaemonController.bootRemoteOrLocal();
 	initAutoUpdates();
 
 	// Windows/Linux: on first launch, the deep-link URL may arrive as a

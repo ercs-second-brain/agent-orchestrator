@@ -1,7 +1,8 @@
-import type { ProjectSource } from "@aoagents/product-ui";
+import { GITHUB_REPO_URL } from "../../shared/github-repo";
+import type { ProjectSource } from "./CreateProjectFlow";
 import { useNavigate } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
-import { AlertTriangle, Folder, Folders, FolderOpen, GitFork, Smartphone, Star } from "lucide-react";
+import { AlertTriangle, Folder, FolderPlus, Folders, FolderOpen, GitFork, Smartphone, Star } from "lucide-react";
 import { useMemo, useState, type ReactNode } from "react";
 import { useSystemRequirementsGate } from "../hooks/useSystemRequirementsGate";
 import { useWorkspaceQuery } from "../hooks/useWorkspaceQuery";
@@ -17,7 +18,7 @@ import { DaemonStartupLoader } from "./DaemonStartupLoader";
 import { TopbarButton } from "./TopbarButton";
 import { Badge } from "./ui/badge";
 
-const GITHUB_REPOSITORY_URL = "https://github.com/Untrivial-ai/agent-orchestrator";
+const GITHUB_REPOSITORY_URL = GITHUB_REPO_URL;
 const RECENT_PROJECT_LIMIT = 3;
 const HOME_BUTTON_CLASS =
 	"flex w-full items-center gap-3 rounded-welcome-panel bg-[var(--color-bg-import-card)] px-4 py-3 text-left hover:bg-interactive-hover hover:text-foreground active:bg-interactive-hover active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60";
@@ -114,7 +115,7 @@ export function HomePage() {
 	const navigate = useNavigate();
 	const { t } = useTranslation();
 	const openGlobalSettings = useUiStore((state) => state.openGlobalSettings);
-	const { cloneProject, createProject, daemonStatus, initializeProjectRepository, workspaceStartupState } =
+	const { cloneProject, createProject, createRepository, daemonStatus, initializeProjectRepository, workspaceStartupState } =
 		useShell();
 	const { blocked: requirementsBlocked } = useSystemRequirementsGate();
 	const workspaceQuery = useWorkspaceQuery();
@@ -123,6 +124,7 @@ export function HomePage() {
 	const recentProjects = useMemo(() => sortProjectsByActivity(projects).slice(0, RECENT_PROJECT_LIMIT), [projects]);
 
 	const isDaemonReady = usesPreviewWorkspaceData || daemonStatus.state === "ready";
+	const isRemote = daemonStatus.connectionMode === "remote" && daemonStatus.state === "ready";
 	const daemonHasFailed = Boolean(daemonStatus.code);
 	const showStartup =
 		!daemonHasFailed &&
@@ -169,23 +171,33 @@ export function HomePage() {
 
 					<div className="-mt-3 grid grid-cols-2 gap-3 px-3">
 						<HomeActionCard
+							ariaLabel={t("createProject.createRepo")}
+							icon={<FolderPlus className="size-4" aria-hidden="true" />}
+							label={t("createProject.createRepo")}
+							onClick={() => requestSource("create")}
+						/>
+						<HomeActionCard
 							ariaLabel={t("createProject.cloneFromGit")}
 							icon={<GitFork className="size-4" aria-hidden="true" />}
 							label={t("createProject.cloneFromGit")}
 							onClick={() => requestSource("clone")}
 						/>
-						<HomeActionCard
-							ariaLabel={t("createProject.openLocal")}
-							icon={<FolderOpen className="size-4" aria-hidden="true" />}
-							label={t("createProject.openLocal")}
-							onClick={() => requestSource("local")}
-						/>
-						<HomeActionCard
-							ariaLabel={t("createProject.addWorkspace")}
-							icon={<Folders className="size-4" aria-hidden="true" />}
-							label={t("createProject.addWorkspace")}
-							onClick={() => requestSource("workspace")}
-						/>
+						{!isRemote ? (
+							<>
+								<HomeActionCard
+									ariaLabel={t("createProject.openLocal")}
+									icon={<FolderOpen className="size-4" aria-hidden="true" />}
+									label={t("createProject.openLocal")}
+									onClick={() => requestSource("local")}
+								/>
+								<HomeActionCard
+									ariaLabel={t("createProject.addWorkspace")}
+									icon={<Folders className="size-4" aria-hidden="true" />}
+									label={t("createProject.addWorkspace")}
+									onClick={() => requestSource("workspace")}
+								/>
+							</>
+						) : null}
 						<HomeActionCard
 							ariaLabel={t("settings.connectMobile")}
 							icon={<Smartphone aria-hidden="true" />}
@@ -212,6 +224,7 @@ export function HomePage() {
 					mode="choose"
 					onCloneProject={cloneProject}
 					onCreateProject={createProject}
+					onCreateRepository={createRepository}
 					onInitializeProject={initializeProjectRepository}
 					sourceSignal={sourceSignal}
 				/>

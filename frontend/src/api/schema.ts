@@ -929,6 +929,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/projects/create-repository": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Create a hosted Git repository and register it as a project */
+        post: operations["createRepository"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/projects/initialize": {
         parameters: {
             query?: never;
@@ -3051,6 +3068,13 @@ export interface components {
             outputTokens: number;
             /** Format: int64 */
             totalTokens: number;
+        };
+        CreateRepositoryInput: {
+            config?: components["schemas"]["ProjectConfig"];
+            destinationParent?: string;
+            name: string;
+            private?: null | boolean;
+            projectId?: null | string;
         };
         DegradedProject: {
             id: string;
@@ -7123,6 +7147,57 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["CloneProjectInput"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProjectResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIError"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIError"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIError"];
+                };
+            };
+        };
+    };
+    createRepository: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateRepositoryInput"];
             };
         };
         responses: {

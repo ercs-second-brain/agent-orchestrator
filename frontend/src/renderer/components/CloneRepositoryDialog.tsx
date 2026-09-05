@@ -21,6 +21,7 @@ export const LAST_CLONE_DESTINATION_KEY = "ao.clone.lastDestinationParent";
 export default function CloneRepositoryDialog({
 	disabled,
 	error,
+	lockDestinationParent,
 	onBack,
 	onChange,
 	onClose,
@@ -30,6 +31,9 @@ export default function CloneRepositoryDialog({
 }: {
 	disabled: boolean;
 	error: string | null;
+	// Remote daemons cannot see the client filesystem. When set, skip the native
+	// folder picker and clone under this daemon-host path (typically "~").
+	lockDestinationParent?: string;
 	onBack: () => void;
 	onChange: (value: CloneRepositoryDetails) => void;
 	onClose: () => void;
@@ -41,12 +45,15 @@ export default function CloneRepositoryDialog({
 	const [submitted, setSubmitted] = useState(false);
 	const [choosingDestination, setChoosingDestination] = useState(false);
 	const [destinationPickerError, setDestinationPickerError] = useState<string | null>(null);
+	const destinationParent = lockDestinationParent ?? value.destinationParent;
+	const destinationLocked = Boolean(lockDestinationParent);
 	const repositoryName = repositoryNameFromGitUrl(value.remoteUrl);
 	const repositoryAvatar = repositoryAvatarFromGitUrl(value.remoteUrl);
 	const urlError = submitted && !repositoryName ? t("createProject.cloneInvalidUrl") : null;
-	const destinationError = submitted && !value.destinationParent ? t("createProject.cloneDestinationRequired") : null;
+	const destinationError = submitted && !destinationParent ? t("createProject.cloneDestinationRequired") : null;
 
 	const chooseDestination = async () => {
+		if (destinationLocked) return;
 		setDestinationPickerError(null);
 		setChoosingDestination(true);
 		try {
@@ -69,11 +76,12 @@ export default function CloneRepositoryDialog({
 	const submit = (event: FormEvent<HTMLFormElement>) => {
 		event.preventDefault();
 		setSubmitted(true);
-		if (!repositoryName || !value.destinationParent || disabled) return;
+		if (!repositoryName || !destinationParent || disabled) return;
 		onContinue({
 			...value,
 			remoteUrl: value.remoteUrl.trim(),
-			targetPath: joinCloneDestination(value.destinationParent, repositoryName),
+			destinationParent,
+			targetPath: joinCloneDestination(destinationParent, repositoryName),
 		});
 	};
 
@@ -155,24 +163,38 @@ export default function CloneRepositoryDialog({
 								<Label htmlFor="cloneDestination" className="text-[13px] font-semibold text-[var(--color-text-import-title)]">
 									{t("createProject.cloneDestination")}
 								</Label>
-								<button
-									type="button"
-									id="cloneDestination"
-									aria-label={t("createProject.cloneChoose")}
-									aria-describedby={destinationError ? "cloneDestinationError" : undefined}
-									aria-invalid={destinationError ? true : undefined}
-									className="flex h-control-form w-full items-center overflow-hidden rounded-md border border-transparent bg-[var(--color-bg-import-card)] text-left text-[13px] text-foreground outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-50"
-									disabled={disabled || choosingDestination}
-									onClick={() => void chooseDestination()}
-								>
-									<span className="flex min-w-0 flex-1 items-center gap-3 px-3">
-										<Folder className="size-4 shrink-0 text-[var(--color-text-import-muted)]" aria-hidden="true" />
-										<span className="truncate">{value.destinationParent || t("createProject.cloneDestinationPlaceholder")}</span>
-									</span>
-									<span className="flex h-full shrink-0 items-center border-l border-border/60 px-4 text-foreground hover:bg-foreground/10">
-										{t("createProject.cloneChoose")}
-									</span>
-								</button>
+								{destinationLocked ? (
+									<div
+										id="cloneDestination"
+										className="flex h-control-form w-full items-center overflow-hidden rounded-md border border-transparent bg-[var(--color-bg-import-card)] text-[13px] text-foreground"
+									>
+										<span className="flex min-w-0 flex-1 items-center gap-3 px-3">
+											<Folder className="size-4 shrink-0 text-[var(--color-text-import-muted)]" aria-hidden="true" />
+											<span className="truncate font-mono">
+												{formatLockedCloneDestination(destinationParent, repositoryName)}
+											</span>
+										</span>
+									</div>
+								) : (
+									<button
+										type="button"
+										id="cloneDestination"
+										aria-label={t("createProject.cloneChoose")}
+										aria-describedby={destinationError ? "cloneDestinationError" : undefined}
+										aria-invalid={destinationError ? true : undefined}
+										className="flex h-control-form w-full items-center overflow-hidden rounded-md border border-transparent bg-[var(--color-bg-import-card)] text-left text-[13px] text-foreground outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-50"
+										disabled={disabled || choosingDestination}
+										onClick={() => void chooseDestination()}
+									>
+										<span className="flex min-w-0 flex-1 items-center gap-3 px-3">
+											<Folder className="size-4 shrink-0 text-[var(--color-text-import-muted)]" aria-hidden="true" />
+											<span className="truncate">{value.destinationParent || t("createProject.cloneDestinationPlaceholder")}</span>
+										</span>
+										<span className="flex h-full shrink-0 items-center border-l border-border/60 px-4 text-foreground hover:bg-foreground/10">
+											{t("createProject.cloneChoose")}
+										</span>
+									</button>
+								)}
 								{destinationError ? (
 									<p id="cloneDestinationError" className="text-pretty text-[12px] leading-5 text-destructive" role="alert">
 										{destinationError}
@@ -331,4 +353,10 @@ function repositoryRemoteParts(raw: string): RepositoryRemoteParts | null {
 export function joinCloneDestination(parent: string, repositoryName: string): string {
 	const separator = parent.includes("\\") && !parent.includes("/") ? "\\" : "/";
 	return `${parent.replace(/[\\/]+$/, "")}${separator}${repositoryName}`;
+}
+
+export function formatLockedCloneDestination(parent: string, repositoryName: string | null): string {
+	const homeStyle = parent === "~" || parent === "~/" || parent === "";
+	if (!repositoryName) return homeStyle ? "~/" : parent;
+	return joinCloneDestination(homeStyle ? "~" : parent, repositoryName);
 }

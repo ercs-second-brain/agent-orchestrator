@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { QueryClient } from "@tanstack/react-query";
 import { aoBridge } from "../lib/bridge";
-import { applyDaemonStatus, readDaemonStatus, type DaemonStatus } from "../lib/daemon-status";
+import { applyDaemonStatus, readDaemonStatus, isDaemonReady, type DaemonStatus } from "../lib/daemon-status";
 import { queryClient as defaultQueryClient } from "../lib/query-client";
 import { createEventTransport } from "../lib/event-transport";
 import {
@@ -10,6 +10,7 @@ import {
 	ensureAgentReadiness,
 } from "./useAgentReadinessQuery";
 import { codexAccountsQueryKey } from "./codex-accounts-state";
+import { workspaceQueryKey } from "./useWorkspaceQuery";
 
 const STATUS_REFRESH_MS = 2_000;
 const READY_STATUS_REFRESH_MS = 10_000;
@@ -64,20 +65,22 @@ export function useDaemonStatus(queryClient: QueryClient = defaultQueryClient) {
 			const previousStatus = statusRef.current;
 			statusRef.current = nextStatus;
 			const daemonChanged =
-				nextStatus.state !== "ready" ||
-				previousStatus.state !== "ready" ||
+				!isDaemonReady(nextStatus) ||
+				!isDaemonReady(previousStatus) ||
 				previousStatus.port !== nextStatus.port ||
-				previousStatus.pid !== nextStatus.pid;
+				previousStatus.pid !== nextStatus.pid ||
+				previousStatus.connectionMode !== nextStatus.connectionMode ||
+				previousStatus.remoteApiBase !== nextStatus.remoteApiBase;
 			if (daemonChanged) {
 				queryClient.removeQueries({ queryKey: agentReadinessQueryKey, exact: true });
 				queryClient.removeQueries({ queryKey: codexAccountsQueryKey, exact: true });
+				queryClient.removeQueries({ queryKey: workspaceQueryKey });
 			}
-			if (nextStatus.state === "ready" && nextStatus.port) {
-				applyDaemonStatus(nextStatus);
+			applyDaemonStatus(nextStatus);
+			if (isDaemonReady(nextStatus)) {
 				clearRefresh();
 				scheduleRefresh(READY_STATUS_REFRESH_MS);
 			} else {
-				applyDaemonStatus(nextStatus);
 				scheduleRefresh();
 			}
 			setStatus(nextStatus);
@@ -86,7 +89,7 @@ export function useDaemonStatus(queryClient: QueryClient = defaultQueryClient) {
 		void refreshStatus();
 		const refreshOnFocus = () => {
 			void refreshStatus().then((nextStatus) => {
-				if (nextStatus?.state !== "ready") return;
+				if (!nextStatus || !isDaemonReady(nextStatus)) return;
 				void ensureAgentReadiness([], "display")
 					.then((next) => cacheAgentReadiness(queryClient, next))
 					.catch(() => undefined);

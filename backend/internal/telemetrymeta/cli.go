@@ -157,6 +157,12 @@ var legacyActorlessUserCLICommands = map[string]struct{}{
 	"ao spawn":                  {},
 	"ao stop":                   {},
 	"ao version":                {},
+	"ao mobile":                 {},
+	"ao mobile disable":         {},
+	"ao mobile enable":          {},
+	"ao mobile pairing-code":    {},
+	"ao mobile regenerate":      {},
+	"ao mobile status":          {},
 
 	// Legacy commands observed in PostHog's current billing-period data.
 	"ao handoff":                   {},

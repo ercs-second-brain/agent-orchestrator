@@ -82,6 +82,7 @@ import {
 	type PRReviewState,
 	type ReviewRunFacts,
 } from "../lib/session-reviews";
+import { useRemoteConnection } from "../hooks/useRemoteConnection";
 
 type ProjectConfig = components["schemas"]["ProjectConfig"];
 type OpenReviewerTerminal = (target: { handleId: string; harness: string }) => void;
@@ -185,9 +186,10 @@ export function SessionInspector({
 	// A persisted/controlled Reviews selection can outlive the last reviewable PR.
 	// Keep the shell on a real, visible tab instead of rendering an empty, unlabelled body.
 	const reviewsAvailable = reviewsTabVisible(session);
-	const availableViewDefs = reviewsAvailable
-		? VIEW_DEFS
-		: VIEW_DEFS.filter((entry) => entry.id !== "reviews");
+	const isRemote = useRemoteConnection();
+	const availableViewDefs = (reviewsAvailable ? VIEW_DEFS : VIEW_DEFS.filter((entry) => entry.id !== "reviews")).filter(
+		(entry) => !(isRemote && entry.id === "browser"),
+	);
 	const view: InspectorView = availableViewDefs.some((entry) => entry.id === requestedView) ? requestedView : "summary";
 	useEffect(() => {
 		if (view === requestedView) return;

@@ -3,8 +3,8 @@ export const COMPANY = {
   SHORT_NAME: "AO",
   MARKETING_URL: "https://aoagents.dev",
   DOCS_URL: "https://aoagents.dev/docs",
-  GITHUB_URL: "https://github.com/Untrivial-ai/agent-orchestrator",
-  GITHUB_REPO: "Untrivial-ai/agent-orchestrator",
+  GITHUB_URL: "https://github.com/ercs-second-brain/agent-orchestrator",
+  GITHUB_REPO: "ercs-second-brain/agent-orchestrator",
   STATUS_URL: "https://status.aoagents.dev",
   TRUST_URL: "https://aoagents.dev/privacy/",
   MAIL_TO: "mailto:prateek@untrivial.ai",
@@ -13,9 +13,9 @@ export const COMPANY = {
   LINKEDIN_URL: "https://www.linkedin.com/company/agent-orchestrator/",
   DISCORD_URL: "https://discord.com/invite/UZv7JjxbwG",
   FOUNDERS_EMAIL: "prateek@untrivial.ai",
-  REPORT_ISSUE_URL: "https://github.com/Untrivial-ai/agent-orchestrator/issues/new",
+  REPORT_ISSUE_URL: "https://github.com/ercs-second-brain/agent-orchestrator/issues/new",
   LICENSE: "Apache-2.0",
-  LICENSE_URL: "https://github.com/Untrivial-ai/agent-orchestrator/blob/main/LICENSE",
+  LICENSE_URL: "https://github.com/ercs-second-brain/agent-orchestrator/blob/main/LICENSE",
 } as const;
 
 export const THEME_STORAGE_KEY = "ao-theme";
@@ -29,7 +29,7 @@ export const PLATFORMS = {
   LINUX: "linux",
 } as const;
 
-export const GITHUB_STARS_URL = "https://api.github.com/repos/Untrivial-ai/agent-orchestrator";
+export const GITHUB_STARS_URL = "https://api.github.com/repos/ercs-second-brain/agent-orchestrator";
 
 // macOS points at the .dmg: this is rollout step 6 of issue #3267, taken once the
 // release conductor started publishing a signed, notarized dmg on the stable
@@ -47,10 +47,10 @@ export const GITHUB_STARS_URL = "https://api.github.com/repos/Untrivial-ai/agent
 // ever break, check that the newest non-prerelease release has both files rather
 // than assuming the pipeline is broken. The download page itself is resilient
 // here: it reads the live release list and falls back to the zip.
-export const DOWNLOAD_URL_MAC_ARM64 = "https://github.com/Untrivial-ai/agent-orchestrator/releases/latest/download/agent-orchestrator-darwin-arm64.dmg";
-export const DOWNLOAD_URL_MAC_X64 = "https://github.com/Untrivial-ai/agent-orchestrator/releases/latest/download/agent-orchestrator-darwin-x64.dmg";
-export const DOWNLOAD_URL_WINDOWS = "https://github.com/Untrivial-ai/agent-orchestrator/releases/latest/download/agent-orchestrator-win32-x64.exe";
-export const DOWNLOAD_URL_LINUX = "https://github.com/Untrivial-ai/agent-orchestrator/releases/latest/download/agent-orchestrator-linux-x64.AppImage";
+export const DOWNLOAD_URL_MAC_ARM64 = "https://github.com/ercs-second-brain/agent-orchestrator/releases/latest/download/agent-orchestrator-darwin-arm64.dmg";
+export const DOWNLOAD_URL_MAC_X64 = "https://github.com/ercs-second-brain/agent-orchestrator/releases/latest/download/agent-orchestrator-darwin-x64.dmg";
+export const DOWNLOAD_URL_WINDOWS = "https://github.com/ercs-second-brain/agent-orchestrator/releases/latest/download/agent-orchestrator-win32-x64.exe";
+export const DOWNLOAD_URL_LINUX = "https://github.com/ercs-second-brain/agent-orchestrator/releases/latest/download/agent-orchestrator-linux-x64.AppImage";
 
 // AO Mobile, live on both stores. These are the same links the desktop app's
 // Connect Mobile panel opens (frontend/src/renderer/components/settings/

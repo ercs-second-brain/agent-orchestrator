@@ -208,8 +208,10 @@ func TestE2E_VersionAndHelp(t *testing.T) {
 	for _, want := range []string{"start", "stop", "status", "doctor", "completion", "version"} {
 		mustContain(t, out, want)
 	}
-	// the internal daemon command is hidden from help (rendered as "\n  daemon")
-	mustNotContain(t, out, "\n  daemon")
+	// `ao daemon` is the headless entrypoint and `ao mobile` manages Connect
+	// Mobile; both are user-visible commands now.
+	mustContain(t, out, "daemon")
+	mustContain(t, out, "mobile")
 }
 
 func TestE2E_DoctorDoesNotTouchTheStore(t *testing.T) {

@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { useState, type ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { CreateProjectFlow, type CloneProjectInput, type CreateProjectInput } from "./CreateProjectFlow";
+import { ShellProvider, type ShellContextValue } from "../lib/shell-context";
 
 const bridgeMocks = vi.hoisted(() => ({
 	checkAncestorRepo: vi.fn(),
@@ -115,7 +116,8 @@ vi.mock("./CreateProjectAgentSheet", () => ({
 // These tests only care whether the clone flow is on screen and that the
 // droppedPath guard leaves it alone, so a thin stub keeps the suite focused.
 vi.mock("./CloneRepositoryDialog", () => ({
-	default: ({ open }: { open: boolean }) => (open ? <div data-testid="clone-dialog" /> : null),
+	default: ({ lockDestinationParent, open }: { lockDestinationParent?: string; open: boolean }) =>
+		open ? <div data-testid="clone-dialog">{lockDestinationParent ?? ""}</div> : null,
 }));
 
 function okScan(path: string) {
@@ -138,6 +140,7 @@ function okScan(path: string) {
 const noop = {
 	onCloneProject: async (_input: CloneProjectInput) => undefined,
 	onCreateProject: async (_input: CreateProjectInput) => undefined,
+	onCreateRepository: async () => undefined,
 	onInitializeProject: async (_path: string) => undefined,
 };
 
@@ -727,5 +730,104 @@ describe("CreateProjectFlow cloud offering", () => {
 
 		expect(await screen.findByText("Enter an https repository URL.")).toBeInTheDocument();
 		expect(cloudMocks.createProject).not.toHaveBeenCalled();
+	});
+});
+
+function RemoteShell({ children }: { children: ReactNode }) {
+	return (
+		<ShellProvider
+			value={
+				{
+					daemonStatus: { state: "ready", connectionMode: "remote" },
+					workspaceStartupState: "ready",
+					createProject: async () => undefined,
+					cloneProject: async () => undefined,
+					initializeProjectRepository: async () => undefined,
+				} as ShellContextValue
+			}
+		>
+			{children}
+		</ShellProvider>
+	);
+}
+
+describe("CreateProjectFlow create repository", () => {
+	it("opens the create dialog with private checked", async () => {
+		const user = userEvent.setup();
+		render(<CreateProjectFlow embedded mode="choose" {...noop} />);
+
+		await user.click(screen.getByRole("button", { name: "Create a new Git repository" }));
+
+		expect(await screen.findByRole("heading", { name: "Create a Git repository" })).toBeInTheDocument();
+		expect(screen.getByLabelText("Create as a private repository")).toBeChecked();
+	});
+
+	it("keeps the agent sheet open when GitHub create fails", async () => {
+		const user = userEvent.setup();
+		const onCreateRepository = vi.fn().mockRejectedValue(
+			Object.assign(new Error("Could not create the GitHub repository. (REPOSITORY_CREATE_FAILED)"), {
+				code: "REPOSITORY_CREATE_FAILED",
+			}),
+		);
+		render(<CreateProjectFlow embedded mode="choose" {...noop} onCreateRepository={onCreateRepository} />);
+
+		await user.click(screen.getByRole("button", { name: "Create a new Git repository" }));
+		expect(await screen.findByRole("heading", { name: "Create a Git repository" })).toBeInTheDocument();
+		await user.type(screen.getByPlaceholderText("my-project"), "orchestrator-test");
+		await user.click(screen.getByRole("button", { name: "Continue" }));
+		await user.click(await screen.findByRole("button", { name: "Submit agents" }));
+
+		await waitFor(() => expect(onCreateRepository).toHaveBeenCalled());
+		expect(screen.getByTestId("agent-sheet")).toBeInTheDocument();
+		expect(screen.queryByText("Needs git init")).not.toBeInTheDocument();
+		expect(screen.queryByRole("button", { name: /Import an existing project/i })).not.toBeInTheDocument();
+		expect(bridgeMocks.scanImportFolder).not.toHaveBeenCalled();
+	});
+});
+
+describe("CreateProjectFlow remote daemon", () => {
+	it("hides local folder import options", () => {
+		render(
+			<RemoteShell>
+				<CreateProjectFlow embedded mode="choose" {...noop} />
+			</RemoteShell>,
+		);
+
+		expect(screen.getByRole("button", { name: "Create a new Git repository" })).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: "Clone from Git" })).toBeInTheDocument();
+		expect(screen.queryByRole("button", { name: "Import an existing project" })).not.toBeInTheDocument();
+		expect(screen.queryByRole("button", { name: "Import a workspace folder" })).not.toBeInTheDocument();
+	});
+
+	it("locks clone destination to ~/ instead of the local folder picker", async () => {
+		window.localStorage.setItem("ao.clone.lastDestinationParent", "/Users/me/Code");
+		const user = userEvent.setup();
+		render(
+			<RemoteShell>
+				<CreateProjectFlow embedded mode="choose" {...noop} />
+			</RemoteShell>,
+		);
+
+		await user.click(screen.getByRole("button", { name: "Clone from Git" }));
+
+		expect(await screen.findByTestId("clone-dialog")).toHaveTextContent("~");
+		expect(bridgeMocks.chooseDirectory).not.toHaveBeenCalled();
+	});
+
+	it("ignores a dropped folder instead of opening the import picker", () => {
+		const { rerender } = render(
+			<RemoteShell>
+				<CreateProjectFlow mode="choose" {...noop} droppedPath={null} />
+			</RemoteShell>,
+		);
+		rerender(
+			<RemoteShell>
+				<CreateProjectFlow mode="choose" {...noop} droppedPath={{ nonce: 1, path: "/dropped/proj" }} />
+			</RemoteShell>,
+		);
+
+		expect(screen.queryByRole("button", { name: "Import an existing project" })).not.toBeInTheDocument();
+		expect(screen.queryByRole("button", { name: "Import a workspace folder" })).not.toBeInTheDocument();
+		expect(bridgeMocks.chooseDirectory).not.toHaveBeenCalled();
 	});
 });

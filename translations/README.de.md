@@ -5,10 +5,10 @@
 
 #### Coding-Agenten an einem Ort planen, ausführen und überwachen.
 
-[![GitHub stars](https://img.shields.io/github/stars/Untrivial-ai/agent-orchestrator?style=flat&logo=github)](https://github.com/Untrivial-ai/agent-orchestrator/stargazers)
+[![GitHub stars](https://img.shields.io/github/stars/ercs-second-brain/agent-orchestrator?style=flat&logo=github)](https://github.com/ercs-second-brain/agent-orchestrator/stargazers)
 ![Top 6k repositories](https://img.shields.io/badge/Top%206k%20repositories-181717?style=flat&logo=github&logoColor=white)
-[![GitHub release](https://img.shields.io/github/v/release/Untrivial-ai/agent-orchestrator?style=flat&logo=github)](https://github.com/Untrivial-ai/agent-orchestrator/releases/latest)
-[![GitHub downloads](https://img.shields.io/github/downloads/Untrivial-ai/agent-orchestrator/total?style=flat&logo=github)](https://github.com/Untrivial-ai/agent-orchestrator/releases)
+[![GitHub release](https://img.shields.io/github/v/release/ercs-second-brain/agent-orchestrator?style=flat&logo=github)](https://github.com/ercs-second-brain/agent-orchestrator/releases/latest)
+[![GitHub downloads](https://img.shields.io/github/downloads/ercs-second-brain/agent-orchestrator/total?style=flat&logo=github)](https://github.com/ercs-second-brain/agent-orchestrator/releases)
 [![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue?style=flat)](../LICENSE)
 [![X](https://img.shields.io/badge/@aoagents-555?style=flat&logo=x&logoColor=white)](https://x.com/aoagents)
 [![Discord](https://img.shields.io/badge/Discord-555?style=flat&logo=discord&logoColor=white)](https://discord.com/invite/UZv7JjxbwG)
@@ -17,7 +17,7 @@ Gib jeder Coding-Aufgabe einen eigenen Agenten, Workspace und Feedback-Zyklus.<b
 Plane und delegiere größere Vorhaben mit einem projektkundigen Orchestrator.<br />
 Verfolge jeden Worker, Pull Request, CI-Lauf und jedes Review in einem Live-Kanban.
 
-[**AO herunterladen**](#installation) &nbsp;&bull;&nbsp; [Dokumentation](https://aoagents.dev/docs) &nbsp;&bull;&nbsp; [Releases](https://github.com/Untrivial-ai/agent-orchestrator/releases) &nbsp;&bull;&nbsp; [Mitwirken](../CONTRIBUTING.md) &nbsp;&bull;&nbsp; [Discord](https://discord.com/invite/UZv7JjxbwG)
+[**AO herunterladen**](#installation) &nbsp;&bull;&nbsp; [Dokumentation](docs/README.md) &nbsp;&bull;&nbsp; [Releases](https://github.com/ercs-second-brain/agent-orchestrator/releases) &nbsp;&bull;&nbsp; [Mitwirken](../CONTRIBUTING.md) &nbsp;&bull;&nbsp; [Discord](https://discord.com/invite/UZv7JjxbwG)
 
 [English](../README.md) · [简体中文](README.zh-CN.md) · [日本語](README.ja.md) · [한국어](README.ko.md) · [Español](README.es.md) · [Français](README.fr.md) · **Deutsch** · [Português (Brasil)](README.pt-BR.md)
 
@@ -161,7 +161,7 @@ AO arbeitet mit den Coding-Agenten und dem Versionsverwaltungs-Workflow, die du 
   </tr>
 </table>
 
-[Einrichtungsanleitungen für Agenten ansehen →](https://aoagents.dev/docs/plugins/agents)
+[Einrichtungsanleitungen für Agenten ansehen →](docs/README.md/plugins/agents)
 
 **Nutze die Oberfläche, die gerade passt: strukturierten Chat oder die native Terminal-Oberfläche des Agenten.**
 
@@ -171,23 +171,23 @@ Lade die neueste AO-Desktop-App für deine Plattform herunter. AO sucht automati
 
 | Plattform             | Download                                                                                                                           |
 | --------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
-| macOS (Apple silicon) | [Herunterladen](https://github.com/Untrivial-ai/agent-orchestrator/releases/latest/download/agent-orchestrator-darwin-arm64.dmg)   |
-| macOS (Intel)         | [Herunterladen](https://github.com/Untrivial-ai/agent-orchestrator/releases/latest/download/agent-orchestrator-darwin-x64.dmg)     |
-| Windows               | [Herunterladen](https://github.com/Untrivial-ai/agent-orchestrator/releases/latest/download/agent-orchestrator-win32-x64.exe)      |
-| Linux (AppImage)      | [Herunterladen](https://github.com/Untrivial-ai/agent-orchestrator/releases/latest/download/agent-orchestrator-linux-x64.AppImage) |
-| Linux (Debian/Ubuntu) | [Herunterladen](https://github.com/Untrivial-ai/agent-orchestrator/releases/latest/download/agent-orchestrator-linux-x64.deb)      |
-| Linux (Fedora/RHEL)   | [Herunterladen](https://github.com/Untrivial-ai/agent-orchestrator/releases/latest/download/agent-orchestrator-linux-x64.rpm)      |
+| macOS (Apple silicon) | [Herunterladen](https://github.com/ercs-second-brain/agent-orchestrator/releases/latest/download/agent-orchestrator-darwin-arm64.dmg)   |
+| macOS (Intel)         | [Herunterladen](https://github.com/ercs-second-brain/agent-orchestrator/releases/latest/download/agent-orchestrator-darwin-x64.dmg)     |
+| Windows               | [Herunterladen](https://github.com/ercs-second-brain/agent-orchestrator/releases/latest/download/agent-orchestrator-win32-x64.exe)      |
+| Linux (AppImage)      | [Herunterladen](https://github.com/ercs-second-brain/agent-orchestrator/releases/latest/download/agent-orchestrator-linux-x64.AppImage) |
+| Linux (Debian/Ubuntu) | [Herunterladen](https://github.com/ercs-second-brain/agent-orchestrator/releases/latest/download/agent-orchestrator-linux-x64.deb)      |
+| Linux (Fedora/RHEL)   | [Herunterladen](https://github.com/ercs-second-brain/agent-orchestrator/releases/latest/download/agent-orchestrator-linux-x64.rpm)      |
 
-Öffne Agent Orchestrator und wähle das Repository aus, das AO verwalten soll. Die Desktop-App führt den Daemon für dich aus, eine CLI ist daher nicht erforderlich. Im [Installationsleitfaden](https://aoagents.dev/docs/installation) findest du Hinweise zur Einrichtung der Agenten-CLI und zur Fehlerbehebung.
+Öffne Agent Orchestrator und wähle das Repository aus, das AO verwalten soll. Die Desktop-App führt den Daemon für dich aus, eine CLI ist daher nicht erforderlich. Im [Installationsleitfaden](docs/README.md/installation) findest du Hinweise zur Einrichtung der Agenten-CLI und zur Fehlerbehebung.
 
 ## Einen Bug melden
 
-Am besten meldest du einen Bug, indem du deinen Coding-Agenten bittest, dem [Bug-Triage-Skill](https://github.com/Untrivial-ai/agent-orchestrator/blob/main/.agents/skills/bug-triage/SKILL.md) des Repositorys zu folgen. Er führt den Agenten durch die Reproduktion mit dem aktuellen Code, die Sammlung von Diagnosedaten, die Untersuchung des relevanten Codepfads, die Suche nach Duplikaten und das Erstellen oder Aktualisieren eines detaillierten GitHub-Issues.
+Am besten meldest du einen Bug, indem du deinen Coding-Agenten bittest, dem [Bug-Triage-Skill](https://github.com/ercs-second-brain/agent-orchestrator/blob/main/.agents/skills/bug-triage/SKILL.md) des Repositorys zu folgen. Er führt den Agenten durch die Reproduktion mit dem aktuellen Code, die Sammlung von Diagnosedaten, die Untersuchung des relevanten Codepfads, die Suche nach Duplikaten und das Erstellen oder Aktualisieren eines detaillierten GitHub-Issues.
 
 Egal, ob du einen lokalen Coding-Agenten oder AO Bot auf Discord fragst: Hänge Screenshots an und teile so viel relevanten Kontext wie möglich. Beschreibe, was wann und wo passiert ist, nenne Schritte zur Reproduktion, dein Betriebssystem, deine AO-Version und ob das Problem immer oder nur gelegentlich auftritt. So hat der Agent die besten Chancen, den Bug zu reproduzieren und einen hilfreichen Bericht zu erstellen.
 
 ```text
-Lies und befolge https://github.com/Untrivial-ai/agent-orchestrator/blob/main/.agents/skills/bug-triage/SKILL.md. Bitte reproduziere und triagiere diesen Bug und erstelle oder aktualisiere anschließend das GitHub-Issue. Kontext: <was ist wann und wo passiert, Schritte zur Reproduktion, Betriebssystem, AO-Version und Häufigkeit>. Screenshots: <Screenshots anhängen>.
+Lies und befolge https://github.com/ercs-second-brain/agent-orchestrator/blob/main/.agents/skills/bug-triage/SKILL.md. Bitte reproduziere und triagiere diesen Bug und erstelle oder aktualisiere anschließend das GitHub-Issue. Kontext: <was ist wann und wo passiert, Schritte zur Reproduktion, Betriebssystem, AO-Version und Häufigkeit>. Screenshots: <Screenshots anhängen>.
 ```
 
 Du kannst einen Bug auch im [Bug-Triaging-Kanal auf Discord](https://discord.com/channels/1476302178913357958/1491735678156013588) melden. Erwähne `@AO Bot#8425`, beschreibe das Problem und bitte ihn, den Bug-Triage-Skill zu verwenden.
@@ -201,17 +201,17 @@ Du kannst einen Bug auch im [Bug-Triaging-Kanal auf Discord](https://discord.com
 Beiträge zu Code, Dokumentation, Triage, Beispielen und Tests sind willkommen.
 
 ```bash
-git clone https://github.com/Untrivial-ai/agent-orchestrator.git
+git clone https://github.com/ercs-second-brain/agent-orchestrator.git
 cd agent-orchestrator
 ```
 
-Der [Entwicklungsleitfaden](../docs/development.md) erklärt Voraussetzungen, lokale Einrichtung und Testbefehle. Lies [CONTRIBUTING.md](../CONTRIBUTING.md), bevor du einen Pull Request öffnest, und nutze [GitHub Issues](https://github.com/Untrivial-ai/agent-orchestrator/issues) für Bugs und Funktionswünsche.
+Der [Entwicklungsleitfaden](../docs/development.md) erklärt Voraussetzungen, lokale Einrichtung und Testbefehle. Lies [CONTRIBUTING.md](../CONTRIBUTING.md), bevor du einen Pull Request öffnest, und nutze [GitHub Issues](https://github.com/ercs-second-brain/agent-orchestrator/issues) für Bugs und Funktionswünsche.
 
 ## Dokumentation
 
 | Dokument                                                            | Hier findest du                                                                            |
 | ------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
-| [Produktdokumentation](https://aoagents.dev/docs)                   | Installation, Einrichtung von Agenten und tägliche Produktnutzung.                         |
+| [Produktdokumentation](docs/README.md)                   | Installation, Einrichtung von Agenten und tägliche Produktnutzung.                         |
 | [docs/architecture.md](../docs/architecture.md)                     | Backend-Mentalmodell, Lifecycle, Persistenz, CDC, Statusableitung und Daemon-Grenzen.      |
 | [docs/backend-code-structure.md](../docs/backend-code-structure.md) | Paketverantwortung und Zuordnung der einzelnen Backend-Bereiche.                           |
 | [docs/cli/README.md](../docs/cli/README.md)                         | CLI-Verhalten und Zuordnung der Daemon-Routen.                                             |
@@ -237,7 +237,7 @@ Der [Entwicklungsleitfaden](../docs/development.md) erklärt Voraussetzungen, lo
 
 ## Community
 
-Komm auf unseren [Discord](https://discord.com/invite/UZv7JjxbwG), wenn du Hilfe suchst oder dich mit anderen Mitwirkenden austauschen möchtest. Folge [@aoagents](https://x.com/aoagents) für Neuigkeiten oder starte eine Diskussion in den [GitHub Issues](https://github.com/Untrivial-ai/agent-orchestrator/issues).
+Komm auf unseren [Discord](https://discord.com/invite/UZv7JjxbwG), wenn du Hilfe suchst oder dich mit anderen Mitwirkenden austauschen möchtest. Folge [@aoagents](https://x.com/aoagents) für Neuigkeiten oder starte eine Diskussion in den [GitHub Issues](https://github.com/ercs-second-brain/agent-orchestrator/issues).
 
 ## Anonyme Telemetrie
 

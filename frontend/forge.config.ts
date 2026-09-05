@@ -10,13 +10,11 @@ import { existsSync, readdirSync, writeFileSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 import path from "node:path";
 
-// Default GitHub release target (production). Releases land on Untrivial-ai
-// (the org the repo was transferred to in July 2026; AgentWrapper and aoagents
-// are prior homes). Builds cut by CI must NOT rely on this fallback: the
-// workflows set AO_RELEASE_REPO to the repo they run in, and build-artifacts.yml
-// asserts the baked app-update.yml matches it, so a future org/repo rename
-// fails the build instead of stranding the fleet on a redirect (#3523).
-const DEFAULT_RELEASE_REPO = "Untrivial-ai/agent-orchestrator";
+// Default GitHub release target. CI sets AO_RELEASE_REPO to github.repository
+// and asserts the baked app-update.yml matches it. Keep in sync with
+// backend/internal/cli/start.go releaseRepo and frontend/src/shared/github-repo.ts.
+// See docs/release-repo.md.
+const DEFAULT_RELEASE_REPO = "ercs-second-brain/agent-orchestrator";
 
 // The packaged binary name (no extension). Single source of truth: the packager
 // names the exe/ELF from this, and the NSIS + deb makers must point their
@@ -257,7 +255,7 @@ const config: ForgeConfig = {
 					bin: EXECUTABLE_NAME,
 					icon: "assets/icon.png",
 					maintainer: "Agent Orchestrator",
-					homepage: "https://github.com/aoagents/agent-orchestrator",
+					homepage: "https://github.com/ercs-second-brain/agent-orchestrator",
 					mimeType: [AUTH_PROTOCOL_MIME_TYPE],
 				},
 			},
@@ -269,7 +267,7 @@ const config: ForgeConfig = {
 					icon: "assets/icon.png",
 					// rpmbuild rejects a spec with an empty License field.
 					license: "MIT",
-					homepage: "https://github.com/aoagents/agent-orchestrator",
+					homepage: "https://github.com/ercs-second-brain/agent-orchestrator",
 					mimeType: [AUTH_PROTOCOL_MIME_TYPE],
 				},
 			},
@@ -278,13 +276,9 @@ const config: ForgeConfig = {
 	publishers: [
 		{
 			name: "@electron-forge/publisher-github",
-			// Release target is build-time overridable so a fork run publishes to the
-			// fork without a source edit. AO_RELEASE_REPO is "owner/repo"; it defaults
-			// to the production target. The dev/test loop sets
-			// AO_RELEASE_REPO=harshitsinghbhandari/agent-orchestrator (spec §1.1, §8).
-			// Note: aoagents/agent-orchestrator and AgentWrapper/agent-orchestrator
-			// are prior homes and intentionally NOT the default; releases land on
-			// Untrivial-ai.
+			// Release target is build-time overridable. AO_RELEASE_REPO is
+			// "owner/repo"; CI sets it to github.repository. The fallback is
+			// DEFAULT_RELEASE_REPO (see docs/release-repo.md).
 			config: {
 				repository: parseReleaseRepo(process.env.AO_RELEASE_REPO),
 				prerelease: process.env.AO_RELEASE_PRERELEASE === "true",

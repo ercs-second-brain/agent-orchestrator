@@ -24,15 +24,15 @@ import (
 	"github.com/aoagents/agent-orchestrator/backend/internal/telemetrymeta"
 )
 
-func TestRootHelpDoesNotShowDaemon(t *testing.T) {
+func TestRootHelpShowsDaemonAndMobile(t *testing.T) {
 	out, _, err := executeCLI(t, Deps{}, "--help")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if strings.Contains(out, "\n  daemon") {
-		t.Fatalf("hidden daemon command leaked into help:\n%s", out)
-	}
-	for _, want := range []string{"start", "stop", "status", "doctor", "completion", "version"} {
+	// `ao daemon` is the supported headless entrypoint and `ao mobile` manages
+	// the Connect Mobile LAN listener for headless deployments; both must be
+	// visible in help.
+	for _, want := range []string{"start", "stop", "status", "doctor", "completion", "version", "daemon", "mobile"} {
 		if !strings.Contains(out, want) {
 			t.Fatalf("help missing %q:\n%s", want, out)
 		}

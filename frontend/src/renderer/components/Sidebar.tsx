@@ -73,9 +73,15 @@ import { getSessionStatusDotView } from "../lib/session-presentation";
 import { deriveSessionAgentSwitchPresentation } from "../lib/agent-switch-presentation";
 import { aoBridge } from "../lib/bridge";
 import { useCommandPaletteEnabled } from "../hooks/useCommandPaletteEnabled";
-import { cloudSessionsQueryKey, workspaceQueryKey } from "../hooks/useWorkspaceQuery";
+import {
+	cloudSessionsQueryKey,
+	pendingOrchestratorSession,
+	seedWorkspaceSession,
+	workspaceQueryKey,
+} from "../hooks/useWorkspaceQuery";
 import { usePinSession, useUnpinSession } from "../hooks/usePinSession";
 import { spawnCloudOrchestrator } from "../lib/cloud-orchestrator";
+import { formatOrchestratorStartupError } from "../lib/orchestrator-startup-error";
 import { spawnOrchestrator } from "../lib/spawn-orchestrator";
 import { formatTimeCompact, formatTimeTerse } from "../lib/format-time";
 import { useTerminateSession } from "../hooks/useTerminateSession";
@@ -125,7 +131,7 @@ import { cn } from "../lib/utils";
 import { useUiStore } from "../stores/ui-store"
 import { useKeybindingsStore } from "../stores/keybindings-store";
 import { ConfirmDialog } from "./ConfirmDialog";
-import { CreateProjectFlow, type CloneProjectInput, type CreateProjectInput } from "./CreateProjectFlow";
+import { CreateProjectFlow, type CloneProjectInput, type CreateProjectInput, type CreateRepositoryInput } from "./CreateProjectFlow";
 import { ResizeHandle } from "./ResizeHandle";
 import { isMacPlatform, isWindowsPlatform } from "../lib/platform";
 import { useCloudSession } from "../lib/cloud-session";
@@ -338,6 +344,7 @@ type SidebarProps = {
 	workspaces: WorkspaceSummary[];
 	onCloneProject: (input: CloneProjectInput) => Promise<void>;
 	onCreateProject: (input: CreateProjectInput) => Promise<void>;
+	onCreateRepository: (input: CreateRepositoryInput) => Promise<void>;
 	onInitializeProject: (path: string) => Promise<void>;
 	onRemoveProject: (projectId: string) => Promise<void>;
 };
@@ -414,6 +421,7 @@ export function Sidebar({
 	workspaces,
 	onCloneProject,
 	onCreateProject,
+	onCreateRepository,
 	onInitializeProject,
 	onRemoveProject,
 }: SidebarProps) {
@@ -746,6 +754,7 @@ export function Sidebar({
 								hideTrigger={workspaces.length === 0}
 								onCloneProject={onCloneProject}
 								onCreateProject={onCreateProject}
+								onCreateRepository={onCreateRepository}
 								onInitializeProject={onInitializeProject}
 							/>
 						}
@@ -1035,6 +1044,7 @@ const ProjectItemContent = memo(function ProjectItemContent({
 		return () => cancelAnimationFrame(id);
 	}, []);
 	const isProjectRestarting = useUiStore((state) => state.restartingProjectIds.has(workspace.id));
+	const setOrchestratorStartupError = useUiStore((state) => state.setOrchestratorStartupError);
 	const requestNewTask = useUiStore((state) => state.requestNewTask);
 	const projectIsDragging = draggingProjectId === workspace.id;
 	// Keep completed PR sessions reachable while their runtime still exists.
@@ -1141,9 +1151,23 @@ const ProjectItemContent = memo(function ProjectItemContent({
 		try {
 			const sessionId = await spawnOrchestrator(workspace.id, "sidebar");
 			await queryClient.invalidateQueries({ queryKey: workspaceQueryKey });
+			seedWorkspaceSession(
+				queryClient,
+				pendingOrchestratorSession({
+					sessionId,
+					projectId: workspace.id,
+					projectName: workspace.name,
+					provider: workspace.orchestratorAgent,
+				}),
+			);
 			selection.goSession(workspace.id, sessionId);
 		} catch (err) {
 			console.error("Failed to spawn orchestrator:", err);
+			setOrchestratorStartupError(
+				workspace.id,
+				formatOrchestratorStartupError(err instanceof Error ? err.message : "Could not spawn orchestrator"),
+			);
+			selection.goProject(workspace.id);
 		} finally {
 			setIsSpawning(false);
 		}
@@ -2504,8 +2528,9 @@ function CreateProjectButton({
 	hideTrigger = false,
 	onCloneProject,
 	onCreateProject,
+	onCreateRepository,
 	onInitializeProject,
-}: Pick<SidebarProps, "onCloneProject" | "onCreateProject" | "onInitializeProject"> & { hideTrigger?: boolean }) {
+}: Pick<SidebarProps, "onCloneProject" | "onCreateProject" | "onCreateRepository" | "onInitializeProject"> & { hideTrigger?: boolean }) {
 	const { t } = useTranslation();
 	// Single CreateProjectFlow owner for the sidebar: the header "+" stays mounted
 	// (CSS-hidden when collapsed or on the empty start page) so it can own
@@ -2519,6 +2544,7 @@ function CreateProjectButton({
 			mode="choose"
 			onCloneProject={onCloneProject}
 			onCreateProject={onCreateProject}
+			onCreateRepository={onCreateRepository}
 			onInitializeProject={onInitializeProject}
 			openSignal={createProjectNonce}
 		>

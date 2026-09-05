@@ -17,19 +17,19 @@ describe("design partner replay", () => {
     ).toEqual({ record: true });
   });
 
-  // The whole reason this function exists. Both surfaces point at one project
-  // today, and arming replay there would record the screens of desktop installs
-  // already in the field, including builds too old to carry the client block.
-  it("refuses while the key is the desktop project, on the right page and with consent", () => {
+  // Desktop ships no PostHog key. An empty DESKTOP_PROJECT_KEY must not be
+  // treated as a configured project (that would block a future marketing key
+  // that happened to be blank-padded).
+  it("refuses when the desktop project key is unset", () => {
     expect(
       replayDecision({ key: DESKTOP_PROJECT_KEY, pathname: REPLAY_PATH, optedOut: false }),
-    ).toEqual({ record: false, reason: "shared-project" });
+    ).toEqual({ record: false, reason: "no-key" });
   });
 
-  it("refuses whitespace-padded variants of the desktop key", () => {
+  it("refuses whitespace-padded empty desktop keys as no-key", () => {
     expect(
       replayDecision({ key: `  ${DESKTOP_PROJECT_KEY}  `, pathname: REPLAY_PATH, optedOut: false }),
-    ).toEqual({ record: false, reason: "shared-project" });
+    ).toEqual({ record: false, reason: "no-key" });
   });
 
   it("records nowhere else on the site", () => {
@@ -76,7 +76,7 @@ it("keeps DESKTOP_PROJECT_KEY in sync with the shared desktop constant", () => {
   const here = dirname(fileURLToPath(import.meta.url));
   const sharedPath = resolve(here, "../../../../shared/posthog-config.ts");
   const source = readFileSync(sharedPath, "utf8");
-  const match = source.match(/DEFAULT_POSTHOG_PROJECT_KEY\s*=\s*"([^"]+)"/);
+  const match = source.match(/DEFAULT_POSTHOG_PROJECT_KEY\s*=\s*"([^"]*)"/);
   expect(match, `could not find DEFAULT_POSTHOG_PROJECT_KEY in ${sharedPath}`).toBeTruthy();
   expect(DESKTOP_PROJECT_KEY).toBe(match![1]);
 });

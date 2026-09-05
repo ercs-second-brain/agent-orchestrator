@@ -336,5 +336,13 @@ if (typeof window !== "undefined") {
 			closeStream: () => undefined,
 			onStreamEvent: () => () => undefined,
 		},
+		desktopRemote: {
+			getConfig: async () => null,
+			connect: async () => ({ ok: false as const, error: "unavailable in tests" }),
+			disconnect: async () => ({ state: "stopped" as const }),
+			probe: async () => ({ ok: false as const, reason: "network" as const }),
+			getAuthHeader: async () => null,
+			onCspOrigins: () => () => undefined,
+		},
 	};
 } // end if (typeof window !== "undefined")

@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/aoagents/agent-orchestrator/backend/internal/adapters/agent/hookutil"
+	"github.com/aoagents/agent-orchestrator/backend/internal/agentlaunch"
 	"github.com/aoagents/agent-orchestrator/backend/internal/ports"
 )
 
@@ -77,10 +78,25 @@ func (p *Plugin) piAgentSettledSupported(ctx context.Context) (bool, error) {
 	if err != nil {
 		return false, err
 	}
+	if !filepath.IsAbs(binary) {
+		if abs, absErr := filepath.Abs(binary); absErr == nil {
+			binary = abs
+		}
+	}
 	probeCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
-	out, err := exec.CommandContext(probeCtx, binary, "--version").CombinedOutput() //nolint:gosec // binary is adapter-resolved, args are static.
+	cmd := exec.CommandContext(probeCtx, binary, "--version") //nolint:gosec // binary is adapter-resolved, args are static.
+	env := map[string]string{"PATH": os.Getenv("PATH")}
+	// systemd/GUI daemons often resolve the Pi npm shim but omit Node from PATH.
+	// Launch already prepends the Node runtime dir; the version probe must too,
+	// or `#!/usr/bin/env node` exits 127 and spawn rolls back the session.
+	agentlaunch.AugmentRuntimePATHForLaunchBinary(probeCtx, env, []string{binary}, exec.LookPath)
+	cmd.Env = append(os.Environ(), "PATH="+env["PATH"])
+	out, err := cmd.CombinedOutput()
 	if err != nil {
+		if isCommandNotFound(err) {
+			return false, fmt.Errorf("pi.GetAgentHooks: probe pi --version (%s): %w", binary, ports.ErrAgentBinaryNotFound)
+		}
 		return false, fmt.Errorf("pi.GetAgentHooks: probe pi --version: %w", err)
 	}
 	version, ok := parsePiVersion(string(out))
@@ -92,6 +108,14 @@ func (p *Plugin) piAgentSettledSupported(ctx context.Context) (bool, error) {
 }
 
 type piVersion [3]int
+
+func isCommandNotFound(err error) bool {
+	var exitErr *exec.ExitError
+	if errors.As(err, &exitErr) && exitErr.ExitCode() == 127 {
+		return true
+	}
+	return errors.Is(err, exec.ErrNotFound)
+}
 
 func parsePiVersion(output string) (piVersion, bool) {
 	match := piVersionPattern.FindStringSubmatch(output)

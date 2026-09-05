@@ -131,6 +131,7 @@ function renderBoard(ui: ReactNode) {
 		workspaceStartupState: "ready",
 		cloneProject: cloneProjectMock,
 		createProject: createProjectMock,
+		createRepository: vi.fn().mockResolvedValue(undefined),
 		initializeProjectRepository: initializeProjectRepositoryMock,
 	};
 	return render(
@@ -177,6 +178,7 @@ describe("global board first launch", () => {
 			workspaceStartupState: "loading",
 			cloneProject: cloneProjectMock,
 			createProject: createProjectMock,
+			createRepository: vi.fn().mockResolvedValue(undefined),
 			initializeProjectRepository: initializeProjectRepositoryMock,
 		};
 		render(
@@ -252,6 +254,7 @@ describe("global board first launch", () => {
 			workspaceStartupState: "loading",
 			cloneProject: cloneProjectMock,
 			createProject: createProjectMock,
+			createRepository: vi.fn().mockResolvedValue(undefined),
 			initializeProjectRepository: initializeProjectRepositoryMock,
 		};
 		render(

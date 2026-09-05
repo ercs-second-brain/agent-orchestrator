@@ -184,10 +184,18 @@ func isIdentityProbe(r *http.Request) bool {
 	return r.Method == http.MethodGet && r.URL.Path == identityProbePath
 }
 
+// isCorsPreflight reports a browser OPTIONS probe that corsMiddleware answers
+// before any handler runs. The desktop renderer crosses from app://renderer to
+// the LAN listener with Authorization, so Chromium sends an unauthenticated
+// preflight first; rejecting it here surfaces as "Failed to fetch" in Electron.
+func isCorsPreflight(r *http.Request) bool {
+	return r.Method == http.MethodOptions && r.Header.Get("Access-Control-Request-Method") != ""
+}
+
 func authMiddleware(state *authState, lock *lockout, connected *mobileConnectReporter) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			if isIdentityProbe(r) {
+			if isIdentityProbe(r) || isCorsPreflight(r) {
 				next.ServeHTTP(w, r)
 				return
 			}

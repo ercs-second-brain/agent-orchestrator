@@ -17,18 +17,14 @@ import (
 )
 
 // releaseRepo is the GitHub "owner/repo" that `ao start` fetches the desktop app
-// from. It defaults to the production target and is overridable at build time so
-// a test binary fetches from the fork without a source edit:
+// from. It defaults to this repository's release target and is overridable at
+// build time:
 //
-//	go build -ldflags "-X github.com/aoagents/agent-orchestrator/backend/internal/cli.releaseRepo=harshitsinghbhandari/agent-orchestrator" ./cmd/ao
+//	go build -ldflags "-X github.com/aoagents/agent-orchestrator/backend/internal/cli.releaseRepo=owner/repo" ./cmd/ao
 //
-// Mirrors how version.go's Version var is stamped by release tooling.
-//
-// Untrivial-ai is the org the repo was transferred to in July 2026. The old
-// AgentWrapper URLs still resolve only through GitHub's rename redirect, which
-// is not a contract: the same staleness that stranded the baked update feed
-// (#3523) would strand every `ao start` download the day that redirect stops.
-var releaseRepo = "Untrivial-ai/agent-orchestrator"
+// Keep in sync with frontend/forge.config.ts DEFAULT_RELEASE_REPO and
+// frontend/src/shared/github-repo.ts. See docs/release-repo.md.
+var releaseRepo = "ercs-second-brain/agent-orchestrator"
 
 // appBundleName is the macOS bundle directory name produced by electron-forge
 // (spaced, per frontend/forge.config.ts).

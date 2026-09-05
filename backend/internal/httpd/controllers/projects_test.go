@@ -310,6 +310,17 @@ func TestProjectsAPI_Clone(t *testing.T) {
 	assertErrorCode(t, body, status, http.StatusBadRequest, "INVALID_JSON")
 }
 
+func TestProjectsAPI_CreateRepository(t *testing.T) {
+	srv := newTestServer(t)
+
+	body, status, _ := doRequest(t, srv, "POST", "/api/v1/projects/create-repository", `{"name":"../etc"}`)
+	assertErrorCode(t, body, status, http.StatusBadRequest, "INVALID_REPOSITORY_NAME")
+	body, status, _ = doRequest(t, srv, "POST", "/api/v1/projects/create-repository", `{}`)
+	assertErrorCode(t, body, status, http.StatusBadRequest, "INVALID_REPOSITORY_NAME")
+	body, status, _ = doRequest(t, srv, "POST", "/api/v1/projects/create-repository", `{`)
+	assertErrorCode(t, body, status, http.StatusBadRequest, "INVALID_JSON")
+}
+
 func TestProjectsAPI_InitializeRepository(t *testing.T) {
 	srv := newTestServer(t)
 

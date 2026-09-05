@@ -26,10 +26,12 @@ import { cloudProjectsQueryKey } from "../hooks/useWorkspaceQuery";
 import { apiClient, apiErrorMessage } from "../lib/api-client";
 import { aoBridge } from "../lib/bridge";
 import { useCloudSession } from "../lib/cloud-session";
+import { useShellMaybe } from "../lib/shell-context";
 import { cn } from "../lib/utils";
 import type { ProjectKind } from "../types/workspace";
 import { CreateProjectAgentSheet, type CreateProjectAgentSelection } from "./CreateProjectAgentSheet";
 import CloneRepositoryDialog, { type CloneRepositoryDetails, type CloneRepositorySelection } from "./CloneRepositoryDialog";
+import CreateRepositoryDialog, { type CreateRepositoryDetails } from "./CreateRepositoryDialog";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
@@ -38,6 +40,7 @@ import { Tabs, TabsList, TabsTrigger } from "./ui/tabs";
 export type CreateProjectInput = { path: string; asWorkspace?: boolean; defaultBranch?: string } & CreateProjectAgentSelection;
 export type CloneProjectInput = Pick<CloneRepositorySelection, "remoteUrl" | "destinationParent"> &
 	CreateProjectAgentSelection;
+export type CreateRepositoryInput = CreateRepositoryDetails & CreateProjectAgentSelection;
 
 const LAST_CLONE_DESTINATION_KEY = "ao.clone.lastDestinationParent";
 const LAST_IMPORT_REMOTE_URL_KEY = "ao.import.lastRemoteUrl";
@@ -46,7 +49,7 @@ type GitPreparationEvent = components["schemas"]["GitPreparationEvent"];
 type ProjectImportStep = "blocked" | "prepare_git";
 
 type CreateProjectFlowMode = ProjectKind | "choose";
-type ProjectSource = "clone" | "local" | "workspace";
+export type ProjectSource = "clone" | "create" | "local" | "workspace";
 
 /** Where the new project should live: on this machine or in AO Cloud. */
 type ProjectOffering = "local" | "cloud";
@@ -62,6 +65,7 @@ export function CreateProjectFlow({
 	mode = "single_repo",
 	onCloneProject,
 	onCreateProject,
+	onCreateRepository,
 	onInitializeProject,
 	openSignal,
 	sourceSignal,
@@ -78,6 +82,7 @@ export function CreateProjectFlow({
 	mode?: CreateProjectFlowMode;
 	onCloneProject: (input: CloneProjectInput) => Promise<void>;
 	onCreateProject: (input: CreateProjectInput) => Promise<void>;
+	onCreateRepository: (input: CreateRepositoryInput) => Promise<void>;
 	onInitializeProject: (path: string) => Promise<void>;
 	// Monotonic counter: each new value opens the flow programmatically (the ⌘N
 	// "no project in scope" fallback). Lets the shortcut reuse the sidebar's own
@@ -87,6 +92,8 @@ export function CreateProjectFlow({
 	sourceSignal?: { source: ProjectSource; nonce: number } | null;
 }) {
 	const { t } = useTranslation();
+	const daemonStatus = useShellMaybe()?.daemonStatus;
+	const isRemote = daemonStatus?.connectionMode === "remote" && daemonStatus.state === "ready";
 	const resolvedIdleLabel = idleLabel ?? t("createProject.newProject");
 	const [error, setError] = useState<string | null>(null);
 	const [modePickerOpen, setModePickerOpen] = useState(false);
@@ -94,10 +101,17 @@ export function CreateProjectFlow({
 	const [cloneDialogClosing, setCloneDialogClosing] = useState(false);
 	const [cloneDetails, setCloneDetails] = useState<CloneRepositoryDetails>(() => ({
 		remoteUrl: "",
-		destinationParent:
-			typeof window === "undefined" ? "" : (window.localStorage.getItem(LAST_CLONE_DESTINATION_KEY) ?? ""),
+		destinationParent: isRemote
+			? "~"
+			: typeof window === "undefined"
+				? ""
+				: (window.localStorage.getItem(LAST_CLONE_DESTINATION_KEY) ?? ""),
 	}));
 	const [cloneSelection, setCloneSelection] = useState<CloneRepositorySelection | null>(null);
+	const [createDialogOpen, setCreateDialogOpen] = useState(false);
+	const [createDialogClosing, setCreateDialogClosing] = useState(false);
+	const [createDetails, setCreateDetails] = useState<CreateRepositoryDetails>({ name: "", private: true });
+	const [createSelection, setCreateSelection] = useState<CreateRepositoryDetails | null>(null);
 	const [folderPickerOpen, setFolderPickerOpen] = useState(false);
 	const [childTransitioning, setChildTransitioning] = useState(false);
 	const [selectedKind, setSelectedKind] = useState<ProjectKind>(mode === "workspace" ? "workspace" : "single_repo");
@@ -142,6 +156,7 @@ export function CreateProjectFlow({
 	};
 
 	const selectSource = (source: ProjectSource) => {
+		if (isRemote && source !== "clone" && source !== "create") return;
 		const presetPath = pendingDropPath;
 		setPendingDropPath(null);
 		setError(null);
@@ -153,7 +168,14 @@ export function CreateProjectFlow({
 		setProjectRemoteUrl("");
 		setProjectSuggestWorkspace(false);
 		if (source === "clone") {
+			if (isRemote) {
+				setCloneDetails((prev) => ({ ...prev, destinationParent: "~" }));
+			}
 			transitionToChild(() => setCloneDialogOpen(true));
+			return;
+		}
+		if (source === "create") {
+			transitionToChild(() => setCreateDialogOpen(true));
 			return;
 		}
 		setCloneSelection(null);
@@ -252,6 +274,7 @@ export function CreateProjectFlow({
 		if (hasModePicker) {
 			setError(null);
 			setCloneSelection(null);
+			setCreateSelection(null);
 			setModePickerOpen(true);
 			return;
 		}
@@ -279,7 +302,8 @@ export function CreateProjectFlow({
 	useEffect(() => {
 		if (!droppedPath || droppedPath.nonce === lastDropNonce.current) return;
 		lastDropNonce.current = droppedPath.nonce;
-		if (isBusy || modePickerOpen || cloneDialogOpen || folderPickerOpen || selectedPath !== null) return;
+		if (isRemote) return;
+		if (isBusy || modePickerOpen || cloneDialogOpen || createDialogOpen || folderPickerOpen || selectedPath !== null) return;
 		startFlow(droppedPath.path);
 	}, [droppedPath]);
 
@@ -287,7 +311,7 @@ export function CreateProjectFlow({
 	useEffect(() => {
 		if (!sourceSignal || sourceSignal.nonce === lastSourceNonce.current) return;
 		lastSourceNonce.current = sourceSignal.nonce;
-		if (isBusy || modePickerOpen || cloneDialogOpen || folderPickerOpen || selectedPath !== null) return;
+		if (isBusy || modePickerOpen || cloneDialogOpen || createDialogOpen || folderPickerOpen || selectedPath !== null) return;
 		selectSource(sourceSignal.source);
 	}, [sourceSignal]);
 
@@ -304,6 +328,15 @@ export function CreateProjectFlow({
 				});
 				setSelectedPath(null);
 				setCloneSelection(null);
+				return;
+			}
+			if (createSelection) {
+				await onCreateRepository({
+					...createSelection,
+					...selection,
+				});
+				setSelectedPath(null);
+				setCreateSelection(null);
 				return;
 			}
 			if (selectedKind === "single_repo" && repositorySetup) {
@@ -331,7 +364,7 @@ export function CreateProjectFlow({
 				setRepositorySetup(code);
 			}
 			setError(message);
-			if (hasModePicker && !cloneSelection) {
+			if (hasModePicker && !cloneSelection && !createSelection) {
 				if (shouldScanCreateFailure(message)) {
 					try {
 						const scan = await aoBridge.app.scanImportFolder({
@@ -446,8 +479,8 @@ export function CreateProjectFlow({
 					error,
 					label,
 				})}
-			<CreateProjectFlowBackdrop open={modePickerOpen || cloneDialogOpen || folderPickerOpen || selectedPath !== null || childTransitioning} />
-			{hasModePicker && embedded && !modePickerOpen && !cloneDialogOpen && selectedPath === null && (
+			<CreateProjectFlowBackdrop open={modePickerOpen || cloneDialogOpen || createDialogOpen || folderPickerOpen || selectedPath !== null || childTransitioning} />
+			{hasModePicker && embedded && !modePickerOpen && !cloneDialogOpen && !createDialogOpen && selectedPath === null && (
 				<div className="flex w-full flex-col items-center gap-3">
 					{cloudEnabled && (
 						<ProjectOfferingTabs disabled={isBusy} offering={offering} onOfferingChange={setOffering} />
@@ -471,7 +504,7 @@ export function CreateProjectFlow({
 			{hasModePicker && (
 				<>
 					<CreateProjectSourceDialog
-						childOpen={childTransitioning || cloneDialogOpen || folderPickerOpen}
+						childOpen={childTransitioning || cloneDialogOpen || createDialogOpen || folderPickerOpen}
 						cloudAvailable={cloudAvailable}
 						cloudEnabled={cloudEnabled}
 						disabled={isBusy}
@@ -497,6 +530,7 @@ export function CreateProjectFlow({
 						<CloneRepositoryDialog
 							disabled={isBusy}
 							error={error}
+							lockDestinationParent={isRemote ? "~" : undefined}
 							onBack={() => {
 								setError(null);
 								setCloneDialogOpen(false);
@@ -526,6 +560,40 @@ export function CreateProjectFlow({
 							}}
 							open={cloneDialogOpen}
 							value={cloneDetails}
+						/>
+					) : null}
+					{createDialogOpen || createDialogClosing ? (
+						<CreateRepositoryDialog
+							disabled={isBusy}
+							error={error}
+							onBack={() => {
+								setError(null);
+								setCreateDialogOpen(false);
+								setModePickerOpen(true);
+							}}
+							onChange={(next) => {
+								setCreateDetails(next);
+								setError(null);
+							}}
+							onClose={() => {
+								setCreateDialogOpen(false);
+								setError(null);
+							}}
+							onContinue={(next) => {
+								setCreateSelection(next);
+								setSelectedKind("single_repo");
+								setModePickerOpen(false);
+								setCreateDialogOpen(false);
+								setCreateDialogClosing(true);
+								setChildTransitioning(true);
+								window.setTimeout(() => {
+									setCreateDialogClosing(false);
+									setSelectedPath(next.name);
+									setChildTransitioning(false);
+								}, 80);
+							}}
+							open={createDialogOpen}
+							value={createDetails}
 						/>
 					) : null}
 					<CreateProjectFolderDialog
@@ -598,6 +666,7 @@ export function CreateProjectFlow({
 					if (!open) {
 						setSelectedPath(null);
 						setCloneSelection(null);
+						setCreateSelection(null);
 						if (!folderPickerOpen) {
 							setError(null);
 						}
@@ -609,6 +678,11 @@ export function CreateProjectFlow({
 								setSelectedPath(null);
 								setCloneDialogOpen(true);
 							}
+						: createSelection
+							? () => {
+									setSelectedPath(null);
+									setCreateDialogOpen(true);
+								}
 						: undefined
 				}
 				onSubmit={createProject}
@@ -1107,25 +1181,37 @@ function ImportSourcePicker({
 	onSelect: (source: ProjectSource) => void;
 }) {
 	const { t } = useTranslation();
+	const daemonStatus = useShellMaybe()?.daemonStatus;
+	const isRemote = daemonStatus?.connectionMode === "remote" && daemonStatus.state === "ready";
 	const sources: Array<{ source: ProjectSource; icon: ReactNode; label: string; description: string }> = [
+		{
+			source: "create",
+			icon: <FolderPlus className="size-5" aria-hidden="true" strokeWidth={1.8} />,
+			label: t("createProject.createRepo"),
+			description: t("createProject.createRepoDesc"),
+		},
 		{
 			source: "clone",
 			icon: <GitFork className="size-5" aria-hidden="true" strokeWidth={1.8} />,
 			label: t("createProject.cloneFromGit"),
 			description: t("createProject.cloneFromGitDesc"),
 		},
-		{
-			source: "local",
-			icon: <FolderClosed className="size-5" aria-hidden="true" strokeWidth={1.8} />,
-			label: t("createProject.openLocal"),
-			description: t("createProject.openLocalDesc"),
-		},
-		{
-			source: "workspace",
-			icon: <Folders className="size-5" aria-hidden="true" strokeWidth={1.8} />,
-			label: t("createProject.addWorkspace"),
-			description: t("createProject.workspaceDesc"),
-		},
+		...(!isRemote
+			? [
+					{
+						source: "local" as const,
+						icon: <FolderClosed className="size-5" aria-hidden="true" strokeWidth={1.8} />,
+						label: t("createProject.openLocal"),
+						description: t("createProject.openLocalDesc"),
+					},
+					{
+						source: "workspace" as const,
+						icon: <Folders className="size-5" aria-hidden="true" strokeWidth={1.8} />,
+						label: t("createProject.addWorkspace"),
+						description: t("createProject.workspaceDesc"),
+					},
+				]
+			: []),
 	];
 	return (
 		<div className="relative w-full max-w-[520px] overflow-hidden rounded-lg border border-border bg-popover text-popover-foreground shadow-xl">

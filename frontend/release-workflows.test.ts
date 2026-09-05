@@ -62,16 +62,22 @@ describe("desktop release workflows", () => {
     }
   });
 
-  it("prevents a public desktop tag publisher from returning", async () => {
-    const workflows = await readWorkflows();
-
-    expect(workflows.map(({ contents }) => contents).join("\n")).not.toContain(
-      "desktop-v*",
+  it("publishes desktop releases from this repository on v* tags", async () => {
+    const contents = await readFile(
+      path.join(workflowsDirectory, "release.yml"),
+      "utf8",
     );
+
+    expect(contents).toMatch(/tags:\s*\n\s*-\s*"v\*\.\*\.\*"/);
+    expect(contents).toContain("AO_RELEASE_REPO: ${{ github.repository }}");
+    expect(contents).toMatch(/permissions:\s*\n\s*contents:\s*write/);
+    expect(contents).toMatch(/gh release (?:create|upload)/);
   });
 
-  it("prevents public workflows from mutating releases or release tags", async () => {
-    const workflows = await readWorkflows();
+  it("keeps non-release workflows from mutating releases or release tags", async () => {
+    const workflows = (await readWorkflows()).filter(
+      ({ name }) => name !== "release.yml",
+    );
 
     expect(findReleaseMutationViolations(workflows)).toEqual([]);
   });
@@ -162,14 +168,11 @@ run: |
     );
   });
 
-  it("requires the WorkOS client ID for unsigned artifacts", async () => {
+  it("forwards WorkOS client ID when the repository variable is set", async () => {
     const contents = await readFile(artifactBuilder, "utf8");
 
     expect(contents).toContain(
       "VITE_WORKOS_CLIENT_ID: ${{ vars.VITE_WORKOS_CLIENT_ID }}",
-    );
-    expect(contents).toContain(
-      "Repository variable VITE_WORKOS_CLIENT_ID is required",
     );
   });
 });

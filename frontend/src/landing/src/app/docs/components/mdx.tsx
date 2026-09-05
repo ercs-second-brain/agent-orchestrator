@@ -219,7 +219,7 @@ export function PlatformSupport({
   );
 }
 
-const RELEASES_URL = "https://github.com/Untrivial-ai/agent-orchestrator/releases";
+const RELEASES_URL = "https://github.com/ercs-second-brain/agent-orchestrator/releases";
 const CHANNELS = ["Stable", "Nightly"] as const;
 
 export async function InstallDownloads() {

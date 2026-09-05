@@ -374,7 +374,7 @@ func providerFilePaths(t *testing.T, root string, fixture testCatalog) []string 
 }
 
 func TestProductionManifestURLIsReviewedAOCatalog(t *testing.T) {
-	if RemoteManifestURL != "https://raw.githubusercontent.com/Untrivial-ai/agent-orchestrator/main/pricing/catalog/v1/manifest.json" {
+	if RemoteManifestURL != "https://raw.githubusercontent.com/ercs-second-brain/agent-orchestrator/main/pricing/catalog/v1/manifest.json" {
 		t.Fatalf("RemoteManifestURL = %q", RemoteManifestURL)
 	}
 	if _, err := NewFetcher(http.DefaultClient, "ftp://example.com/manifest.json"); err == nil {

@@ -65,6 +65,8 @@ import type {
 	BrowserImportRequest,
 	BrowserImportResult,
 } from "./shared/browser-profile-import";
+import { applyRemoteCspOrigins } from "./preload/desktop-remote-csp";
+import type { DesktopRemoteConfig } from "./shared/desktop-remote";
 
 if (typeof document !== "undefined") {
 	const markNativeBrowserComposition = () => {
@@ -595,8 +597,51 @@ const api = {
 			};
 		},
 	},
+	desktopRemote: {
+		getConfig: () =>
+			ipcRenderer.invoke("desktop-remote:getConfig") as Promise<
+				(Omit<DesktopRemoteConfig, "password"> & { hasPassword: true }) | null
+			>,
+		connect: (input: {
+			pairingText?: string;
+			host?: string;
+			port?: number;
+			password?: string;
+			secure?: boolean;
+		}) =>
+			ipcRenderer.invoke("desktop-remote:connect", input) as Promise<
+				| { ok: true; config: Omit<DesktopRemoteConfig, "password"> & { hasPassword: true } }
+				| { ok: false; error: string }
+			>,
+		disconnect: () => ipcRenderer.invoke("desktop-remote:disconnect") as Promise<DaemonStatus>,
+		probe: (input: { host: string; port: number; secure?: boolean }) =>
+			ipcRenderer.invoke("desktop-remote:probe", input) as Promise<
+				| { ok: true; hostId: string; apiVersion?: number }
+				| { ok: false; reason: "network" | "not_ao" | "missing_host_id" }
+			>,
+		getAuthHeader: () =>
+			ipcRenderer.invoke("desktop-remote:getAuthHeader") as Promise<Record<string, string> | null>,
+		onCspOrigins: (listener: (origins: string[]) => void) => {
+			const wrapped = (_event: Electron.IpcRendererEvent, origins: string[]) => listener(origins);
+			ipcRenderer.on("desktop-remote:csp", wrapped);
+			return () => {
+				ipcRenderer.off("desktop-remote:csp", wrapped);
+			};
+		},
+	},
 };
 
 contextBridge.exposeInMainWorld("ao", api);
+
+void ipcRenderer.invoke("desktop-remote:getCspOrigins").then((origins) => {
+	if (Array.isArray(origins) && origins.length > 0) {
+		applyRemoteCspOrigins(origins);
+	}
+});
+ipcRenderer.on("desktop-remote:csp", (_event, origins: string[]) => {
+	if (Array.isArray(origins) && origins.length > 0) {
+		applyRemoteCspOrigins(origins);
+	}
+});
 
 export type AoBridge = typeof api;

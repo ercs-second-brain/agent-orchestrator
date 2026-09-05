@@ -5,7 +5,13 @@ import { useCallback, useEffect, useMemo, useRef, useState, type AnimationEvent,
 import { useTranslation } from "react-i18next";
 import { useCommandPaletteEnabled } from "../hooks/useCommandPaletteEnabled";
 import { useRestoreSession } from "../hooks/useRestoreSession";
-import { cloudSessionsQueryKey, useWorkspaceQuery, workspaceQueryKey } from "../hooks/useWorkspaceQuery";
+import {
+	cloudSessionsQueryKey,
+	pendingOrchestratorSession,
+	seedWorkspaceSession,
+	useWorkspaceQuery,
+	workspaceQueryKey,
+} from "../hooks/useWorkspaceQuery";
 import { apiClient, apiErrorMessage } from "../lib/api-client";
 import { aoBridge } from "../lib/bridge";
 import { spawnCloudOrchestrator } from "../lib/cloud-orchestrator";
@@ -22,6 +28,7 @@ import { iconForCommand } from "../lib/command-palette-icons";
 import { isDialogOrMenuOpen } from "../lib/dom-selectors";
 import { isMacPlatform } from "../lib/platform";
 import { sessionReviewsQueryOptions, type PRReviewState } from "../lib/session-reviews";
+import { formatOrchestratorStartupError } from "../lib/orchestrator-startup-error";
 import { spawnOrchestrator } from "../lib/spawn-orchestrator";
 import { useShell } from "../lib/shell-context";
 import { findProjectOrchestrator, hasConfiguredOrchestratorAgent, openPRs, workerSessions } from "../types/workspace";
@@ -51,7 +58,7 @@ export function CommandPalette() {
 	const queryClient = useQueryClient();
 	const restoreSessionById = useRestoreSession();
 	const params = useParams({ strict: false }) as { projectId?: string; sessionId?: string };
-	const { cloneProject, createProject, initializeProjectRepository } = useShell();
+	const { cloneProject, createProject, createRepository, initializeProjectRepository } = useShell();
 	const resolvedTheme = useUiStore((s) => s.resolvedTheme);
 	const setThemePreference = useUiStore((s) => s.setThemePreference);
 	const isOpen = useUiStore((s) => s.isCommandPaletteOpen);
@@ -322,17 +329,34 @@ export function CommandPalette() {
 				closePalette();
 				return;
 			}
-			if (!hasConfiguredOrchestratorAgent(workspace)) {
+			if (!workspace || !hasConfiguredOrchestratorAgent(workspace)) {
 				if (workspace) {
 					navigateToTarget({ to: "/projects/$projectId/settings", params: { projectId } });
 					closePalette();
 				}
 				return;
 			}
-			const sessionId = await spawnOrchestrator(projectId, "command_palette");
-			await queryClient.invalidateQueries({ queryKey: workspaceQueryKey });
-			navigateToTarget({ to: "/projects/$projectId/sessions/$sessionId", params: { projectId, sessionId } });
-			closePalette();
+			try {
+				const sessionId = await spawnOrchestrator(projectId, "command_palette");
+				await queryClient.invalidateQueries({ queryKey: workspaceQueryKey });
+				seedWorkspaceSession(
+					queryClient,
+					pendingOrchestratorSession({
+						sessionId,
+						projectId,
+						projectName: workspace.name,
+						provider: workspace.orchestratorAgent,
+					}),
+				);
+				navigateToTarget({ to: "/projects/$projectId/sessions/$sessionId", params: { projectId, sessionId } });
+				closePalette();
+			} catch (err) {
+				useUiStore.getState().setOrchestratorStartupError(
+					projectId,
+					formatOrchestratorStartupError(err instanceof Error ? err.message : "Could not spawn orchestrator"),
+				);
+				throw err;
+			}
 		},
 		[workspaces, navigateToTarget, queryClient, closePalette, blockedByRestart],
 	);
@@ -639,6 +663,7 @@ export function CommandPalette() {
 				mode="choose"
 				onCloneProject={cloneProject}
 				onCreateProject={createProject}
+				onCreateRepository={createRepository}
 				onInitializeProject={initializeProjectRepository}
 			>
 				{({ choosePath }) => <BindChoosePath choosePath={choosePath} choosePathRef={choosePathRef} />}

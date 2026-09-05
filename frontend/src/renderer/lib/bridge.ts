@@ -253,4 +253,12 @@ export const aoBridge: AoBridge =
 			closeStream: () => undefined,
 			onStreamEvent: () => () => undefined,
 		},
+		desktopRemote: {
+			getConfig: async () => null,
+			connect: async () => ({ ok: false as const, error: "Desktop app is required for remote connection." }),
+			disconnect: async () => ({ state: "stopped" as const }),
+			probe: async () => ({ ok: false as const, reason: "network" as const }),
+			getAuthHeader: async () => null,
+			onCspOrigins: () => () => undefined,
+		},
 	} satisfies AoBridge);

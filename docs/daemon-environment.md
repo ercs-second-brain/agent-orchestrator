@@ -169,7 +169,12 @@ parent that hands env to the daemon.
 
 - macOS: required (this is where the GUI/launchd split bites).
 - Linux: the same class of problem exists for `.desktop`-launched apps; the same
-  resolution applies.
+  resolution applies. A **systemd user unit** (`ao daemon` on a headless VM) is
+  the same footgun: it does not source `.bashrc`, so interactive `pi --version`
+  can succeed while spawn fails with `probe pi --version: exit status 127`
+  (the Pi shim's `#!/usr/bin/env node` cannot see nvm/fnm). Set
+  `Environment=PATH=…` on the unit to the SSH user's `echo $PATH`. See
+  [headless-vm.md](headless-vm.md).
 - Windows: not applicable in the same form; a static `PATH` floor is sufficient.
 
 This matches what `shell-env`/`fix-path` do; the logic above is the entirety of

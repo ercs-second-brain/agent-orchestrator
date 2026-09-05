@@ -633,6 +633,7 @@ describe("SessionView", () => {
 			activeShellTerminalHandleId: null,
 			inspectorSessions: {},
 			isSidebarOpen: true,
+			orchestratorStartupErrors: {},
 			visibleTerminalKindBySession: {},
 		});
 		browserDestroy.mockReset();
@@ -681,6 +682,44 @@ describe("SessionView", () => {
 			}
 			return { data: { reviewerHandleId: "", reviews: [], runs: [] }, error: undefined };
 		});
+	});
+
+	it("keeps the session route in a preparing state until the workspace query settles", () => {
+		workspaceQueryState.data = [];
+		workspaceQueryState.isLoading = true;
+		render(<SessionView sessionId="sess-missing" />);
+		expect(
+			screen.getByText(
+				"Preparing the orchestrator terminal. This can take a moment while AO creates the workspace and starts the agent.",
+			),
+		).toBeInTheDocument();
+		expect(
+			screen.queryByText("Session not found. It may have been cleaned up — pick another from the sidebar."),
+		).not.toBeInTheDocument();
+		expect(screen.queryByText("No session selected. Pick a worker to attach its terminal.")).not.toBeInTheDocument();
+	});
+
+	it("shows session not found after the workspace query settles without the session", () => {
+		workspaceQueryState.data = [];
+		workspaceQueryState.isLoading = false;
+		render(<SessionView sessionId="sess-missing" />);
+		expect(
+			screen.getByText("Session not found. It may have been cleaned up — pick another from the sidebar."),
+		).toBeInTheDocument();
+	});
+
+	it("shows the spawn error when the routed session was rolled back", () => {
+		workspaceQueryState.data = [];
+		workspaceQueryState.isLoading = false;
+		useUiStore.getState().setOrchestratorStartupError(
+			"webreadr",
+			"spawn webreadr-1: prepare: install hooks: pi.GetAgentHooks: probe pi --version: exit status 127",
+		);
+		render(<SessionView projectId="webreadr" sessionId="webreadr-1" />);
+		expect(screen.getByText(/cannot run Pi/)).toBeInTheDocument();
+		expect(
+			screen.queryByText("Session not found. It may have been cleaned up — pick another from the sidebar."),
+		).not.toBeInTheDocument();
 	});
 
 	it("offers recovery directly from a Codex session blocked by a failed account switch", async () => {

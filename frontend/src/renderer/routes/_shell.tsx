@@ -1,6 +1,6 @@
 import { createFileRoute, Outlet, useMatchRoute, useNavigate, useParams } from "@tanstack/react-router";
 import { isCancelledError, useQueryClient } from "@tanstack/react-query";
-import { memo, type CSSProperties, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { memo, type CSSProperties, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { FolderPlus } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { CommandPalette } from "../components/CommandPalette";
@@ -27,9 +27,16 @@ import { agentModelsQueryOptions } from "../hooks/useAgentModelsQuery";
 import { useDaemonStatus } from "../hooks/useDaemonStatus";
 import { useOpenShellTerminal } from "../hooks/useShellTerminals";
 import { useWindowFullScreen } from "../hooks/useWindowFullScreen";
-import { useWorkspaceQuery, workspaceQueryKey, workspaceQueryOptions } from "../hooks/useWorkspaceQuery";
-import { apiClient, apiErrorCode, apiErrorMessage, hasTrustedApiBaseUrl } from "../lib/api-client";
-import { refreshDaemonStatus } from "../lib/daemon-status";
+import {
+	useWorkspaceQuery,
+	workspaceQueryKey,
+	workspaceQueryOptions,
+	resolveWorkspaceQueryKey,
+	pendingOrchestratorSession,
+	seedWorkspaceSession,
+} from "../hooks/useWorkspaceQuery";
+import { apiClient, apiErrorCode, apiErrorMessage, getApiBaseUrl, hasTrustedApiBaseUrl, subscribeApiBaseUrl } from "../lib/api-client";
+import { refreshDaemonStatus, isDaemonReady } from "../lib/daemon-status";
 import { usesPreviewWorkspaceData } from "../lib/preview-mode";
 import { addRendererExceptionStep, captureRendererEvent, captureRendererException } from "../lib/telemetry";
 import { ShellProvider } from "../lib/shell-context";
@@ -61,7 +68,11 @@ export const Route = createFileRoute("/_shell")({
 	loader: async ({ context }) => {
 		await refreshDaemonStatus().catch(() => undefined);
 		if (!usesPreviewWorkspaceData && !hasTrustedApiBaseUrl()) return;
-		return context.queryClient.fetchQuery({ ...workspaceQueryOptions, staleTime: 0 });
+		return context.queryClient.fetchQuery({
+			...workspaceQueryOptions,
+			queryKey: resolveWorkspaceQueryKey(),
+			staleTime: 0,
+		});
 	},
 	component: ShellLayout,
 });
@@ -166,6 +177,7 @@ function ShellLayout() {
 	const workspacesRef = useRef(workspaces);
 	workspacesRef.current = workspaces;
 	const daemonStatus = useDaemonStatus(queryClient);
+	const apiBaseUrl = useSyncExternalStore(subscribeApiBaseUrl, getApiBaseUrl, () => "");
 	const [workspaceStartupState, setWorkspaceStartupState] = useState<"loading" | "ready" | "error">("loading");
 	const workspaceStartupBaselineRef = useRef(0);
 	const themePreference = useUiStore((state) => state.themePreference);
@@ -226,7 +238,9 @@ function ShellLayout() {
 	// when it lands on an active terminal pane.
 	const [isDragActive, setIsDragActive] = useState(false);
 	const dragDepthRef = useRef(0);
+	const isRemoteDaemon = daemonStatus.connectionMode === "remote" && daemonStatus.state === "ready";
 	useEffect(() => {
+		if (isRemoteDaemon) return;
 		const isFileDrag = (event: DragEvent) => Array.from(event.dataTransfer?.types ?? []).includes("Files");
 		const firstEntryIsDirectory = (event: DragEvent) => {
 			const item = event.dataTransfer?.items?.[0];
@@ -272,7 +286,7 @@ function ShellLayout() {
 			window.removeEventListener("dragleave", handleDragLeave);
 			window.removeEventListener("drop", handleDrop);
 		};
-	}, [requestCreateProjectFromPath]);
+	}, [isRemoteDaemon, requestCreateProjectFromPath]);
 	// Project in scope for a new-session shortcut: the route's project, or the
 	// workspace owning the open session (so the shortcut works from a worker's
 	// detail view, where the URL carries only a sessionId).
@@ -334,7 +348,7 @@ function ShellLayout() {
 	const isStartupLoading =
 		!usesPreviewWorkspaceData &&
 		!daemonStatus.code &&
-		(daemonStatus.state !== "ready" || workspaceStartupState === "loading" || (!workspaceQuery.isSuccess && !workspaceQuery.isError));
+		(daemonStatus.state !== "ready" || workspaceStartupState === "loading");
 	const navigateSession = useCallback(
 		(direction: -1 | 1) => {
 			if (!scopedProjectId) return;
@@ -361,7 +375,7 @@ function ShellLayout() {
 
 	const updateWorkspaces = useCallback(
 		(updater: (workspaces: WorkspaceSummary[]) => WorkspaceSummary[]) => {
-			queryClient.setQueryData<WorkspaceSummary[]>(workspaceQueryKey, (current = []) => updater(current));
+			queryClient.setQueryData<WorkspaceSummary[]>(resolveWorkspaceQueryKey(), (current = []) => updater(current));
 		},
 		[queryClient],
 	);
@@ -370,7 +384,7 @@ function ShellLayout() {
 		async (
 			project: components["schemas"]["Project"],
 			input: CreateProjectConfigInput,
-			source: "project_add" | "project_clone",
+			source: "project_add" | "project_clone" | "project_create_repository",
 		) => {
 			const workspace: WorkspaceSummary = {
 				id: project.id,
@@ -388,9 +402,18 @@ function ShellLayout() {
 			try {
 				const sessionId = await spawnOrchestrator(
 					workspace.id,
-					source === "project_clone" ? "project_clone" : "project_add",
+					source === "project_add" ? "project_add" : source,
 				);
 				await queryClient.invalidateQueries({ queryKey: workspaceQueryKey });
+				seedWorkspaceSession(
+					queryClient,
+					pendingOrchestratorSession({
+						sessionId,
+						projectId: workspace.id,
+						projectName: workspace.name,
+						provider: workspace.orchestratorAgent,
+					}),
+				);
 				void navigate({
 					to: "/projects/$projectId/sessions/$sessionId",
 					params: { projectId: workspace.id, sessionId },
@@ -421,7 +444,7 @@ function ShellLayout() {
 			});
 			void captureRendererEvent("ao.renderer.project_add_requested");
 			const status = await refreshDaemonStatus();
-			if (status.state !== "ready" || !status.port) {
+			if (!isDaemonReady(status)) {
 				throw new Error(status.message || "AO daemon is not ready.");
 			}
 			const { data, error } = await apiClient.POST("/api/v1/projects", {
@@ -473,7 +496,7 @@ function ShellLayout() {
 			});
 			void captureRendererEvent("ao.renderer.project_clone_requested");
 			const status = await refreshDaemonStatus();
-			if (status.state !== "ready" || !status.port) {
+			if (!isDaemonReady(status)) {
 				throw new Error(status.message || "AO daemon is not ready.");
 			}
 			const { data, error } = await apiClient.POST("/api/v1/projects/clone", {
@@ -495,6 +518,47 @@ function ShellLayout() {
 			}
 			if (!data?.project) throw new Error("Project clone returned no project");
 			await completeProjectCreation(data.project, input, "project_clone");
+		},
+		[completeProjectCreation],
+	);
+
+	const createRepository = useCallback(
+		async (input: {
+			name: string;
+			private: boolean;
+			workerAgent: string;
+			orchestratorAgent: string;
+			trackerIntake?: components["schemas"]["TrackerIntakeConfig"];
+		}) => {
+			void addRendererExceptionStep("Repository create requested", {
+				source: "project-create-repository",
+				operation: "project_create_repository",
+				surface: "project_board",
+			});
+			void captureRendererEvent("ao.renderer.project_create_repository_requested");
+			const status = await refreshDaemonStatus();
+			if (!isDaemonReady(status)) {
+				throw new Error(status.message || "AO daemon is not ready.");
+			}
+			const { data, error } = await apiClient.POST("/api/v1/projects/create-repository", {
+				body: {
+					name: input.name,
+					private: input.private,
+					config: createProjectConfig(input),
+				},
+			});
+			if (error) {
+				const failure = new Error(apiErrorMessage(error)) as Error & { code?: string };
+				failure.code = apiErrorCode(error);
+				void captureRendererException(failure, {
+					source: "project-create-repository",
+					operation: "project_create_repository",
+					surface: "project_board",
+				});
+				throw failure;
+			}
+			if (!data?.project) throw new Error("Repository create returned no project");
+			await completeProjectCreation(data.project, input, "project_create_repository");
 		},
 		[completeProjectCreation],
 	);
@@ -581,7 +645,7 @@ function ShellLayout() {
 				active = false;
 			};
 		}
-		if (daemonStatus.state !== "ready" || !daemonStatus.port) {
+		if (!isDaemonReady(daemonStatus) || !apiBaseUrl) {
 			workspaceStartupBaselineRef.current = 0;
 			setWorkspaceStartupState("loading");
 			return () => {
@@ -590,10 +654,14 @@ function ShellLayout() {
 		}
 
 		workspaceStartupBaselineRef.current =
-			queryClient.getQueryState(workspaceQueryKey)?.dataUpdatedAt ?? 0;
+			queryClient.getQueryState(resolveWorkspaceQueryKey())?.dataUpdatedAt ?? 0;
 		setWorkspaceStartupState("loading");
 		void queryClient
-			.fetchQuery({ ...workspaceQueryOptions, staleTime: 0 })
+			.fetchQuery({
+				...workspaceQueryOptions,
+				queryKey: resolveWorkspaceQueryKey(),
+				staleTime: 0,
+			})
 			.then(() => {
 				if (active) setWorkspaceStartupState("ready");
 			})
@@ -604,7 +672,7 @@ function ShellLayout() {
 		return () => {
 			active = false;
 		};
-	}, [daemonStatus.port, daemonStatus.state, queryClient]);
+	}, [apiBaseUrl, daemonStatus.port, daemonStatus.state, daemonStatus.connectionMode, daemonStatus.remoteApiBase, queryClient]);
 
 	// The first confirmed fetch may fail transiently even though the daemon is
 	// ready. React Query keeps polling and the event transport may invalidate
@@ -694,8 +762,12 @@ function ShellLayout() {
 	// cold start or an already-running instance) — feeds the same drop flow as
 	// dragging a folder into the open window.
 	useEffect(
-		() => aoBridge.app.onOpenFolderPath((path) => requestCreateProjectFromPath(path)),
-		[requestCreateProjectFromPath],
+		() =>
+			aoBridge.app.onOpenFolderPath((path) => {
+				if (isRemoteDaemon) return;
+				requestCreateProjectFromPath(path);
+			}),
+		[isRemoteDaemon, requestCreateProjectFromPath],
 	);
 
 	// New standalone terminal (⌘T / Ctrl+T), also detected in the main process so it
@@ -781,11 +853,13 @@ function ShellLayout() {
 			workspaceStartupState,
 			cloneProject,
 			createProject,
+			createRepository,
 			initializeProjectRepository,
 		}),
 		[
 			cloneProject,
 			createProject,
+			createRepository,
 			daemonStatus,
 			initializeProjectRepository,
 			workspaceStartupState,
@@ -894,6 +968,7 @@ function ShellLayout() {
 						topbarOffset={isWindows ? "titlebar" : hideShellTopbar ? "trafficLights" : "toolbar"}
 						onCloneProject={cloneProject}
 						onCreateProject={createProject}
+						onCreateRepository={createRepository}
 						onInitializeProject={initializeProjectRepository}
 						onRemoveProject={removeProject}
 						workspaceError={workspaceQuery.isError ? errorMessage(workspaceQuery.error) : undefined}

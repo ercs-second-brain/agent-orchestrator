@@ -11,6 +11,7 @@ import { MobileDevicesSection } from "./settings/MobileDevicesSection";
 import { ReportProblemContent } from "./settings/ReportProblemContent";
 import { SettingsSection } from "./settings/SettingsSection";
 import { BrowserProfilesSection } from "./settings/BrowserProfilesSection";
+import { useRemoteConnection } from "../hooks/useRemoteConnection";
 
 const UpdatesSection = lazy(async () => {
 	const module = await import("./settings/UpdatesSection");
@@ -31,6 +32,7 @@ export function GlobalSettingsForm({
 	section?: GlobalSettingsSection;
 }) {
 	const { t } = useTranslation();
+	const isRemote = useRemoteConnection();
 	const all = section === "all";
 	// One section per page means the dialog header already names it, so a
 	// leading in-page heading would just repeat that title.
@@ -44,21 +46,29 @@ export function GlobalSettingsForm({
 		>
 			{(all || section === "general") && <GeneralSettingsSection titleHidden={titleHidden} />}
 
-			{(all || section === "harness") && <HarnessSettingsSection titleHidden={titleHidden} />}
+			{(all || section === "harness") && !isRemote ? <HarnessSettingsSection titleHidden={titleHidden} /> : null}
 
-			{(all || section === "agents") && <CodexAccountsSection titleHidden={titleHidden} />}
+			{(all || section === "agents") && !isRemote ? <CodexAccountsSection titleHidden={titleHidden} /> : null}
 
-			{(all || section === "browserProfiles") && <BrowserProfilesSection titleHidden={titleHidden} />}
-			{(all || section === "cloud") && <CloudCredentialsSection titleHidden={titleHidden} />}
+			{(all || section === "browserProfiles") && !isRemote ? <BrowserProfilesSection titleHidden={titleHidden} /> : null}
+			{(all || section === "cloud") && !isRemote ? <CloudCredentialsSection titleHidden={titleHidden} /> : null}
 
-			{(all || section === "mobile") && (
+			{(all || section === "mobile") && !isRemote ? (
 				<SettingsSection title={t("settings.mobile")} titleHidden={titleHidden}>
 					<div className="rounded-md bg-[var(--color-bg-settings-row)] px-4 pb-4 pt-0">
 						<ConnectMobileContent active />
 						<MobileDevicesSection />
 					</div>
 				</SettingsSection>
-			)}
+			) : null}
+			{(all || section === "mobile") && isRemote ? (
+				<SettingsSection title={t("settings.mobile")} titleHidden={titleHidden}>
+					<p className="rounded-md bg-[var(--color-bg-settings-row)] px-4 py-4 text-sm text-muted-foreground">
+						Connect Mobile is managed on the LAN server. Run <code className="font-mono text-xs">ao mobile enable</code> on
+						that host.
+					</p>
+				</SettingsSection>
+			) : null}
 
 			{(all || section === "shortcuts") && (
 				<SettingsSection title={t("settings.keyboardShortcuts")} titleHidden={titleHidden}>
