@@ -742,6 +742,7 @@ function RemoteShell({ children }: { children: ReactNode }) {
 					daemonStatus: { state: "ready", connectionMode: "remote" },
 					workspaceStartupState: "ready",
 					createProject: async () => undefined,
+					createRepository: async () => undefined,
 					cloneProject: async () => undefined,
 					initializeProjectRepository: async () => undefined,
 				} as ShellContextValue

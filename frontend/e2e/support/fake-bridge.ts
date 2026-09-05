@@ -274,6 +274,14 @@ export async function installFakeBridge(page: Page, opts: FakeBridgeOptions = {}
 					closeStream: () => undefined,
 					onStreamEvent: unsubscribe,
 				},
+				desktopRemote: {
+					getConfig: async () => null,
+					connect: async () => ({ ok: false as const, error: "unavailable in e2e" }),
+					disconnect: async () => ({ state: "stopped" as const }),
+					probe: async () => ({ ok: false as const, reason: "network" as const }),
+					getAuthHeader: async () => null,
+					onCspOrigins: () => () => undefined,
+				},
 			} satisfies AoBridge;
 			(window as unknown as { ao: unknown }).ao = ao;
 		},
@@ -788,6 +796,14 @@ export async function installFakeAgent(page: Page, opts: FakeAgentOptions = {}):
 					openStream: async () => ({ streamId: "stream_test" }),
 					closeStream: () => undefined,
 					onStreamEvent: unsubscribe,
+				},
+				desktopRemote: {
+					getConfig: async () => null,
+					connect: async () => ({ ok: false as const, error: "unavailable in e2e" }),
+					disconnect: async () => ({ state: "stopped" as const }),
+					probe: async () => ({ ok: false as const, reason: "network" as const }),
+					getAuthHeader: async () => null,
+					onCspOrigins: () => () => undefined,
 				},
 			} satisfies AoBridge;
 			(window as unknown as { ao: unknown }).ao = ao;
