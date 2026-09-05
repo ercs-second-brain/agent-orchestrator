@@ -11,6 +11,12 @@ fenced source generation, target generation, and native identity before taking
 an ownership-changing action. An `unknown` probe result retains the recovery
 gate; it never authorizes source restoration or a second target.
 
+Scope note: the chat path was removed by
+[#39](https://github.com/ercs-second-brain/agent-orchestrator/issues/39). The
+`admission_chat_handoff_arm` and `chat_*` failure points remain valid vocabulary
+for decoding events persisted before that change, but the code paths behind them
+no longer exist and they can no longer fire.
+
 ## Reading the table
 
 Durable-phase codes:
@@ -87,10 +93,10 @@ referenced deterministic test:
 - `SM-L`: local log message `agent switch failed`; tests in
   `backend/internal/session_manager/agent_switch_faults_test.go` and
   `agent_switching_test.go`.
-- `SM-C`: ordinary Chat worker failures use `agent switch failed`; the narrower
-  persistence fault uses `Chat agent switch: failed to persist terminal failure`.
-  Tests live in `agent_switch_faults_test.go`, `agent_switching_test.go`, and
-  `agent_switching_chat_integration_test.go`.
+- `SM-C`: historical Chat-path selector. Chat switching was removed by #39; the
+  codes below that referenced it (`Chat agent switch: failed to persist terminal
+  failure` and friends) are unreachable today and are kept only to decode
+  historical rows.
 - `SM-R`: local log message `agent switch recovery failed`; recovery matrix in
   `agent_switching_test.go`.
 - `SM-P`: local messages `agent switch failed` or
@@ -176,7 +182,7 @@ referenced deterministic test:
 | <a id="agent-switch-target_activation_commit"></a>`target_activation_commit` | T | TGT? | SM-L | HOLD and prove the complete committed-target tuple | B0 |
 | <a id="agent-switch-target_activation_readback"></a>`target_activation_readback` | T | TGT? | SM-L | HOLD; target is TGT only after complete tuple proof | B0 |
 
-## Chat target start
+## Chat target start (unreachable — chat removed by #39)
 
 | Failure point | Phase | Ownership / restore | Log / test | User action | Blocker |
 | --- | --- | --- | --- | --- | --- |
@@ -224,8 +230,7 @@ Recovery phase rules:
   terminalize; uncertain cleanup/restore retains `source_restore_unconfirmed`.
 - `starting_target`: exact dead permits cleanup/restore; exact alive plus matching
   identity may be adopted by fenced activation; unknown retains the gate.
-- `target_ready`: never replay unconfirmed TUI argv context; Chat may relay the
-  one deterministic, not-yet-attempted message.
+- `target_ready`: never replay unconfirmed TUI argv context.
 - `delivering_context`: durable acknowledgement completes; otherwise never
   replay and settle `delivery_unconfirmed`.
 - terminal states: no switch side effects and no second semantic event.
@@ -261,9 +266,8 @@ Before enabling production, verify:
 1. Every supported runtime returns exact `alive`, exact `dead`, or deliberate
    `unknown` for the fenced generation; no registry/probe error collapses to
    absence.
-2. Chat activation atomically commits session, conversation, switch, native
-   identity, provider boundary, and controller generation from the expected
-   source generation.
+2. Target activation atomically commits session, switch, native identity, and
+   controller generation from the expected source generation.
 3. The same failure is owned exactly once across saga, HTTP, renderer, startup,
    panic, and acknowledgement races.
 4. Disabling consent closes/drains main, closes/drains the daemon gate, durably

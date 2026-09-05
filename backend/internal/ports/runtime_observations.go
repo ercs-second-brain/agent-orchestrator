@@ -59,9 +59,11 @@ type ActivitySignal struct {
 	// LaunchID is set by AO's process supervisor. Lifecycle rejects a signal
 	// from an older process generation of the same session.
 	LaunchID string
-	// ControllerGeneration is the required ownership fence for a runtime-less
-	// Chat controller. It is intentionally internal (provider events never call
-	// the public hook endpoint): lifecycle rejects a Chat signal without the
-	// current generation, as well as one received after a handoff or replacement.
+	// ControllerGeneration is the required ownership fence for a controller that
+	// runs without a terminal runtime. It is intentionally internal (provider
+	// events never call the public hook endpoint): lifecycle rejects a signal
+	// without the current generation, as well as one received after a
+	// replacement. Since #39 removed chat controllers, only legacy chat-mode
+	// rows still carry this fence.
 	ControllerGeneration string
 }

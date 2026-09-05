@@ -517,8 +517,8 @@ describe("GlobalSettingsForm", () => {
 		const installBtn = await screen.findByRole("button", { name: /Restart & install/ });
 		await userEvent.click(installBtn);
 
-		// Installing quits the app, which costs a turn on any chat session running
-		// a daemon-owned driver, so the click opens the confirmation instead of
+		// Installing quits the app, which costs a turn on any running agent session,
+		// so the click opens the confirmation instead of
 		// tearing the app down on one click.
 		expect(updInstall).not.toHaveBeenCalled();
 		expect(useUiStore.getState().updateInstallPromptOpen).toBe(true);

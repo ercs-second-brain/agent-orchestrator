@@ -135,7 +135,9 @@ type ExitAgentOutcome struct {
 }
 
 // InterfaceTransitionStatus describes whether this session can cross between
-// its TUI and Chat controllers and includes the latest durable handoff attempt.
+// interface controllers. Interface transitions were removed by #39 — sessions
+// are terminal-only — so this reports legacy stored state; the type survives
+// for old rows and API compatibility.
 type scmProvider interface {
 	ParseRepository(remote string) (ports.SCMRepo, bool)
 	FetchPullRequests(ctx context.Context, refs []ports.SCMPRRef) ([]ports.SCMObservation, error)

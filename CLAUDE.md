@@ -25,10 +25,8 @@ Build new UI from shadcn primitives (`components/ui/*`) where a component fits. 
 deviate without explicit user approval. In QA/review, flag any renderer code that
 diverges from **agent-orchestrator** — do **not** re-flag old design-reference mismatches.
 
-When showing or demoing frontend changes, run `ao preview [url]` from inside the
-session so the change renders in the desktop browser panel (the inspector rail's
-Browser tab); do not just describe it. `ao preview` updates the panel non-disruptively —
-it does not steal focus or force the Browser tab open if the user is looking at
-something else, only badging it as unseen. If the Browser tab isn't already the one
-the user has open, say so in your reply (e.g. "check the Browser tab") so the change
-doesn't go unnoticed behind the badge.
+When showing or demoing frontend changes, run the app from a checkout (`npm run
+dev` in `frontend/`) and verify the change in the real Electron window; do not
+just describe it. Sessions are terminal-first: there is no chat surface, no
+browser panel, and no preview server, so there is no Browser tab to route the
+user to — name what to look at in the terminal or session view instead.

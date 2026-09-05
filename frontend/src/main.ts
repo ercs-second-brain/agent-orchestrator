@@ -970,9 +970,9 @@ function daemonEnv(forceKeep = keepDaemonAlive(process.env)): NodeJS.ProcessEnv 
 		// it as appImagePath in /healthz|/readyz so the identity check can
 		// recognise its own daemon across a relaunch-to-update.
 		...(process.env.APPIMAGE ? { AO_APPIMAGE: process.env.APPIMAGE } : {}),
-		// Claude Code Chat uses AO's packaged ACP adapter + Node runtime. The
-		// provider executable itself is resolved by the daemon from the user's PATH
-		// and passed through CLAUDE_CODE_EXECUTABLE; it is not part of this resource.
+		// AO_ACP_RUNTIME_DIR points at the packaged acp-runtime resource. Legacy: the
+		// chat drivers were removed by #39 and the daemon no longer consumes this
+		// variable; kept only until the packaged resource is dropped.
 		AO_ACP_RUNTIME_DIR:
 			process.env.AO_ACP_RUNTIME_DIR ??
 			(app.isPackaged

@@ -10,9 +10,11 @@ Triage bugs into well-structured GitHub issues on the Agent Orchestrator repo.
 
 > **Agent Orchestrator is Go + Electron.** The backend is a Go daemon (`backend/`)
 > exposing a loopback HTTP API on `127.0.0.1:3001`; the frontend is an Electron +
-> React supervisor (`frontend/`). There is **no** pm2/tmux/Node runtime here —
-> the daemon owns lifecycle and sessions run under the **Zellij** runtime
-> adapter. Triage against _this_ stack, not the old TypeScript agent-orchestrator.
+> React supervisor (`frontend/`). There is **no** pm2/Node session runtime here —
+> the daemon owns lifecycle and sessions run under the **tmux/conpty** runtime
+> adapters (tmux on Linux and legacy macOS handles, a native detached PTY host on
+> new macOS sessions, ConPTY on Windows). Triage against _this_ stack, not the old
+> TypeScript agent-orchestrator.
 
 ## ⚠️ Which `ao` are you running?
 
@@ -98,7 +100,7 @@ tail -n 100 ~/.ao/daemon.log                        # daemon log
 # Sessions & runtime
 /tmp/ao session ls                                  # all sessions and their state
 /tmp/ao session get <id>                            # one session: spawn config, runtime, lifecycle
-zellij list-sessions                                # Zellij runtime sessions backing terminals
+tmux list-sessions                                  # tmux sessions backing terminal runtimes (Linux/legacy macOS)
 
 # Durable state (SQLite at ~/.ao/data)
 sqlite3 ~/.ao/data/ao.db '.tables'                  # inspect schema/rows if state looks wrong
@@ -124,7 +126,7 @@ one layer down. Agent Orchestrator's layers:
 - Daemon (loopback HTTP on :3001): `backend/internal/daemon/daemon.go`,
   controllers under `backend/internal/httpd/controllers/`
 - Sessions & lifecycle: `backend/internal/session_manager/manager.go`
-- Runtime adapter (Zellij): `backend/internal/adapters/runtime/`
+- Runtime adapters (tmux/conpty/PTY host): `backend/internal/adapters/runtime/`
 - Agent harness adapters: `backend/internal/adapters/agent/<harness>/`
 - Terminal mux: `backend/internal/terminal/`
 - Agent hooks: `backend/internal/cli/hooks.go`
@@ -141,7 +143,7 @@ git log --oneline -S 'exact-string' -- <file>
 git show <sha> -- <file> | grep -B 5 -A 10 'pattern'
 ```
 
-**Research dependencies** (Zellij, the agent harness binary, Electron, React, the
+**Research dependencies** (tmux, the agent harness binary, Electron, React, the
 SQLite driver) — check installed vs latest version, search their issue trackers,
 check changelogs. Root cause is sometimes in a dependency, not Agent Orchestrator.
 
@@ -351,7 +353,7 @@ any priority/confidence stated in the body), root cause summary.
 | **CLI** (`ao start/stop/spawn`) | Version, install method, OS, which binary | `backend/internal/cli/`, `backend/cmd/ao/main.go`                          |
 | **Daemon / HTTP API**           | `ao status`, port, daemon.log             | `backend/internal/daemon/daemon.go`, `backend/internal/httpd/controllers/` |
 | **Sessions / Lifecycle**        | Session ID, spawn config, runtime, state  | `backend/internal/session_manager/manager.go`                              |
-| **Runtime (Zellij)**            | Zellij version, `zellij list-sessions`    | `backend/internal/adapters/runtime/`                                       |
+| **Runtime (tmux/conpty)**       | Runtime type, `tmux list-sessions`        | `backend/internal/adapters/runtime/`                                       |
 | **Terminal mux**                | Runtime type, shell, attach behavior      | `backend/internal/terminal/`                                               |
 | **Agent harness**               | Harness name + version                    | `backend/internal/adapters/agent/<harness>/`                               |
 | **Storage**                     | DB state, migrations                      | `backend/internal/storage/sqlite/`, `~/.ao/data/ao.db`                     |
@@ -360,10 +362,10 @@ any priority/confidence stated in the body), root cause summary.
 
 **Misrouting patterns:**
 
-- Terminal bugs → Zellij runtime adapter vs the terminal mux vs the Electron xterm
+- Terminal bugs → tmux/conpty runtime adapter vs the terminal mux vs the Electron xterm
   surface. Trace where bytes flow (daemon → mux → frontend).
 - "Session stuck" → lifecycle/session-manager state vs agent harness process vs
-  Zellij runtime connection.
+  runtime connection.
 - "Config not saving" → config loading (`backend/internal/config/config.go`) vs
   project registration vs SQLite write (`~/.ao/data/ao.db`).
 - "Command does nothing / wrong port" → you're on the wrong `ao` binary (:3000 vs

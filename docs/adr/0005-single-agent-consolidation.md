@@ -1,7 +1,9 @@
 # 5. Single-agent consolidation: pi as a managed external dependency, retire the adapter zoo
 
 Date: 2026-09-05 (revised 2026-09-05: vendored-import decision replaced by managed external dependency)
-Status: Proposed (RFC for [#13](https://github.com/ercs-second-brain/agent-orchestrator/issues/13), revision 2)
+Status: Accepted (revision 2). Milestone N3's chat-driver plan is superseded by
+[#39](https://github.com/ercs-second-brain/agent-orchestrator/issues/39) — see
+the SUPERSEDED note in section 4.
 
 ## Context
 

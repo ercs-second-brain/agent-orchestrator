@@ -88,7 +88,7 @@ export type DiffHighlight = {
 // would be wrong for one side of a split diff. Colors a row as soon as its
 // hunk-side blob can be tokenized; a diff that opens before the grammar chunk has
 // loaded renders in plain/segment-only form first and pops in colored once loading
-// resolves, matching HighlightedCode's existing chat-code-block behavior.
+// resolves, matching HighlightedCode's existing markdown-code-block behavior.
 export function useDiffHighlight(rows: DiffRow[], path: string, previousPath: string | undefined): DiffHighlight {
 	const oldLang = useMemo(() => languageForPath(previousPath ?? path), [previousPath, path]);
 	const newLang = useMemo(() => languageForPath(path), [path]);

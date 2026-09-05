@@ -124,7 +124,8 @@ Once one PR merges, prefer rebasing the remaining PR onto current `main`; the no
 
 ## Common mistakes
 
-- `ao preview` controls the AO Browser panel; it does not launch the desktop shell.
+- `ao preview` and `ao browser` are session-scoped CLI helpers, not desktop-shell
+  launchers; they do not start the Electron app.
 - `npm run dev:web` is useful for browser-only renderer work but does not provide Electron APIs or native chrome.
 - Renderer URLs can move from `5173` when a port is occupied. Trust Forge's printed URL rather than assuming one.
 - Multiple dev instances share `~/.ao/dev/electron` by default, and Chromium's

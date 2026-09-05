@@ -59,11 +59,13 @@ surface (`npm run sqlc`, `npm run api`).
 - Project CRUD plus per-project config (`PUT /projects/{id}/config`).
 - PR action engine wired into the API: `POST /prs/{id}/merge` and
   `/prs/{id}/resolve-comments`.
-- Review routes registered: `GET /reviews`, `POST /reviews/execute`,
-  `POST /reviews/{id}/send`.
+- Review routes registered: `GET /sessions/{sessionId}/reviews`,
+  `POST /sessions/{sessionId}/reviews/trigger`, `/reviews/rerequest`,
+  `/reviews/comments/resolve`, `/reviews/cancel`, and
+  `POST /reviews/{reviewSessionID}/activity`.
 - Interactive reviewer panes for Aider, Agy, Amp, Auggie, Autohand,
   Claude Code, Cline, Codex, Continue, GitHub Copilot, Crush, Cursor, Devin,
-  Droid, Goose, Grok, Kilo Code, Kimchi, Kiro, Kimi, OpenCode, Pi, Qwen, and Vibe. Pi uses an AO-data-owned extension with built-in/project
+  Droid, Goose, Grok, Kilo Code, Kimchi, Kiro, Kimi, Muse, OpenCode, Pi, Qwen, and Vibe. Pi uses an AO-data-owned extension with built-in/project
   resources disabled, structured read-only inspection/reporting tools, and
   Escape-based turn cancellation. Kiro also uses its native Escape
   cancellation. Continue, Qwen, and Vibe also use Escape cancellation. Agy,
@@ -89,8 +91,9 @@ surface (`npm run sqlc`, `npm run api`).
   sessions, per-client `tmux attach` for Linux and persisted legacy macOS
   handles, and a ConPTY loopback host on Windows.
 - Lifecycle reducer plus reaper (`internal/observe/reaper`).
-- Agent adapter platform under `internal/adapters/agent/` (25 adapters) with a
-  registry and `ao hooks` activity dispatch.
+- Agent adapter platform under `internal/adapters/agent/` (27 harness adapters
+  plus shared plumbing and a fake test adapter) with a registry and `ao hooks`
+  activity dispatch.
 - Daemon-owned in-memory agent readiness coordination with normalized
   installation/authentication observations, purpose-specific freshness,
   single-flight checks, bounded warm-up/retries, launch-time validation, and

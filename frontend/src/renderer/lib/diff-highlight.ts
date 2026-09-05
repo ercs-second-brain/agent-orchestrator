@@ -1,5 +1,5 @@
 // Syntax coloring for diff lines, layered on top of the structural diff
-// (diff-parser.ts) and the chat surface's highlight.js engine (code-highlight.ts).
+// (diff-parser.ts) and the renderer's highlight.js engine (code-highlight.ts).
 // Pure, no React, no DOM — the sync/async orchestration lives in
 // hooks/useDiffHighlight.ts.
 

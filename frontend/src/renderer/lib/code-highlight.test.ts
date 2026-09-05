@@ -3,7 +3,7 @@ import type { Element, Root, RootContent } from "hast";
 import { canonicalLanguage, highlight, highlightSync, type GrammarName } from "./code-highlight";
 
 // The contract these pin down is not "the colours are right" — highlight.js owns
-// that — but the four things the chat surface depends on: a fence label resolves
+// that — but the four things every rendered code block depends on: a fence label resolves
 // to a grammar or to nothing, tokenizing produces classed spans, the same block is
 // never parsed twice, and nothing here can throw into a message.
 
