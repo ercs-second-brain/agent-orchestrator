@@ -163,7 +163,7 @@ func TestMobileDisable_RequiresConfirmation(t *testing.T) {
 
 	// "y" confirms and posts.
 	capture.method = ""
-	out, errOut, err = executeCLI(t, Deps{
+	_, errOut, err = executeCLI(t, Deps{
 		ProcessAlive: func(int) bool { return true },
 		In:           strings.NewReader("y\n"),
 	}, "mobile", "disable")
@@ -280,7 +280,7 @@ func TestMobilePairingCode_RequiresEnabledBridge(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error")
 	}
-	if !strings.Contains(err.Error(), "Connect Mobile is disabled") {
+	if !strings.Contains(err.Error(), "connect mobile is disabled") {
 		t.Fatalf("error = %v\nstderr=%s", err, errOut)
 	}
 }
