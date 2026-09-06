@@ -198,17 +198,14 @@ describe("normalizeApiOperation", () => {
 		expect(normalizeApiOperation("get", "/api/v1/projects/my project id")).toBe("GET /api/v1/projects/:id");
 		expect(normalizeApiOperation("POST", "/api/v1/sessions/ao-42/kill")).toBe("POST /api/v1/sessions/:id/kill");
 		expect(normalizeApiOperation("PUT", "/api/v1/projects/p1/config")).toBe("PUT /api/v1/projects/:id/config");
-		expect(normalizeApiOperation("GET", "/api/v1/agents/claude-code/models")).toBe(
+		expect(normalizeApiOperation("GET", "/api/v1/agents/pi/models")).toBe(
 			"GET /api/v1/agents/:id/models",
 		);
-		expect(normalizeApiOperation("POST", "/api/v1/agents/codex/models/refresh")).toBe(
+		expect(normalizeApiOperation("POST", "/api/v1/agents/pi/models/refresh")).toBe(
 			"POST /api/v1/agents/:id/models/refresh",
 		);
-		expect(normalizeApiOperation("POST", "/api/v1/agents/codex/accounts/login-operations/72d4db6e-da2c-414c-a6a9-fdbd09a006b6/verify")).toBe(
-			"POST /api/v1/agents/codex/accounts/login-operations/:id/verify",
-		);
-		expect(normalizeApiOperation("POST", "/api/v1/agents/codex/account-switches/switch-1/recover")).toBe(
-			"POST /api/v1/agents/codex/account-switches/:id/recover",
+		expect(normalizeApiOperation("POST", "/api/v1/agents/pi/install")).toBe(
+			"POST /api/v1/agents/:id/install",
 		);
 	});
 
@@ -220,7 +217,7 @@ describe("normalizeApiOperation", () => {
 	it("keeps static child routes instead of treating them as ids", () => {
 		// These match an exact OpenAPI template, so the trailing segment must not
 		// be collapsed to :id (which would break aggregation and hide the route).
-		expect(normalizeApiOperation("GET", "/api/v1/agents/readiness")).toBe("GET /api/v1/agents/readiness");
+		expect(normalizeApiOperation("GET", "/api/v1/agents/auth-plans")).toBe("GET /api/v1/agents/auth-plans");
 		expect(normalizeApiOperation("POST", "/api/v1/agents/readiness/ensure")).toBe(
 			"POST /api/v1/agents/readiness/ensure",
 		);
@@ -235,7 +232,7 @@ describe("normalizeApiOperation", () => {
 	});
 
 	it("normalizes agent ids in authentication routes", () => {
-		expect(normalizeApiOperation("POST", "/api/v1/agents/claude-code/auth")).toBe(
+		expect(normalizeApiOperation("POST", "/api/v1/agents/pi/auth")).toBe(
 			"POST /api/v1/agents/:id/auth",
 		);
 	});
@@ -255,8 +252,7 @@ describe("normalizeApiOperation", () => {
 	it("normalizes ids for resources a collection heuristic would miss", () => {
 		expect(normalizeApiOperation("GET", "/api/v1/orchestrators/orch-abc")).toBe("GET /api/v1/orchestrators/:id");
 		expect(normalizeApiOperation("POST", "/api/v1/prs/pr-1/merge")).toBe("POST /api/v1/prs/:id/merge");
-		expect(normalizeApiOperation("POST", "/api/v1/agents/codex/accounts/ensure")).toBe("POST /api/v1/agents/codex/accounts/ensure");
-		expect(normalizeApiOperation("DELETE", "/api/v1/agents/codex/accounts/private-account-id")).toBe("DELETE /api/v1/agents/codex/accounts/:id");
+		expect(normalizeApiOperation("GET", "/api/v1/agents/install-jobs")).toBe("GET /api/v1/agents/install-jobs");
 	});
 });
 
