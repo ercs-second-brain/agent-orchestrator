@@ -128,7 +128,7 @@ export function RemoteConnectionSection({ titleHidden }: { titleHidden?: boolean
 			</SettingsRow>
 			{isRemote && remoteConfig ? (
 				<p className="px-3 pb-4 text-xs leading-relaxed text-muted-foreground">
-					{`Connected to ${remoteConfig.host}:${remoteConfig.port}${remoteConfig.hostId ? ` (${remoteConfig.hostId})` : ""}. Browser automation, Codex accounts, harness installs, and Connect Mobile controls are unavailable in remote mode.`}
+					{`Connected to ${remoteConfig.host}:${remoteConfig.port}${remoteConfig.hostId ? ` (${remoteConfig.hostId})` : ""}. Browser automation, harness installs, and Connect Mobile controls are unavailable in remote mode.`}
 				</p>
 			) : null}
 			{showingRemote && !isRemote ? (

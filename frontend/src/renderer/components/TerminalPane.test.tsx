@@ -251,7 +251,7 @@ describe("TerminalPane empty states", () => {
 			kind: "shell" as const,
 			handleId: "shellterm-login-1",
 			generation: "2026-08-29T12:00:00Z",
-			title: "Codex login",
+			title: "pi login",
 		};
 		const view = render(
 			<QueryClientProvider client={queryClient}>

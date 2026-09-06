@@ -82,14 +82,14 @@ const project: Project = {
 	id: "proj-1",
 	name: "my-app",
 	path: "/repo/my-app",
-	orchestratorAgent: "claude-code",
+	orchestratorAgent: "pi",
 };
 
 const workerSession: Session = {
 	id: "sess-1",
 	projectId: "proj-1",
 	displayName: "fix the bug",
-	harness: "claude-code",
+	harness: "pi",
 	kind: "worker",
 	status: "working",
 	isTerminated: false,
@@ -101,7 +101,7 @@ const orchestratorSession: Session = {
 	id: "proj-1-orchestrator",
 	projectId: "proj-1",
 	displayName: "orchestrator",
-	harness: "claude-code",
+	harness: "pi",
 	kind: "orchestrator",
 	status: "working",
 	isTerminated: false,

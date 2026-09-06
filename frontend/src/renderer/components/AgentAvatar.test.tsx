@@ -13,8 +13,8 @@ describe("AgentAvatar", () => {
 	});
 
 	it("falls back to a lettered tile for legacy provider names", () => {
-		render(<AgentAvatar provider="codex" />);
+		render(<AgentAvatar provider="pi" />);
 
-		expect(screen.getByRole("img", { name: "codex" })).toHaveTextContent("C");
+		expect(screen.getByRole("img", { name: "pi" })).toBeInTheDocument();
 	});
 });

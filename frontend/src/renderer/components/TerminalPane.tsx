@@ -607,7 +607,7 @@ export function TerminalPane({
 				</pre>
 			);
 		}
-		const provider = terminalTarget?.kind === "reviewer" ? terminalTarget.harness : (session?.provider ?? "claude");
+		const provider = terminalTarget?.kind === "reviewer" ? terminalTarget.harness : (session?.provider ?? "pi");
 		const lines =
 			terminalTarget?.kind === "reviewer" ? reviewerPreviewLines(session) : workerPreviewLines(session, provider);
 		return (
@@ -760,7 +760,7 @@ function workerPreviewLines(session: WorkspaceSession | undefined, provider: str
 	if (session?.id === "demo-ci-failed") {
 		return [
 			"╭────────────────────────────────────────────╮",
-			"│ >_ OpenAI Codex (v0.133.0)                 │",
+			"│ >_ pi (v0.133.0)                           │",
 			"│ model:        gpt-5.5 high  /model to change",
 			"│ directory:    ~/ao-demo/demo-new-task-flake",
 			"│ permissions:  YOLO mode                    │",

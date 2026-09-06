@@ -70,7 +70,7 @@ export function AgentModelCombobox({
 	onRefresh?: () => void | Promise<void>;
 	onChange: (value: string) => void;
 	onCustom: (value: string) => void;
-	/** Names what happens with no override, e.g. "Use codex's default". */
+	/** Names what happens with no override, e.g. "Use pi's default". */
 	emptyLabel?: string;
 	triggerLabel?: string;
 	triggerClassName?: string;

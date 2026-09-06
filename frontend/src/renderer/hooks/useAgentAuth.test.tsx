@@ -15,14 +15,14 @@ describe("agent authentication hooks", () => {
 
 	it("loads display-safe authentication plans", async () => {
 		vi.spyOn(apiClient, "GET").mockResolvedValue({
-			data: { plans: [{ agentId: "codex", action: "login", launchMode: "terminal", available: true, documentationUrl: "https://example.test" }] },
+			data: { plans: [{ agentId: "pi", action: "login", launchMode: "terminal", available: true, documentationUrl: "https://example.test" }] },
 		} as never);
 		const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
 
 		const { result } = renderHook(() => useAgentAuthPlans(), { wrapper: wrapper(client) });
 
 		await waitFor(() => expect(result.current.isSuccess).toBe(true));
-		expect(result.current.data?.[0]).toMatchObject({ agentId: "codex", action: "login" });
+		expect(result.current.data?.[0]).toMatchObject({ agentId: "pi", action: "login" });
 		expect(apiClient.GET).toHaveBeenCalledWith("/api/v1/agents/auth-plans");
 	});
 

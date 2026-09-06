@@ -1599,8 +1599,8 @@ describe("SessionInspector summary reviews", () => {
   });
 
   // The label is a display name, not the wire id: the trigger used to print the
-  // raw harness id, which read as a second, selectable "claude-code" entry
-  // alongside the catalog's properly-cased "pi".
+  // The label is a display name, not the wire id: the trigger used to print
+  // the raw harness id, which read as a second selectable entry.
   it("labels the default reviewer with its display name, not the raw id", async () => {
     getMock.mockImplementation(async (path: string) => {
       if (path === "/api/v1/agents/readiness/ensure") {

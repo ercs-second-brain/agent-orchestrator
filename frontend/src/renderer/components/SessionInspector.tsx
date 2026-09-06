@@ -1517,7 +1517,7 @@ function ReviewsSection({
  * one list keyed by PR. They were two sections, which made the same PR appear
  * twice and left the reader joining them up by number; a review is a review,
  * and what matters is who wrote it. Each group inside a PR names its source —
- * "AO codex" against the agent that ran, "On GitHub" for everyone else.
+ * "AO" against the agent that ran, "On GitHub" for everyone else.
  */
 function MergedReviewsSection({
 	githubPRs,

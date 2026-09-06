@@ -629,7 +629,7 @@ it("locks model selection while task creation is in flight, then unlocks it afte
 			if (path.includes("/models")) {
 				return {
 					data: {
-						agentId: "opencode",
+						agentId: "pi",
 						selectionMode: "catalog",
 						models: [],
 						customModelEntry: "configured",
@@ -637,7 +637,7 @@ it("locks model selection while task creation is in flight, then unlocks it afte
 					},
 				};
 			}
-			return { data: { status: "ok", project: { agent: "opencode", config: {} } } };
+			return { data: { status: "ok", project: { agent: "pi", config: {} } } };
 		});
 
 		render(
@@ -649,7 +649,7 @@ it("locks model selection while task creation is in flight, then unlocks it afte
 		const picker = await screen.findByRole("button", { name: "Model" });
 		expect(screen.queryByRole("textbox", { name: "Model" })).not.toBeInTheDocument();
 		await userEvent.click(picker);
-		expect(screen.getByText("Configure the model in opencode, then refresh.")).toBeInTheDocument();
+		expect(screen.getByText("Configure the model in pi, then refresh.")).toBeInTheDocument();
 	});
 
 	it("uses the project worker model as the new task model default", async () => {

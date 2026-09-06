@@ -14,9 +14,6 @@ const closeShellTerminalMock = vi.hoisted(() => vi.fn());
 const nativeFullScreenMock = vi.hoisted(() => vi.fn(() => false));
 const reviewGetMock = vi.hoisted(() => vi.fn());
 const inspectorVisibilityRenders = vi.hoisted(() => [] as boolean[]);
-const codexAccountsQueryState = vi.hoisted(() => ({ data: undefined as unknown }));
-const recoverCodexAccountSwitchMock = vi.hoisted(() => vi.fn());
-
 vi.mock("@tanstack/react-router", () => ({
 	useNavigate: () => navigateMock,
 }));
@@ -30,18 +27,6 @@ vi.mock("../lib/platform", () => ({
 vi.mock("../hooks/useWindowFullScreen", () => ({
 	useWindowFullScreen: () => nativeFullScreenMock(),
 }));
-vi.mock("../hooks/useCodexAccountsQuery", () => ({
-	useCodexAccountsQuery: () => ({ data: codexAccountsQueryState.data, isLoading: false }),
-}));
-
-vi.mock("../hooks/useCodexAccountActions", () => ({
-	useCodexAccountActions: () => ({
-		error: null,
-		recoverPending: false,
-		recoverSwitch: recoverCodexAccountSwitchMock,
-	}),
-}));
-
 vi.mock("../lib/api-client", () => ({
 	getApiBaseUrl: () => "",
 	subscribeApiBaseUrl: () => () => undefined,
@@ -398,8 +383,6 @@ describe("SessionView", () => {
 			optimistic: true,
 		}));
 		closeShellTerminalMock.mockReset();
-		codexAccountsQueryState.data = undefined;
-		recoverCodexAccountSwitchMock.mockReset();
 		reviewGetMock.mockReset();
 		reviewGetMock.mockImplementation(async (path: string) => {
 			if (path === "/api/v1/sessions/{sessionId}/workspace/files") {

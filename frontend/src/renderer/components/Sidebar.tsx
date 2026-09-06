@@ -141,7 +141,7 @@ const HOVER_ACTION_CLASS =
 const SESSION_ACTION_CLASS =
 	"grid size-5 shrink-0 place-items-center rounded-md bg-transparent p-1 text-passive hover:bg-transparent focus:bg-transparent focus-visible:bg-transparent active:bg-transparent data-[state=open]:bg-transparent hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent/50 disabled:pointer-events-none disabled:opacity-50 [&_svg]:size-3!";
 
-// Shared nav-row chrome (Codex-style): inset pill hover/selected, 14px type, no accent bar.
+// Shared nav-row chrome: inset pill hover/selected, 14px type, no accent bar.
 const NAV_ROW_CLASS =
 	"h-9 gap-2.5 rounded-lg px-2.5 text-sm font-medium text-muted-foreground transition-[background-color,color] hover:bg-interactive-hover hover:text-foreground active:bg-interactive-hover active:text-foreground data-[active=true]:bg-interactive-active data-[active=true]:font-medium data-[active=true]:text-foreground";
 

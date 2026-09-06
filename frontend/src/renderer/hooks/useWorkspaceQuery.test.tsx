@@ -85,7 +85,7 @@ describe("useWorkspaceQuery", () => {
 							terminalGeneration: "launch-2",
 							displayName: "fix-bug",
 							issueId: "github:acme/project-one#42",
-							harness: "claude-code",
+							harness: "pi",
 							reviewerHarness: "qwen",
 							branch: "qa/modal-worker",
 							status: "mergeable",
@@ -101,7 +101,7 @@ describe("useWorkspaceQuery", () => {
 						},
 						{
 							// Unknown harness/status and no displayName/issueId: falls back
-							// to codex / unknown / the session id.
+							// to unknown values / the session id.
 							id: "sess-2",
 							projectId: "proj-1",
 							harness: "legacy-harness",
