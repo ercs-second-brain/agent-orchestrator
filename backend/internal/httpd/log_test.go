@@ -87,14 +87,13 @@ func TestRequestLoggerRecords5xxCause(t *testing.T) {
 	}
 }
 
-func TestRequestLoggerSuppressesOnlySagaOwnedSentryCapture(t *testing.T) {
+func TestRequestLoggerCapturesHTTPOwnedSentryCapture(t *testing.T) {
 	tests := []struct {
 		name         string
 		owner        ownership.Owner
 		wantCaptures int
 	}{
-		{name: "pre-admission HTTP owner captures", owner: ownership.OwnerHTTP, wantCaptures: 1},
-		{name: "post-admission saga owner is suppressed", owner: ownership.OwnerAgentSwitchSaga, wantCaptures: 0},
+		{name: "HTTP owner captures", owner: ownership.OwnerHTTP, wantCaptures: 1},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {

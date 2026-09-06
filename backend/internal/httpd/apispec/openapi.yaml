@@ -3785,7 +3785,6 @@ components:
         reporting_owner:
           enum:
           - http
-          - agent_switch_saga
           type: string
         requestId:
           type: string

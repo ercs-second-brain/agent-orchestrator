@@ -1405,7 +1405,7 @@ export interface components {
             error: string;
             message: string;
             /** @enum {string} */
-            reporting_owner?: "http" | "agent_switch_saga";
+            reporting_owner?: "http";
             requestId?: string;
         };
         AddProjectInput: {
