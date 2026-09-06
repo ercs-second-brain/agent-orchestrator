@@ -936,9 +936,7 @@ func TestModelsUsesCapabilityAwareFallbackWhenDiscoveryCannotRun(t *testing.T) {
 		wantSelection  ports.ModelSelectionMode
 		wantAllowInput bool
 	}{
-		{agent: "qwen", wantEntryMode: ports.CustomModelEntryDirect, wantSelection: ports.ModelSelectionText, wantAllowInput: true},
-		{agent: "opencode", wantEntryMode: ports.CustomModelEntryDirect, wantSelection: ports.ModelSelectionText, wantAllowInput: true},
-		{agent: "grok", wantEntryMode: ports.CustomModelEntryDirect, wantSelection: ports.ModelSelectionText, wantAllowInput: true},
+		{agent: "pi", wantEntryMode: ports.CustomModelEntryConfigured, wantSelection: ports.ModelSelectionCatalog, wantAllowInput: false},
 	} {
 		t.Run(tc.agent, func(t *testing.T) {
 			emptyHome := testenv.PrivateTempDir(t)
@@ -955,7 +953,7 @@ func TestModelsUsesCapabilityAwareFallbackWhenDiscoveryCannotRun(t *testing.T) {
 			if got.SelectionMode != tc.wantSelection || got.CustomModelEntry != tc.wantEntryMode || got.AllowCustom != tc.wantAllowInput || got.Source != "manual" || len(got.Models) != 0 {
 				t.Fatalf("catalog = %#v, want capability-aware fallback", got)
 			}
-			if tc.agent != "qwen" && (!got.Stale || got.Warning == "") {
+			if !got.Stale || got.Warning == "" {
 				t.Fatalf("catalog = %#v, want discovery warning on manual fallback", got)
 			}
 		})
@@ -968,9 +966,7 @@ func TestModelsNormalizesCustomEntryPolicyInOldCache(t *testing.T) {
 		wantEntryMode  ports.CustomModelEntryMode
 		wantAllowInput bool
 	}{
-		{agent: "codex", wantEntryMode: ports.CustomModelEntryDirect, wantAllowInput: true},
-		{agent: "opencode", wantEntryMode: ports.CustomModelEntryDirect, wantAllowInput: true},
-		{agent: "grok", wantEntryMode: ports.CustomModelEntryDirect, wantAllowInput: true},
+		{agent: "pi", wantEntryMode: ports.CustomModelEntryConfigured, wantAllowInput: false},
 	} {
 		t.Run(tc.agent, func(t *testing.T) {
 			oldCatalog := map[string]any{
