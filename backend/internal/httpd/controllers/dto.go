@@ -51,16 +51,6 @@ type StartAgentAuthResponse struct {
 	Terminal      ShellTerminalResponse `json:"terminal"`
 }
 
-// CodexAccountIDParam documents a Codex account route identifier.
-type CodexAccountIDParam struct {
-	AccountID string `path:"accountId" description:"AO Codex account identifier."`
-}
-
-// CodexAccountLoginIDParam documents a Codex login operation route identifier.
-type CodexAccountLoginIDParam struct {
-	OperationID string `path:"operationId" description:"In-memory Codex account login operation identifier."`
-}
-
 // ListProjectsResponse is the body of GET /api/v1/projects.
 type ListProjectsResponse struct {
 	Projects []projectsvc.Summary `json:"projects"`
@@ -133,11 +123,6 @@ func newGetProjectResponse(res projectsvc.GetResult) (GetProjectResponse, error)
 // SessionIDParam is the {sessionId} path parameter shared by session routes.
 type SessionIDParam struct {
 	SessionID string `path:"sessionId" description:"Session identifier, e.g. project-1."`
-}
-
-// AgentSwitchIDParam is the {switchId} path parameter for one durable switch saga.
-type AgentSwitchIDParam struct {
-	SwitchID string `path:"switchId" description:"Durable agent-switch identifier."`
 }
 
 // SessionInterfaceTransitionIDParam is the {transitionId} path parameter for a
@@ -238,7 +223,6 @@ type SessionView struct {
 	// Lifecycle and internal automation updates do not advance it.
 	LastUserMessageAt *time.Time       `json:"lastUserMessageAt,omitempty"`
 	PRs               []SessionPRFacts `json:"prs"`
-	ActiveAgentSwitch *AgentSwitchView `json:"activeAgentSwitch,omitempty"`
 }
 
 // ListSessionsResponse is the body of GET /api/v1/sessions.
@@ -252,7 +236,7 @@ type SpawnSessionRequest struct {
 	IssueID         domain.IssueID         `json:"issueId,omitempty"`
 	TrackerProvider domain.TrackerProvider `json:"trackerProvider,omitempty" enum:"github,gitlab"`
 	Kind            domain.SessionKind     `json:"kind,omitempty" enum:"worker,orchestrator"`
-	Harness         domain.AgentHarness    `json:"harness,omitempty" enum:"claude-code,codex,aider,opencode,grok,droid,amp,agy,crush,cursor,qwen,copilot,goose,auggie,continue,devin,cline,kimi,muse,kiro,kilocode,vibe,pi,kimchi,omp,prime-agent,autohand"`
+	Harness         domain.AgentHarness    `json:"harness,omitempty" enum:"pi"`
 	Branch          string                 `json:"branch,omitempty"`
 	// Mode picks the conversation controller: chat talks to the agent over a
 	// structured connection, tui opens the agent's native terminal interface.
@@ -301,55 +285,6 @@ type SpawnSessionResponse struct {
 	Session           SessionView `json:"session"`
 	PromptBytes       int         `json:"promptBytes"`
 	SystemPromptBytes int         `json:"systemPromptBytes"`
-}
-
-// SwitchAgentRequest is the body of POST /api/v1/sessions/{sessionId}/switch-agent.
-type SwitchAgentRequest struct {
-	TargetHarness  domain.AgentHarness `json:"targetHarness" enum:"claude-code,codex" description:"Agent harness to continue the logical AO session with."`
-	Model          string              `json:"model,omitempty" maxLength:"256" description:"Optional model override for the target agent launch or resume."`
-	IdempotencyKey string              `json:"idempotencyKey,omitempty" maxLength:"128" description:"Optional retry key. Reusing it with a different request is rejected."`
-}
-
-// AgentSwitchView is the deliberately small public projection of a durable
-// switch saga. Provider context, local artifact paths, retry keys, generation
-// fences, and raw failure details remain daemon-private.
-type AgentSwitchView struct {
-	ID                      domain.AgentSwitchID                     `json:"id"`
-	SessionID               domain.SessionID                         `json:"sessionId"`
-	FromHarness             domain.AgentHarness                      `json:"fromHarness"`
-	TargetHarness           domain.AgentHarness                      `json:"targetHarness"`
-	TargetStartMode         domain.AgentSwitchTargetStartMode        `json:"targetStartMode,omitempty" enum:"fresh,resumed"`
-	State                   domain.AgentSwitchState                  `json:"state" enum:"preparing_handoff,stopping_source,source_stopped,starting_target,target_ready,delivering_context,completed,failed"`
-	AgentHandoffStatus      domain.AgentHandoffStatus                `json:"agentHandoffStatus" enum:"not_attempted,requested,received,unavailable,timed_out,failed,rejected"`
-	SemanticHandoffIncluded bool                                     `json:"semanticHandoffIncluded"`
-	SourceTranscriptStatus  domain.AgentSwitchSourceTranscriptStatus `json:"sourceTranscriptStatus,omitempty" enum:"not_attempted,available,unavailable"`
-	ErrorCode               domain.AgentSwitchErrorCode              `json:"errorCode,omitempty" enum:"daemon_restart_pre_stop,daemon_restart_post_stop,daemon_restart_unrecoverable_target,daemon_restart_before_delivery,delivery_unconfirmed,source_session_terminated,source_stop_unconfirmed,target_binary_missing,target_agent_unauthorized,target_start_unconfirmed,source_restore_unconfirmed,request_cancelled,source_blocked,failed_pre_stop,failed_post_stop,target_ready_failed,delivery_failed,switch_failed"`
-	RequestedAt             time.Time                                `json:"requestedAt"`
-	UpdatedAt               time.Time                                `json:"updatedAt"`
-}
-
-// AgentSwitchResponse is the body returned by switch creation, reads, and
-// generation-fenced handoff submission.
-type AgentSwitchResponse struct {
-	Switch AgentSwitchView `json:"switch"`
-}
-
-// ListAgentSwitchesResponse is the body of
-// GET /api/v1/sessions/{sessionId}/agent-switches.
-type ListAgentSwitchesResponse struct {
-	Switches []AgentSwitchView `json:"switches"`
-}
-
-// SubmitAgentHandoffRequest is the body of
-// POST /api/v1/sessions/{sessionId}/agent-switches/{switchId}/handoff.
-// Handoff remains provider-neutral JSON and is accepted only from the source
-// generation recorded by the durable switch.
-type SubmitAgentHandoffRequest struct {
-	SourceGenerationID domain.AgentGenerationID `json:"sourceGenerationId" description:"Source invocation generation that authored this handoff."`
-	// RawMessage deliberately preserves the source object's original token
-	// stream. Decoding into a map here would silently collapse duplicate keys
-	// before the semantic validator can reject them.
-	Handoff json.RawMessage `json:"handoff" description:"Structured, source-agent-authored handoff enrichment."`
 }
 
 // StageSessionAttachmentsRequest attaches files to a session that is already
@@ -465,7 +400,7 @@ type RenameSessionRequest struct {
 // SetSessionReviewerRequest sets the durable reviewer preference for a session.
 // Empty clears the preference and falls back to project configuration.
 type SetSessionReviewerRequest struct {
-	Harness     domain.ReviewerHarness `json:"harness,omitempty" enum:"claude-code,codex,copilot,cursor,kilocode,opencode,kiro,pi,qwen,agy,continue,goose,vibe,devin,droid,kimi,kimchi,muse,amp,aider,grok,crush,auggie,cline,autohand"`
+	Harness     domain.ReviewerHarness `json:"harness,omitempty" enum:"pi"`
 	AgentConfig domain.AgentConfig     `json:"agentConfig,omitempty"`
 }
 
@@ -670,7 +605,7 @@ type SendSessionMessageResponse struct {
 type DelegateTaskRequest struct {
 	ProjectID domain.ProjectID    `json:"projectId"`
 	Brief     string              `json:"brief" maxLength:"4096"`
-	Agent     domain.AgentHarness `json:"agent,omitempty" enum:"claude-code,codex,aider,opencode,grok,droid,amp,agy,crush,cursor,qwen,copilot,goose,auggie,continue,devin,cline,kimi,muse,kiro,kilocode,vibe,pi,kimchi,omp,prime-agent,autohand,fake"`
+	Agent     domain.AgentHarness `json:"agent,omitempty" enum:"pi,fake"`
 	Model     string              `json:"model,omitempty" maxLength:"256"`
 	// ApprovalMode is an optional per-session override. The UI uses the explicit
 	// bypass value only after the user accepts an approval-less Chat fallback.
@@ -915,27 +850,15 @@ type ClaimPRResponse struct {
 // state-only semantics.
 // AgentSessionID may arrive without State on metadata-only SessionStart hooks.
 type SetActivityRequest struct {
-	State                 string             `json:"state,omitempty" enum:"active,idle,waiting_input,blocked,exited" description:"Agent activity state reported by an agent hook. Optional for metadata-only hooks."`
-	Event                 string             `json:"event,omitempty" description:"AO hook sub-command that produced this state (e.g. post-tool-use)."`
-	ToolName              string             `json:"toolName,omitempty" description:"Native tool name, for tool-use hook events."`
-	ToolUseID             string             `json:"toolUseId,omitempty" description:"Native tool-use id, for tool-use hook events."`
-	AgentSessionID        string             `json:"agentSessionId,omitempty" description:"Native agent session identifier used to resume its transcript."`
-	LatestUserPrompt      string             `json:"latestUserPrompt,omitempty" maxLength:"16384" description:"Latest real user prompt exposed by the provider hook."`
-	LatestAssistantUpdate string             `json:"latestAssistantUpdate,omitempty" maxLength:"16384" description:"Latest assistant update exposed by the provider hook."`
-	TranscriptPath        string             `json:"transcriptPath,omitempty" maxLength:"4096" description:"Read-only provider-native transcript path exposed by the hook."`
-	LaunchID              string             `json:"launchId,omitempty" description:"AO process generation that produced the signal."`
-	Usage                 *UsageHookMetadata `json:"usage,omitempty" description:"Provider transcript metadata used by the local usage pipeline."`
-}
-
-// UsageHookMetadata is the transcript metadata carried by supported Claude
-// Code and Codex hooks. It contains paths and identifiers only, never prompt or
-// response content.
-type UsageHookMetadata struct {
-	Harness                domain.AgentHarness `json:"harness" enum:"claude-code,codex"`
-	TranscriptPath         string              `json:"transcriptPath,omitempty"`
-	ModelID                string              `json:"modelId,omitempty"`
-	SubagentID             string              `json:"subagentId,omitempty"`
-	SubagentTranscriptPath string              `json:"subagentTranscriptPath,omitempty"`
+	State                 string `json:"state,omitempty" enum:"active,idle,waiting_input,blocked,exited" description:"Agent activity state reported by an agent hook. Optional for metadata-only hooks."`
+	Event                 string `json:"event,omitempty" description:"AO hook sub-command that produced this state (e.g. post-tool-use)."`
+	ToolName              string `json:"toolName,omitempty" description:"Native tool name, for tool-use hook events."`
+	ToolUseID             string `json:"toolUseId,omitempty" description:"Native tool-use id, for tool-use hook events."`
+	AgentSessionID        string `json:"agentSessionId,omitempty" description:"Native agent session identifier used to resume its transcript."`
+	LatestUserPrompt      string `json:"latestUserPrompt,omitempty" maxLength:"16384" description:"Latest real user prompt exposed by the provider hook."`
+	LatestAssistantUpdate string `json:"latestAssistantUpdate,omitempty" maxLength:"16384" description:"Latest assistant update exposed by the provider hook."`
+	TranscriptPath        string `json:"transcriptPath,omitempty" maxLength:"4096" description:"Read-only provider-native transcript path exposed by the hook."`
+	LaunchID              string `json:"launchId,omitempty" description:"AO process generation that produced the signal."`
 }
 
 // SetActivityResponse is the body of POST /api/v1/sessions/{sessionId}/activity.
@@ -1011,209 +934,6 @@ type AgentReadinessResponse = agentsvc.Readiness
 type EnsureAgentReadinessRequest struct {
 	AgentIDs []string                     `json:"agentIds,omitempty"`
 	Purpose  domain.AgentReadinessPurpose `json:"purpose" enum:"display,launch"`
-}
-
-// CodexAccountsResponse is the controller-owned, redacted cached account view.
-type CodexAccountsResponse struct {
-	ActiveAccountID        string                               `json:"activeAccountId,omitempty"`
-	AccountRevision        int64                                `json:"accountRevision"`
-	Accounts               []CodexAccountResponse               `json:"accounts"`
-	Capabilities           CodexAccountCapabilitiesResponse     `json:"capabilities"`
-	UnmanagedGlobalAccount *CodexUnmanagedGlobalAccountResponse `json:"unmanagedGlobalAccount,omitempty"`
-	ActiveLogin            *CodexActiveLoginResponse            `json:"activeLogin,omitempty"`
-	CurrentSwitch          *CodexAccountSwitchResponse          `json:"currentSwitch,omitempty"`
-}
-
-// CodexAccountResponse contains UI account facts without provider or storage identity.
-type CodexAccountResponse struct {
-	ID             string                            `json:"id"`
-	Label          string                            `json:"label"`
-	Status         string                            `json:"status" enum:"valid,signed_out,broken"`
-	ReasonCode     string                            `json:"reasonCode"`
-	Reason         string                            `json:"reason"`
-	Active         bool                              `json:"active"`
-	Authentication CodexAuthenticationResponse       `json:"authentication"`
-	AuthMethod     string                            `json:"authMethod" enum:"chatgpt,api_key,other,unknown"`
-	AccountEmail   *string                           `json:"accountEmail,omitempty"`
-	Capacity       CodexAccountCapacityResponse      `json:"capacity"`
-	UsageSummary   *CodexAccountUsageSummaryResponse `json:"usageSummary,omitempty"`
-	CreatedAt      time.Time                         `json:"createdAt"`
-}
-
-// CodexAuthenticationResponse is the normalized authentication observation.
-type CodexAuthenticationResponse struct {
-	State       string     `json:"state" enum:"authorized,unauthorized,unknown,not_applicable"`
-	Freshness   string     `json:"freshness" enum:"fresh,stale,checking"`
-	CheckedAt   *time.Time `json:"checkedAt"`
-	AttemptedAt *time.Time `json:"attemptedAt"`
-	ReasonCode  string     `json:"reasonCode"`
-	Reason      string     `json:"reason"`
-}
-
-// CodexAccountCapacityResponse is the normalized capacity display projection.
-type CodexAccountCapacityResponse struct {
-	State             string                            `json:"state" enum:"available,near_limit,exhausted,unknown,unsupported"`
-	Freshness         string                            `json:"freshness" enum:"fresh,stale,checking"`
-	Plan              *string                           `json:"plan,omitempty"`
-	UsedPercent       *float64                          `json:"usedPercent,omitempty" minimum:"0" maximum:"100"`
-	RemainingPercent  *float64                          `json:"remainingPercent,omitempty" minimum:"0" maximum:"100"`
-	ResetsAt          *time.Time                        `json:"resetsAt,omitempty"`
-	ObservedAt        *time.Time                        `json:"observedAt,omitempty"`
-	CheckedAt         *time.Time                        `json:"checkedAt,omitempty"`
-	AttemptedAt       *time.Time                        `json:"attemptedAt,omitempty"`
-	ReasonCode        string                            `json:"reasonCode"`
-	Reason            string                            `json:"reason"`
-	Overall           *CodexCapacityBucketResponse      `json:"overall,omitempty"`
-	AdditionalBuckets []CodexCapacityBucketResponse     `json:"additionalBuckets"`
-	ResetCredits      *CodexResetCreditsSummaryResponse `json:"resetCredits,omitempty"`
-}
-
-// CodexCapacityBucketResponse omits the provider limit identifier.
-type CodexCapacityBucketResponse struct {
-	DisplayName *string                      `json:"displayName,omitempty"`
-	Primary     *CodexCapacityWindowResponse `json:"primary,omitempty"`
-	Secondary   *CodexCapacityWindowResponse `json:"secondary,omitempty"`
-	Reached     string                       `json:"reached" enum:"not_reached,reached,unknown"`
-}
-
-// CodexCapacityWindowResponse contains a normalized provider meter window.
-type CodexCapacityWindowResponse struct {
-	UsedPercent           float64    `json:"usedPercent" minimum:"0" maximum:"100"`
-	WindowDurationMinutes *int64     `json:"windowDurationMinutes,omitempty"`
-	ResetsAt              *time.Time `json:"resetsAt,omitempty"`
-}
-
-// CodexResetCreditsSummaryResponse contains no provider reset-credit identity.
-type CodexResetCreditsSummaryResponse struct {
-	AvailableCount   int64      `json:"availableCount" minimum:"0"`
-	NearestExpiresAt *time.Time `json:"nearestExpiresAt,omitempty"`
-}
-
-// CodexAccountUsageSummaryResponse contains normalized aggregate usage metrics.
-type CodexAccountUsageSummaryResponse struct {
-	LatestDayTokens           *int64    `json:"latestDayTokens,omitempty"`
-	LatestDayStartDate        *string   `json:"latestDayStartDate,omitempty"`
-	LifetimeTokens            *int64    `json:"lifetimeTokens,omitempty"`
-	PeakDailyTokens           *int64    `json:"peakDailyTokens,omitempty"`
-	LongestRunningTurnSeconds *int64    `json:"longestRunningTurnSeconds,omitempty"`
-	CurrentStreakDays         *int64    `json:"currentStreakDays,omitempty"`
-	LongestStreakDays         *int64    `json:"longestStreakDays,omitempty"`
-	ObservedAt                time.Time `json:"observedAt"`
-}
-
-// CodexCapabilityObservationResponse is one UI-safe capability result.
-type CodexCapabilityObservationResponse struct {
-	State      string `json:"state" enum:"supported,unsupported,unknown"`
-	ReasonCode string `json:"reasonCode"`
-	Reason     string `json:"reason"`
-}
-
-// CodexAccountCapabilitiesResponse is the renderer-consumed capability view.
-type CodexAccountCapabilitiesResponse struct {
-	NativeLogin        CodexCapabilityObservationResponse `json:"nativeLogin"`
-	ResetCreditConsume CodexCapabilityObservationResponse `json:"resetCreditConsume"`
-	GlobalSwitch       CodexCapabilityObservationResponse `json:"globalSwitch"`
-}
-
-// CodexUnmanagedGlobalAccountResponse explains a device identity AO cannot manage.
-type CodexUnmanagedGlobalAccountResponse struct {
-	Label        string  `json:"label"`
-	AuthMethod   string  `json:"authMethod" enum:"chatgpt,api_key,other,unknown"`
-	AccountEmail *string `json:"accountEmail,omitempty"`
-	ReasonCode   string  `json:"reasonCode"`
-	Reason       string  `json:"reason"`
-}
-
-// EnsureCodexAccountsRequest selects accounts for display reads.
-type EnsureCodexAccountsRequest struct {
-	AccountIDs   []string `json:"accountIds,omitempty"`
-	IncludeUsage bool     `json:"includeUsage,omitempty"`
-}
-
-// ConsumeCodexAccountResetCreditRequest identifies one idempotent provider
-// reset attempt. The provider selects the available reset credit.
-type ConsumeCodexAccountResetCreditRequest struct {
-	IdempotencyKey string `json:"idempotencyKey" minLength:"1" maxLength:"200"`
-}
-
-// OpenCodexAccountLoginTerminalResponse is the standalone terminal opened for
-// one pending account's native Codex login flow.
-type OpenCodexAccountLoginTerminalResponse struct {
-	Operation     CodexAccountLoginResponse         `json:"operation"`
-	ShellTerminal CodexAccountLoginTerminalResponse `json:"shellTerminal"`
-}
-
-// CodexAccountLoginResponse is the redacted login-operation projection.
-type CodexAccountLoginResponse struct {
-	OperationID string                `json:"operationId"`
-	AccountID   string                `json:"accountId,omitempty"`
-	Status      string                `json:"status" enum:"pending,verifying,unauthorized,unverified,completed,cancelled,failed,expired"`
-	ReasonCode  string                `json:"reasonCode"`
-	Reason      string                `json:"reason"`
-	Account     *CodexAccountResponse `json:"account,omitempty"`
-	ExpiresAt   time.Time             `json:"expiresAt"`
-}
-
-// CodexActiveLoginResponse lets a renderer remount reattach to a live login.
-type CodexActiveLoginResponse struct {
-	OperationID   string                            `json:"operationId"`
-	AccountID     string                            `json:"accountId,omitempty"`
-	Status        string                            `json:"status" enum:"pending,verifying,unauthorized,unverified,completed,cancelled,failed,expired"`
-	ReasonCode    string                            `json:"reasonCode"`
-	Reason        string                            `json:"reason"`
-	ExpiresAt     time.Time                         `json:"expiresAt"`
-	ShellTerminal CodexAccountLoginTerminalResponse `json:"shellTerminal"`
-}
-
-// CodexAccountLoginTerminalResponse contains only the mux identity and display
-// fields needed by the inline Settings terminal. Its private credential-home
-// working directory is deliberately excluded from the public API.
-type CodexAccountLoginTerminalResponse struct {
-	HandleID  string    `json:"handleId"`
-	Title     string    `json:"title"`
-	CreatedAt time.Time `json:"createdAt"`
-}
-
-// StartCodexAccountSwitchRequest requests an idempotent global account change.
-type StartCodexAccountSwitchRequest struct {
-	TargetAccountID         string `json:"targetAccountId" minLength:"1"`
-	ExpectedAccountRevision int64  `json:"expectedAccountRevision" minimum:"0"`
-	IdempotencyKey          string `json:"idempotencyKey" minLength:"1"`
-}
-
-// CodexAccountSwitchIDParam describes the durable switch path parameter.
-type CodexAccountSwitchIDParam struct {
-	SwitchID string `path:"switchId" description:"Durable Codex account switch identifier."`
-}
-
-// CodexAccountSwitchPhase is the retained public switch lifecycle.
-type CodexAccountSwitchPhase string
-
-// CodexAccountSwitchResponse contains only safe AO identifiers and progress.
-type CodexAccountSwitchResponse struct {
-	ID                     string                              `json:"id"`
-	SourceAccountID        string                              `json:"sourceAccountId"`
-	TargetAccountID        string                              `json:"targetAccountId"`
-	Phase                  CodexAccountSwitchPhase             `json:"phase" enum:"requested,stopping_sessions,sessions_stopped,checkpointing_source,activating_target,verifying_target,restarting_sessions,rollback_required,recovery_required,completed,failed"`
-	FailureCode            string                              `json:"failureCode,omitempty"`
-	Sessions               []CodexAccountSwitchSessionResponse `json:"sessions"`
-	CanRecover             bool                                `json:"canRecover"`
-	CredentialsCommittedAt *time.Time                          `json:"credentialsCommittedAt,omitempty"`
-	CreatedAt              time.Time                           `json:"createdAt"`
-	UpdatedAt              time.Time                           `json:"updatedAt"`
-	CompletedAt            *time.Time                          `json:"completedAt,omitempty"`
-}
-
-// CodexAccountSwitchSessionResponse is safe AO session progress for a switch.
-type CodexAccountSwitchSessionResponse struct {
-	SessionID     string     `json:"sessionId"`
-	InterfaceMode string     `json:"interfaceMode" enum:"tui,chat"`
-	WasRunning    bool       `json:"wasRunning"`
-	StopState     string     `json:"stopState"`
-	RestartState  string     `json:"restartState"`
-	ErrorCode     string     `json:"errorCode,omitempty"`
-	StoppedAt     *time.Time `json:"stoppedAt,omitempty"`
-	RestartedAt   *time.Time `json:"restartedAt,omitempty"`
 }
 
 // AgentReadinessSnapshot is one normalized harness readiness view.
@@ -1306,7 +1026,7 @@ type SystemRequirementsResponse = systemcheck.Report
 
 // InstallTargetParam is the {target} path parameter for /system/install routes.
 type InstallTargetParam struct {
-	Target string `path:"target" enum:"tmux,gh,claude,codex,opencode,copilot,cloudflared" description:"Install target identifier: tmux, gh, claude, codex, opencode, copilot, or cloudflared."`
+	Target string `path:"target" enum:"tmux,gh,claude,cloudflared" description:"Install target identifier: tmux, gh, claude, or cloudflared."`
 }
 
 // StartInstallResponse is the body of POST /api/v1/system/install/{target} (202).
@@ -2214,7 +1934,7 @@ type UpdateSessionInterfaceRequest struct {
 // it for this pass only, without editing project config, so one session's choice
 // cannot change what another session in the project runs.
 type TriggerReviewRequest struct {
-	Harness     domain.ReviewerHarness `json:"harness,omitempty" enum:"claude-code,codex,copilot,cursor,kilocode,opencode,kiro,pi,qwen,agy,continue,goose,vibe,devin,droid,kimi,kimchi,muse,amp,aider,grok,crush,auggie,cline,autohand"`
+	Harness     domain.ReviewerHarness `json:"harness,omitempty" enum:"pi"`
 	AgentConfig domain.AgentConfig     `json:"agentConfig,omitempty"`
 }
 

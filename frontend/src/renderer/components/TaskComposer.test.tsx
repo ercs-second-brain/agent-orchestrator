@@ -22,28 +22,26 @@ vi.mock("../hooks/useAgentReadinessQuery", async (importOriginal) => {
 	};
 });
 
-vi.mock("./CreateProjectAgentSheet", () => ({
+vi.mock("./settings/RequiredAgentField", () => ({
 	RequiredAgentField: ({
 		value,
-		onChange,
+		label,
 		triggerClassName,
-		disabled,
 	}: {
 		value: string;
-		onChange: (value: string) => void;
+		label: string;
 		triggerClassName?: string;
-		disabled?: boolean;
 	}) => {
 		h.agentValues.push(value);
 		return (
 			<button
 				type="button"
-				aria-label="Agent"
+				aria-label={label}
 				className={triggerClassName}
 				data-testid="agent-field"
 				data-value={value}
-				disabled={disabled}
-				onClick={() => onChange(value === "codex" ? "claude-code" : "codex")}
+				// ADR 0005: pi is the single supported harness and the field is locked.
+				disabled
 			/>
 		);
 	},
@@ -79,7 +77,7 @@ beforeEach(() => {
 		if (path.includes("/models")) {
 			return {
 				data: {
-					agent: "codex",
+					agent: "pi",
 					selectionMode: "text",
 					models: [],
 					allowCustom: true,
@@ -111,32 +109,15 @@ describe("TaskComposer", () => {
 		await waitFor(() => expect(h.ensureReadiness).toHaveBeenCalledWith());
 	});
 
-	it("ensures the selected harness when agent selection changes", async () => {
-		render(
-			<Wrap>
-				<TaskComposer projectId="proj-1" onCreated={vi.fn()} />
-			</Wrap>,
-		);
-
-		fireEvent.click(screen.getByLabelText("Agent"));
-		await waitFor(() =>
-			expect(h.ensureReadiness).toHaveBeenCalledWith({
-				agentIds: ["codex"],
-				enabled: true,
-				purpose: "launch",
-			}),
-		);
-	});
-
 	it("waits for and caches targeted readiness after a binary launch failure", async () => {
 		h.get.mockImplementation(async (path: string) => {
 			if (path.includes("/models")) {
-				return { data: { agent: "codex", selectionMode: "text", models: [], allowCustom: true } };
+				return { data: { agent: "pi", selectionMode: "text", models: [], allowCustom: true } };
 			}
-			return { data: { status: "ok", project: { agent: "codex", config: {} } } };
+			return { data: { status: "ok", project: { agent: "pi", config: {} } } };
 		});
 		h.post.mockResolvedValueOnce({
-			error: { code: "AGENT_BINARY_NOT_FOUND", message: "Codex is not installed" },
+			error: { code: "AGENT_BINARY_NOT_FOUND", message: "pi is not installed" },
 		});
 		let finishReadiness!: (value: { agents: ReturnType<typeof agentReadiness>[] }) => void;
 		h.ensureTargetedReadiness.mockReturnValueOnce(
@@ -145,8 +126,8 @@ describe("TaskComposer", () => {
 			}),
 		);
 		const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-		const stale = agentReadiness("codex", "Codex", { freshness: "stale" });
-		const completed = agentReadiness("codex", "Codex", { installation: "not_installed" });
+		const stale = agentReadiness("pi", "pi", { freshness: "stale" });
+		const completed = agentReadiness("pi", "pi", { installation: "not_installed" });
 		queryClient.setQueryData(agentReadinessQueryKey, { agents: [stale] });
 
 		render(
@@ -154,16 +135,16 @@ describe("TaskComposer", () => {
 				<TaskComposer projectId="proj-1" onCreated={vi.fn()} />
 			</Wrap>,
 		);
-		await waitFor(() => expect(screen.getByTestId("agent-field")).toHaveAttribute("data-value", "codex"));
+		await waitFor(() => expect(screen.getByTestId("agent-field")).toHaveAttribute("data-value", "pi"));
 		fireEvent.click(screen.getByRole("button", { name: "Start task" }));
 
 		await waitFor(() =>
-			expect(h.ensureTargetedReadiness).toHaveBeenCalledWith(["codex"], "launch"),
+			expect(h.ensureTargetedReadiness).toHaveBeenCalledWith(["pi"], "launch"),
 		);
-		expect(screen.queryByText("Codex is not installed")).not.toBeInTheDocument();
+		expect(screen.queryByText("pi is not installed")).not.toBeInTheDocument();
 
 		await act(async () => finishReadiness({ agents: [completed] }));
-		expect(await screen.findByText("Codex is not installed")).toBeInTheDocument();
+		expect(await screen.findByText("pi is not installed")).toBeInTheDocument();
 		expect(queryClient.getQueryData(agentReadinessQueryKey)).toEqual({ agents: [completed] });
 	});
 
@@ -282,12 +263,12 @@ describe("TaskComposer", () => {
 		await waitFor(() => expect(onSubmittingChange).toHaveBeenLastCalledWith(false));
 	});
 
-	it("locks agent and model selection while task creation is in flight, then unlocks them after failure", async () => {
+it("locks model selection while task creation is in flight, then unlocks it after failure", async () => {
 		h.get.mockImplementation(async (path: string) => {
 			if (path.includes("/models")) {
 				return {
 					data: {
-						agent: "codex",
+						agent: "pi",
 						selectionMode: "text",
 						models: [],
 						allowCustom: true,
@@ -295,7 +276,7 @@ describe("TaskComposer", () => {
 					},
 				};
 			}
-			return { data: { status: "ok", project: { agent: "codex", config: {} } } };
+			return { data: { status: "ok", project: { agent: "pi", config: {} } } };
 		});
 		let rejectCreate!: (error: Error) => void;
 		h.post.mockReturnValueOnce(new Promise((_resolve, reject) => (rejectCreate = reject)));
@@ -307,10 +288,11 @@ describe("TaskComposer", () => {
 		);
 
 		const agent = await screen.findByTestId("agent-field");
-		await waitFor(() => expect(agent).toHaveAttribute("data-value", "codex"));
+		await waitFor(() => expect(agent).toHaveAttribute("data-value", "pi"));
 		const model = await screen.findByRole("button", { name: "Model" });
 		const prompt = task();
-		expect(agent).toBeEnabled();
+		// ADR 0005: the agent control is a locked pi-only field.
+		expect(agent).toBeDisabled();
 		expect(model).toBeEnabled();
 		expect(prompt).toBeEnabled();
 
@@ -323,83 +305,11 @@ describe("TaskComposer", () => {
 
 		await act(async () => rejectCreate(new Error("creation failed")));
 		await screen.findByText("creation failed");
-		expect(agent).toBeEnabled();
 		expect(model).toBeEnabled();
 		expect(prompt).toBeEnabled();
-	});
-
-	it.each([
-		{
-			name: "mode",
-			catalog: {
-				agent: "codex",
-				selectionMode: "mode",
-				models: [{ id: "plan", label: "Plan", isDefault: true }],
-				customModelEntry: "none",
-				allowCustom: false,
-			},
-			controls: async () => [await screen.findByRole("button", { name: "Model" })],
-		},
-		{
-			name: "catalog",
-			catalog: {
-				agent: "codex",
-				selectionMode: "catalog",
-				models: [{ id: "gpt-5", label: "GPT-5", isDefault: true }],
-				customModelEntry: "none",
-				allowCustom: false,
-			},
-			controls: async () => [await screen.findByRole("button", { name: "Model" })],
-		},
-		{
-			name: "search and direct model ID",
-			catalog: {
-				agent: "codex",
-				selectionMode: "catalog",
-				models: [{ id: "gpt-5", label: "GPT-5", isDefault: true }],
-				customModelEntry: "direct",
-				allowCustom: true,
-			},
-			controls: async () => {
-				const model = await screen.findByRole("button", { name: "Model" });
-				await userEvent.click(model);
-				await userEvent.type(screen.getByRole("searchbox", { name: "Search model" }), "private/model-id");
-				await userEvent.click(
-					screen.getByRole("menuitem", { name: "Use “private/model-id” as a custom model" }),
-				);
-				expect(model).toHaveTextContent("private/model-id");
-				expect(screen.queryByRole("textbox", { name: "Model" })).not.toBeInTheDocument();
-				return [model];
-			},
-		},
-	])("locks the $name selector while creating and restores it after failure", async ({ catalog, controls }) => {
-		h.get.mockImplementation(async (path: string) => {
-			if (path.includes("/models")) return { data: catalog };
-			return { data: { status: "ok", project: { agent: "codex", config: {} } } };
-		});
-		let rejectCreate!: (error: Error) => void;
-		h.post.mockReturnValueOnce(new Promise((_resolve, reject) => (rejectCreate = reject)));
-
-		render(
-			<Wrap>
-				<TaskComposer projectId="proj-1" onCreated={vi.fn()} />
-			</Wrap>,
-		);
-
-		const modelControls = await controls();
-		for (const control of modelControls) expect(control).toBeEnabled();
-
-		fireEvent.click(screen.getByRole("button", { name: "Start task" }));
-
-		await waitFor(() => expect(h.post).toHaveBeenCalledOnce());
-		for (const control of modelControls) expect(control).toBeDisabled();
-
-		await act(async () => rejectCreate(new Error("creation failed")));
-		await screen.findByText("creation failed");
-		for (const control of modelControls) expect(control).toBeEnabled();
-	});
-
-	it("attaches a selected file and sends it in the delegate body", async () => {
+		// The agent control stays locked: pi is the only option.
+		expect(agent).toBeDisabled();
+	});	it("attaches a selected file and sends it in the delegate body", async () => {
 		h.post.mockResolvedValueOnce({ data: { workerId: "sess-1" } });
 
 		const { container } = render(
@@ -533,9 +443,9 @@ describe("TaskComposer", () => {
 	it("offers an explicit approval-less retry from structured capability details", async () => {
 		h.get.mockImplementation(async (path: string) => {
 			if (path.includes("/models")) {
-				return { data: { agent: "cursor", selectionMode: "text", models: [], allowCustom: true } };
+				return { data: { agent: "pi", selectionMode: "text", models: [], allowCustom: true } };
 			}
-			return { data: { status: "ok", project: { agent: "cursor", config: {} } } };
+			return { data: { status: "ok", project: { agent: "pi", config: {} } } };
 		});
 		h.post
 			.mockResolvedValueOnce({
@@ -556,7 +466,7 @@ describe("TaskComposer", () => {
 				<TaskComposer projectId="proj-1" onCreated={onCreated} />
 			</Wrap>,
 		);
-		await waitFor(() => expect(screen.getByTestId("agent-field")).toHaveAttribute("data-value", "cursor"));
+		await waitFor(() => expect(screen.getByTestId("agent-field")).toHaveAttribute("data-value", "pi"));
 		fireEvent.change(task(), { target: { value: "Use approval-less Chat" } });
 		fireEvent.click(screen.getByText("Start task"));
 
@@ -588,10 +498,10 @@ describe("TaskComposer", () => {
 	it("preselects the project worker agent and spawns with it", async () => {
 		h.get.mockImplementation(async (path: string) => {
 			if (path.includes("/models")) {
-				return { data: { agent: "codex", selectionMode: "text", models: [], allowCustom: true } };
+				return { data: { agent: "pi", selectionMode: "text", models: [], allowCustom: true } };
 			}
 			return {
-				data: { status: "ok", project: { agent: "claude-code", config: { worker: { agent: "codex" } } } },
+				data: { status: "ok", project: { agent: "pi", config: { worker: { agent: "pi" } } } },
 			};
 		});
 		h.post.mockResolvedValueOnce({ data: { workerId: "sess-3" } });
@@ -602,7 +512,7 @@ describe("TaskComposer", () => {
 			</Wrap>,
 		);
 
-		await waitFor(() => expect(screen.getByTestId("agent-field")).toHaveAttribute("data-value", "codex"));
+		await waitFor(() => expect(screen.getByTestId("agent-field")).toHaveAttribute("data-value", "pi"));
 
 		fireEvent.change(task(), { target: { value: "Ship it" } });
 		fireEvent.click(screen.getByText("Start task"));
@@ -610,7 +520,7 @@ describe("TaskComposer", () => {
 		await waitFor(() =>
 			expect(h.post).toHaveBeenCalledWith(
 				"/api/v1/orchestrators/delegate",
-				expect.objectContaining({ body: expect.objectContaining({ agent: "codex" }) }),
+				expect.objectContaining({ body: expect.objectContaining({ agent: "pi" }) }),
 			),
 		);
 	});
@@ -620,17 +530,17 @@ describe("TaskComposer", () => {
 			if (path.includes("/models")) {
 				return {
 					data: {
-						agent: "codex",
+						agent: "pi",
 						selectionMode: "text",
 						models: [{ id: "gpt-5.6-sol", label: "GPT-5.6 Sol", isDefault: true }],
 						allowCustom: true,
 					},
 				};
 			}
-			return { data: { status: "ok", project: { agent: "codex", config: {} } } };
+			return { data: { status: "ok", project: { agent: "pi", config: {} } } };
 		});
 		const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-		queryClient.setQueryData(["project", "proj-1"], { agent: "codex", config: {} });
+		queryClient.setQueryData(["project", "proj-1"], { agent: "pi", config: {} });
 
 		render(
 			<QueryClientProvider client={queryClient}>
@@ -645,9 +555,9 @@ describe("TaskComposer", () => {
 	it("falls back to the global default agent when the project sets no worker agent", async () => {
 		h.get.mockImplementation(async (path: string) => {
 			if (path.includes("/models")) {
-				return { data: { agent: "claude-code", selectionMode: "text", models: [], allowCustom: true } };
+				return { data: { agent: "pi", selectionMode: "text", models: [], allowCustom: true } };
 			}
-			return { data: { status: "ok", project: { agent: "claude-code", config: {} } } };
+			return { data: { status: "ok", project: { agent: "pi", config: {} } } };
 		});
 
 		render(
@@ -656,7 +566,7 @@ describe("TaskComposer", () => {
 			</Wrap>,
 		);
 
-		await waitFor(() => expect(screen.getByTestId("agent-field")).toHaveAttribute("data-value", "claude-code"));
+		await waitFor(() => expect(screen.getByTestId("agent-field")).toHaveAttribute("data-value", "pi"));
 	});
 
 	it("preselects the agent's default model when the project configures none", async () => {
@@ -664,7 +574,7 @@ describe("TaskComposer", () => {
 			if (path.includes("/models")) {
 				return {
 					data: {
-						agent: "codex",
+						agent: "pi",
 						selectionMode: "text",
 						models: [
 							{ id: "gpt-5", label: "GPT-5" },
@@ -674,7 +584,7 @@ describe("TaskComposer", () => {
 					},
 				};
 			}
-			return { data: { status: "ok", project: { agent: "codex", config: {} } } };
+			return { data: { status: "ok", project: { agent: "pi", config: {} } } };
 		});
 
 		render(
@@ -686,72 +596,19 @@ describe("TaskComposer", () => {
 		expect(await screen.findByRole("button", { name: "Model" })).toHaveTextContent("GPT-5 Codex");
 	});
 
-	it("clears a stale model while the newly selected agent catalog resolves", async () => {
-		let resolveClaudeCatalog!: (value: {
-			data: {
-				agent: string;
-				selectionMode: "text";
-				models: Array<{ id: string; label: string; isDefault: boolean }>;
-				allowCustom: boolean;
-			};
-		}) => void;
-		h.get.mockImplementation(async (path: string, request?: { params?: { path?: { agent?: string } } }) => {
-			if (path.includes("/models")) {
-				if (request?.params?.path?.agent === "claude-code") {
-					return new Promise((resolve) => {
-						resolveClaudeCatalog = resolve;
-					});
-				}
-				return {
-					data: {
-						agent: "codex",
-						selectionMode: "text",
-						models: [{ id: "gpt-5.6-sol", label: "GPT-5.6 Sol", isDefault: true }],
-						allowCustom: true,
-					},
-				};
-			}
-			return { data: { status: "ok", project: { agent: "codex", config: {} } } };
-		});
-
-		render(
-			<Wrap>
-				<TaskComposer projectId="proj-1" onCreated={vi.fn()} />
-			</Wrap>,
-		);
-
-		expect(await screen.findByRole("button", { name: "Model" })).toHaveTextContent("GPT-5.6 Sol");
-		fireEvent.click(screen.getByTestId("agent-field"));
-
-		expect(screen.getByLabelText("Model")).not.toHaveTextContent("GPT-5.6 Sol");
-		expect(screen.getByRole("status", { name: "Loading models…" })).toBeInTheDocument();
-
-		await act(async () => {
-			resolveClaudeCatalog({
-				data: {
-					agent: "claude-code",
-					selectionMode: "text",
-					models: [{ id: "opus[1m]", label: "opus[1m]", isDefault: true }],
-					allowCustom: true,
-				},
-			});
-		});
-		expect(await screen.findByRole("button", { name: "Model" })).toHaveTextContent("opus[1m]");
-	});
-
 	it("shows the same no-override label on the trigger and in the menu", async () => {
 		h.get.mockImplementation(async (path: string) => {
 			if (path.includes("/models")) {
 				return {
 					data: {
-						agent: "codex",
+						agent: "pi",
 						selectionMode: "catalog",
 						models: [{ id: "gpt-5", label: "GPT-5" }],
 						allowCustom: true,
 					},
 				};
 			}
-			return { data: { status: "ok", project: { agent: "codex", config: {} } } };
+			return { data: { status: "ok", project: { agent: "pi", config: {} } } };
 		});
 
 		render(
@@ -761,10 +618,10 @@ describe("TaskComposer", () => {
 		);
 
 		const picker = await screen.findByRole("button", { name: "Model" });
-		expect(picker).toHaveTextContent("Use codex's default");
+		expect(picker).toHaveTextContent("Use pi's default");
 
 		await userEvent.click(picker);
-		expect(await screen.findByRole("menuitem", { name: "Use codex's default" })).toBeInTheDocument();
+		expect(await screen.findByRole("menuitem", { name: "Use pi's default" })).toBeInTheDocument();
 	});
 
 	it("does not render free text when models must be configured in the agent", async () => {
@@ -772,7 +629,7 @@ describe("TaskComposer", () => {
 			if (path.includes("/models")) {
 				return {
 					data: {
-						agentId: "opencode",
+						agentId: "pi",
 						selectionMode: "catalog",
 						models: [],
 						customModelEntry: "configured",
@@ -780,7 +637,7 @@ describe("TaskComposer", () => {
 					},
 				};
 			}
-			return { data: { status: "ok", project: { agent: "opencode", config: {} } } };
+			return { data: { status: "ok", project: { agent: "pi", config: {} } } };
 		});
 
 		render(
@@ -792,7 +649,7 @@ describe("TaskComposer", () => {
 		const picker = await screen.findByRole("button", { name: "Model" });
 		expect(screen.queryByRole("textbox", { name: "Model" })).not.toBeInTheDocument();
 		await userEvent.click(picker);
-		expect(screen.getByText("Configure the model in opencode, then refresh.")).toBeInTheDocument();
+		expect(screen.getByText("Configure the model in pi, then refresh.")).toBeInTheDocument();
 	});
 
 	it("uses the project worker model as the new task model default", async () => {
@@ -800,7 +657,7 @@ describe("TaskComposer", () => {
 			if (path.includes("/models")) {
 				return {
 					data: {
-						agent: "codex",
+						agent: "pi",
 						selectionMode: "text",
 						models: [],
 						allowCustom: true,
@@ -812,7 +669,7 @@ describe("TaskComposer", () => {
 				data: {
 					status: "ok",
 					project: {
-						config: { worker: { agent: "codex", agentConfig: { model: "gpt-5" } } },
+						config: { worker: { agent: "pi", agentConfig: { model: "gpt-5" } } },
 					},
 				},
 			};

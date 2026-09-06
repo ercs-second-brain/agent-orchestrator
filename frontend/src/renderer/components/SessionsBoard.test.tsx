@@ -184,7 +184,7 @@ describe("SessionsBoard", () => {
 							workspaceId: "p1",
 							workspaceName: "solkit-ui",
 							title: "test",
-							provider: "codex",
+							provider: "pi",
 							branch: "ao/dev/solkit-ui-5/root",
 							status: "running",
 							activity: { state: "working", lastActivityAt: "2026-01-01T00:00:00Z" },
@@ -227,7 +227,7 @@ describe("SessionsBoard", () => {
 							workspaceId: "p1",
 							workspaceName: "solkit-ui",
 							title: "orchestrator",
-							provider: "codex",
+							provider: "pi",
 							kind: "orchestrator",
 							branch: "main",
 							status: "working",
@@ -286,7 +286,7 @@ describe("SessionsBoard", () => {
 							workspaceId: "p1",
 							workspaceName: "radic",
 							title: "brand-font-pipeline",
-							provider: "claude-code",
+							provider: "pi",
 							branch: "ao/radic-5",
 							status: "idle",
 							activity: { state: "idle", lastActivityAt: "2026-01-01T00:00:00Z" },
@@ -474,34 +474,6 @@ describe("SessionsBoard", () => {
 		expect(within(card).queryByText("Exited")).not.toBeInTheDocument();
 	});
 
-	it("shows switch progress instead of the exited source on a card", () => {
-		const worker = boardSession({
-			id: "s-switching",
-			title: "switching worker",
-			status: "exited",
-			activity: {
-				state: "exited",
-				lastActivityAt: "2026-01-01T00:00:00Z",
-			},
-		});
-		worker.activeAgentSwitch = activeAgentSwitch(worker.id);
-		workspaceQueryMock.mockReturnValue({
-			data: [workspaceWithSessions([worker])],
-			isError: false,
-			isSuccess: true,
-		});
-
-		renderBoard("p1");
-
-		const card = screen.getByText("switching worker").closest('[data-testid="board-session-card"]') as HTMLElement;
-		const status = within(card).getByText("Switching to Codex").parentElement as HTMLElement;
-		expect(status).toHaveClass("text-status-working");
-		expect(status).not.toHaveAttribute("data-kanban-column");
-		expect(status.style.getPropertyValue("--session-status-tone")).toBe("");
-		expect(status.querySelector(".animate-status-pulse")).toBeNull();
-		expect(within(card).queryByText("Exited")).not.toBeInTheDocument();
-	});
-
 	it("styles legacy statuses from their status-implied Kanban columns", () => {
 		workspaceQueryMock.mockReturnValue({
 			data: [
@@ -515,7 +487,7 @@ describe("SessionsBoard", () => {
 							workspaceId: "p1",
 							workspaceName: "radic",
 							title: "idle-card-task",
-							provider: "claude-code",
+							provider: "pi",
 							branch: "ao/radic-5",
 							status: "idle",
 							activity: { state: "idle", lastActivityAt: "2026-01-01T00:00:00Z" },
@@ -527,7 +499,7 @@ describe("SessionsBoard", () => {
 							workspaceId: "p1",
 							workspaceName: "radic",
 							title: "no-signal-card-task",
-							provider: "claude-code",
+							provider: "pi",
 							branch: "ao/radic-6",
 							status: "no_signal",
 							activity: { state: "idle", lastActivityAt: "2026-01-01T00:00:00Z" },
@@ -539,7 +511,7 @@ describe("SessionsBoard", () => {
 							workspaceId: "p1",
 							workspaceName: "radic",
 							title: "draft-card-task",
-							provider: "claude-code",
+							provider: "pi",
 							branch: "ao/radic-7",
 							status: "draft",
 							activity: { state: "idle", lastActivityAt: "2026-01-01T00:00:00Z" },
@@ -580,7 +552,7 @@ describe("SessionsBoard", () => {
 						workspaceId: "p1",
 						workspaceName: "radic",
 						title: "agent-exited-task",
-						provider: "codex",
+						provider: "pi",
 						branch: "ao/exited",
 						status: "exited",
 						// What the daemon derives for a worker with no PR, whatever its
@@ -623,7 +595,7 @@ describe("SessionsBoard", () => {
 							workspaceId: "p1",
 							workspaceName: "radic",
 							title: "p1 active",
-							provider: "claude-code",
+							provider: "pi",
 							branch: "ao/radic-active",
 							status: "working",
 							activity: { state: "active", lastActivityAt: "2026-01-01T00:00:00Z" },
@@ -635,7 +607,7 @@ describe("SessionsBoard", () => {
 							workspaceId: "p1",
 							workspaceName: "radic",
 							title: "p1 idle",
-							provider: "claude-code",
+							provider: "pi",
 							branch: "ao/radic-idle",
 							status: "idle",
 							activity: { state: "idle", lastActivityAt: "2026-01-01T00:00:00Z" },
@@ -654,7 +626,7 @@ describe("SessionsBoard", () => {
 							workspaceId: "p2",
 							workspaceName: "other",
 							title: "p2 active",
-							provider: "claude-code",
+							provider: "pi",
 							branch: "ao/other-active",
 							status: "working",
 							activity: { state: "active", lastActivityAt: "2026-01-01T00:00:00Z" },
@@ -666,7 +638,7 @@ describe("SessionsBoard", () => {
 							workspaceId: "p2",
 							workspaceName: "other",
 							title: "p2 idle",
-							provider: "claude-code",
+							provider: "pi",
 							branch: "ao/other-idle",
 							status: "idle",
 							activity: { state: "idle", lastActivityAt: "2026-01-01T00:00:00Z" },
@@ -740,7 +712,7 @@ describe("SessionsBoard", () => {
 		expect(within(terminatedCard!).queryByRole("button", { name: "Open dead worker" })).not.toBeInTheDocument();
 		expect(within(terminatedCard!).getByText("Terminated")).toBeInTheDocument();
 		// Agent shown as its brand logo with an accessible name (not a text label).
-		expect(within(terminatedCard!).getByRole("img", { name: "claude-code" })).toBeInTheDocument();
+		expect(within(terminatedCard!).getByRole("img", { name: "pi" })).toBeInTheDocument();
 		expect(screen.getByText("ao/dead-worker")).toBeInTheDocument();
 		expect(within(terminatedCard!).queryByText("github:INT-17")).not.toBeInTheDocument();
 		expect(within(terminatedCard!).getByRole("link", { name: "PR #42 merged" })).toHaveAttribute(
@@ -1399,7 +1371,7 @@ function boardSession(
 	return {
 		workspaceId: "p1",
 		workspaceName: "radic",
-		provider: "claude-code",
+		provider: "pi",
 		branch: `ao/${overrides.id}`,
 		kanbanColumn: toKanbanColumn(undefined, overrides.status),
 		updatedAt: "2026-01-01T00:00:00Z",
@@ -1408,19 +1380,6 @@ function boardSession(
 	};
 }
 
-function activeAgentSwitch(
-	sessionId: string,
-	overrides: Partial<NonNullable<WorkspaceSession["activeAgentSwitch"]>> = {},
-): NonNullable<WorkspaceSession["activeAgentSwitch"]> {
-	return {
-		agentHandoffStatus: "received",
-		fromHarness: "claude-code",
-		id: `switch-${sessionId}`,
-		state: "starting_target",
-		targetHarness: "codex",
-		...overrides,
-	};
-}
 
 function terminatedSession(overrides: Partial<WorkspaceSession> = {}): WorkspaceSession {
 	return {
@@ -1429,7 +1388,7 @@ function terminatedSession(overrides: Partial<WorkspaceSession> = {}): Workspace
 		workspaceName: "radic",
 		title: "dead worker",
 		issueId: "github:INT-17",
-		provider: "claude-code",
+		provider: "pi",
 		kind: "worker",
 		branch: "ao/dead-worker",
 		status: "terminated",

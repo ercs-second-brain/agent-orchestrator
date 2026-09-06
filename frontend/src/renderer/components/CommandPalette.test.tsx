@@ -23,14 +23,14 @@ const ctx = vi.hoisted(() => {
 			name: "app",
 			path: "/repos/app",
 			type: "main",
-			orchestratorAgent: "codex",
+			orchestratorAgent: "pi",
 			sessions: [
 				{
 					id: "w-merge",
 					workspaceId: "proj-1",
 					workspaceName: "app",
 					title: "ship banner",
-					provider: "codex",
+					provider: "pi",
 					kind: "worker",
 					branch: "feature/ship",
 					status: "mergeable",
@@ -42,7 +42,7 @@ const ctx = vi.hoisted(() => {
 					workspaceId: "proj-1",
 					workspaceName: "app",
 					title: "fix flake",
-					provider: "codex",
+					provider: "pi",
 					kind: "worker",
 					branch: "feature/fix",
 					status: "working",
@@ -54,7 +54,7 @@ const ctx = vi.hoisted(() => {
 					workspaceId: "proj-1",
 					workspaceName: "app",
 					title: "archived cleanup",
-					provider: "codex",
+					provider: "pi",
 					kind: "worker",
 					branch: "feature/archived",
 					status: "terminated",
@@ -66,7 +66,7 @@ const ctx = vi.hoisted(() => {
 					workspaceId: "proj-1",
 					workspaceName: "app",
 					title: "orchestrate",
-					provider: "codex",
+					provider: "pi",
 					kind: "orchestrator",
 					branch: "main",
 					status: "working",
@@ -80,7 +80,7 @@ const ctx = vi.hoisted(() => {
 			name: "lib",
 			path: "/repos/lib",
 			type: "main",
-			orchestratorAgent: "codex",
+			orchestratorAgent: "pi",
 			sessions: [],
 		},
 	];
@@ -225,8 +225,8 @@ const paletteInput = () => screen.queryByPlaceholderText(/search projects/i);
 beforeEach(() => {
 	ctx.params = {};
 	ctx.enabled = true;
-	ctx.workspaces[0].orchestratorAgent = "codex";
-	ctx.workspaces[1].orchestratorAgent = "codex";
+	ctx.workspaces[0].orchestratorAgent = "pi";
+	ctx.workspaces[1].orchestratorAgent = "pi";
 	ctx.workspaces[0].sessions[0].prs = [];
 	navigateMock.mockReset();
 	spawnMock.mockReset();

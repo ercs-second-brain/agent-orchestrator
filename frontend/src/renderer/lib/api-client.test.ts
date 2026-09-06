@@ -145,12 +145,10 @@ describe("apiClient runtime base URL", () => {
 		expect(error).toEqual({ code: "exited", message: "AO daemon exited with code 1" });
 	});
 
-	it("leaves workspace and switch-history failures exclusively to visibility reporting", async () => {
+	it("leaves workspace failures exclusively to visibility reporting", async () => {
 		vi.spyOn(globalThis, "fetch").mockImplementation(async () => new Response(JSON.stringify({ code: "unavailable", message: "nope", reporting_owner: "http" }), { status: 503, headers: { "Content-Type": "application/json" } }));
 		setApiBaseUrl("http://127.0.0.1:3001");
 		await apiClient.GET("/api/v1/projects");
-		await apiClient.GET("/api/v1/sessions");
-		await apiClient.GET("/api/v1/sessions/{sessionId}/agent-switches", { params: { path: { sessionId: "local-secret" } } });
 		expect(sentryCaptureMock).not.toHaveBeenCalled();
 	});
 });
@@ -200,17 +198,14 @@ describe("normalizeApiOperation", () => {
 		expect(normalizeApiOperation("get", "/api/v1/projects/my project id")).toBe("GET /api/v1/projects/:id");
 		expect(normalizeApiOperation("POST", "/api/v1/sessions/ao-42/kill")).toBe("POST /api/v1/sessions/:id/kill");
 		expect(normalizeApiOperation("PUT", "/api/v1/projects/p1/config")).toBe("PUT /api/v1/projects/:id/config");
-		expect(normalizeApiOperation("GET", "/api/v1/agents/claude-code/models")).toBe(
+		expect(normalizeApiOperation("GET", "/api/v1/agents/pi/models")).toBe(
 			"GET /api/v1/agents/:id/models",
 		);
-		expect(normalizeApiOperation("POST", "/api/v1/agents/codex/models/refresh")).toBe(
+		expect(normalizeApiOperation("POST", "/api/v1/agents/pi/models/refresh")).toBe(
 			"POST /api/v1/agents/:id/models/refresh",
 		);
-		expect(normalizeApiOperation("POST", "/api/v1/agents/codex/accounts/login-operations/72d4db6e-da2c-414c-a6a9-fdbd09a006b6/verify")).toBe(
-			"POST /api/v1/agents/codex/accounts/login-operations/:id/verify",
-		);
-		expect(normalizeApiOperation("POST", "/api/v1/agents/codex/account-switches/switch-1/recover")).toBe(
-			"POST /api/v1/agents/codex/account-switches/:id/recover",
+		expect(normalizeApiOperation("POST", "/api/v1/agents/pi/install")).toBe(
+			"POST /api/v1/agents/:id/install",
 		);
 	});
 
@@ -222,7 +217,7 @@ describe("normalizeApiOperation", () => {
 	it("keeps static child routes instead of treating them as ids", () => {
 		// These match an exact OpenAPI template, so the trailing segment must not
 		// be collapsed to :id (which would break aggregation and hide the route).
-		expect(normalizeApiOperation("GET", "/api/v1/agents/readiness")).toBe("GET /api/v1/agents/readiness");
+		expect(normalizeApiOperation("GET", "/api/v1/agents/auth-plans")).toBe("GET /api/v1/agents/auth-plans");
 		expect(normalizeApiOperation("POST", "/api/v1/agents/readiness/ensure")).toBe(
 			"POST /api/v1/agents/readiness/ensure",
 		);
@@ -237,7 +232,7 @@ describe("normalizeApiOperation", () => {
 	});
 
 	it("normalizes agent ids in authentication routes", () => {
-		expect(normalizeApiOperation("POST", "/api/v1/agents/claude-code/auth")).toBe(
+		expect(normalizeApiOperation("POST", "/api/v1/agents/pi/auth")).toBe(
 			"POST /api/v1/agents/:id/auth",
 		);
 	});
@@ -257,8 +252,7 @@ describe("normalizeApiOperation", () => {
 	it("normalizes ids for resources a collection heuristic would miss", () => {
 		expect(normalizeApiOperation("GET", "/api/v1/orchestrators/orch-abc")).toBe("GET /api/v1/orchestrators/:id");
 		expect(normalizeApiOperation("POST", "/api/v1/prs/pr-1/merge")).toBe("POST /api/v1/prs/:id/merge");
-		expect(normalizeApiOperation("POST", "/api/v1/agents/codex/accounts/ensure")).toBe("POST /api/v1/agents/codex/accounts/ensure");
-		expect(normalizeApiOperation("DELETE", "/api/v1/agents/codex/accounts/private-account-id")).toBe("DELETE /api/v1/agents/codex/accounts/:id");
+		expect(normalizeApiOperation("GET", "/api/v1/agents/install-jobs")).toBe("GET /api/v1/agents/install-jobs");
 	});
 });
 
@@ -283,51 +277,9 @@ describe("api error telemetry", () => {
 		vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response("oops", { status: 500 }));
 		setApiBaseUrl("http://127.0.0.1:3037");
 
-		await apiClient.GET("/api/v1/agents");
+		await apiClient.GET("/api/v1/agents/installers");
 
 		expect(sentryCaptureMock).toHaveBeenCalledTimes(1);
-	});
-
-	it("does not send saga-owned API failures to generic Sentry capture", async () => {
-		vi.spyOn(globalThis, "fetch").mockResolvedValue(
-			new Response(
-				JSON.stringify({
-					error: "internal",
-					code: "AGENT_SWITCH_FAILED",
-					message: "Agent switch failed",
-					reporting_owner: "agent_switch_saga",
-				}),
-				{ status: 500, headers: { "Content-Type": "application/json" } },
-			),
-		);
-		setApiBaseUrl("http://127.0.0.1:3037");
-
-		const { error } = await apiClient.GET("/api/v1/agents");
-
-		expect(sentryCaptureMock).not.toHaveBeenCalled();
-		expect(apiErrorMessage(error)).toBe("Agent switch failed (AGENT_SWITCH_FAILED)");
-	});
-
-	it("suppresses saga-owned 4xx responses without changing presentation", async () => {
-		vi.spyOn(globalThis, "fetch").mockResolvedValue(
-			new Response(
-				JSON.stringify({
-					error: "conflict",
-					code: "AGENT_SWITCH_DELIVERY_UNCONFIRMED",
-					message: "The target agent accepted an unconfirmed continuation",
-					reporting_owner: "agent_switch_saga",
-				}),
-				{ status: 409, headers: { "Content-Type": "application/json" } },
-			),
-		);
-		setApiBaseUrl("http://127.0.0.1:3037");
-
-		const { error } = await apiClient.GET("/api/v1/agents");
-
-		expect(sentryCaptureMock).not.toHaveBeenCalled();
-		expect(apiErrorMessage(error)).toBe(
-			"The target agent accepted an unconfirmed continuation (AGENT_SWITCH_DELIVERY_UNCONFIRMED)",
-		);
 	});
 
 	it("does not trust an unknown reporting owner", async () => {
@@ -339,29 +291,7 @@ describe("api error telemetry", () => {
 		);
 		setApiBaseUrl("http://127.0.0.1:3037");
 
-		await apiClient.GET("/api/v1/agents");
-
-		expect(sentryCaptureMock).toHaveBeenCalledTimes(1);
-	});
-
-	it("does not let a saga-owned response dedupe a later HTTP-owned failure", async () => {
-		vi.spyOn(globalThis, "fetch")
-			.mockResolvedValueOnce(
-				new Response(JSON.stringify({ reporting_owner: "agent_switch_saga" }), {
-					status: 500,
-					headers: { "Content-Type": "application/json" },
-				}),
-			)
-			.mockResolvedValueOnce(
-				new Response(JSON.stringify({ reporting_owner: "http" }), {
-					status: 500,
-					headers: { "Content-Type": "application/json" },
-				}),
-			);
-		setApiBaseUrl("http://127.0.0.1:3037");
-
-		await apiClient.GET("/api/v1/agents");
-		await apiClient.GET("/api/v1/agents");
+		await apiClient.GET("/api/v1/agents/installers");
 
 		expect(sentryCaptureMock).toHaveBeenCalledTimes(1);
 	});
@@ -381,16 +311,16 @@ describe("api error telemetry", () => {
 		vi.spyOn(globalThis, "fetch").mockRejectedValue(new TypeError("Failed to fetch"));
 		setApiBaseUrl("http://127.0.0.1:3037");
 
-		await expect(apiClient.GET("/api/v1/agents")).rejects.toThrow("Failed to fetch");
+		await expect(apiClient.GET("/api/v1/agents/installers")).rejects.toThrow("Failed to fetch");
 
-		expect(sentryCaptureMock).toHaveBeenCalledWith("GET /api/v1/agents", "network_error", undefined, undefined, undefined);
+		expect(sentryCaptureMock).toHaveBeenCalledWith("GET /api/v1/agents/installers", "network_error", undefined, undefined, undefined);
 	});
 
 	it("does not report caller-initiated aborts", async () => {
 		vi.spyOn(globalThis, "fetch").mockRejectedValue(new DOMException("Aborted", "AbortError"));
 		setApiBaseUrl("http://127.0.0.1:3037");
 
-		await expect(apiClient.GET("/api/v1/agents")).rejects.toThrow("Aborted");
+		await expect(apiClient.GET("/api/v1/agents/installers")).rejects.toThrow("Aborted");
 
 		expect(sentryCaptureMock).not.toHaveBeenCalled();
 	});
@@ -398,21 +328,21 @@ describe("api error telemetry", () => {
 	it("reports daemon_unavailable when the base URL is untrusted", async () => {
 		setApiBaseUrl(null);
 
-		await apiClient.GET("/api/v1/agents");
+		await apiClient.GET("/api/v1/agents/installers");
 
-		expect(sentryCaptureMock).toHaveBeenCalledWith("GET /api/v1/agents", "daemon_unavailable", 503, undefined, undefined);
+		expect(sentryCaptureMock).toHaveBeenCalledWith("GET /api/v1/agents/installers", "daemon_unavailable", 503, undefined, undefined);
 	});
 
 	it("dedupes repeated identical failures within the 30s window", async () => {
 		vi.spyOn(globalThis, "fetch").mockImplementation(async () => new Response("oops", { status: 502 }));
 		setApiBaseUrl("http://127.0.0.1:3037");
 
-		await apiClient.GET("/api/v1/agents");
-		await apiClient.GET("/api/v1/agents");
+		await apiClient.GET("/api/v1/agents/installers");
+		await apiClient.GET("/api/v1/agents/installers");
 		expect(sentryCaptureMock).toHaveBeenCalledTimes(1);
 
 		vi.setSystemTime(clock + 31_000);
-		await apiClient.GET("/api/v1/agents");
+		await apiClient.GET("/api/v1/agents/installers");
 		expect(sentryCaptureMock).toHaveBeenCalledTimes(2);
 	});
 });

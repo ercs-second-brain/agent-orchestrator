@@ -58,11 +58,11 @@ func TestReviewerAgentAuthUsesLaunchReadinessAndPreservesStrictStates(t *testing
 			provider := &wiringReadinessProvider{snapshot: domain.AgentReadinessSnapshot{
 				Authentication: domain.AgentAuthenticationObservation{State: test.state},
 			}}
-			got, supported, err := (reviewerAgentAuth{readiness: provider}).AuthStatus(context.Background(), domain.ReviewerCodex)
+			got, supported, err := (reviewerAgentAuth{readiness: provider}).AuthStatus(context.Background(), domain.ReviewerPi)
 			if err != nil || !supported || got != test.want {
 				t.Fatalf("AuthStatus() = (%q, %v, %v), want (%q, true, nil)", got, supported, err, test.want)
 			}
-			if provider.agentID != "codex" || provider.purpose != domain.AgentReadinessPurposeLaunch {
+			if provider.agentID != string(domain.ReviewerPi) || provider.purpose != domain.AgentReadinessPurposeLaunch {
 				t.Fatalf("readiness request = (%q, %q)", provider.agentID, provider.purpose)
 			}
 		})
@@ -75,14 +75,7 @@ func TestInstalledAgentHarnessMapsManagedHarnessInstalls(t *testing.T) {
 		harness string
 		ok      bool
 	}{
-		{target: systeminstall.TargetClaude, harness: "claude-code", ok: true},
-		{target: systeminstall.TargetClaudeCode, harness: "claude-code", ok: true},
-		{target: systeminstall.TargetCodex, harness: "codex", ok: true},
-		{target: systeminstall.TargetOpencode, harness: "opencode", ok: true},
-		{target: systeminstall.TargetCopilot, harness: "copilot", ok: true},
-		{target: systeminstall.TargetKiro, harness: "kiro", ok: true},
 		{target: systeminstall.TargetPi, harness: "pi", ok: true},
-		{target: systeminstall.TargetVibe, harness: "vibe", ok: true},
 		{target: systeminstall.TargetTmux},
 		{target: systeminstall.TargetGH},
 	} {
@@ -154,7 +147,7 @@ func TestWiring_WriteFlowsToBroadcaster(t *testing.T) {
 // matching registered adapter, while empty and unknown harnesses miss.
 func TestWiring_AgentResolverResolvesRealAdapters(t *testing.T) {
 	log := slog.New(slog.NewTextHandler(io.Discard, nil))
-	resolver, err := buildAgentResolver("", log) // empty default → claude-code
+	resolver, err := buildAgentResolver("", log)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -162,31 +155,7 @@ func TestWiring_AgentResolverResolvesRealAdapters(t *testing.T) {
 		harness domain.AgentHarness
 		wantID  string
 	}{
-		{domain.HarnessClaudeCode, "claude-code"},
-		{domain.HarnessCodex, "codex"},
-		{domain.HarnessOpenCode, "opencode"},
-		{domain.HarnessGrok, "grok"},
-		{domain.HarnessCursor, "cursor"},
-		{domain.HarnessQwen, "qwen"},
-		{domain.HarnessCopilot, "copilot"},
-		{domain.HarnessKimi, "kimi"},
-		{domain.HarnessMuse, "muse"},
-		{domain.HarnessDroid, "droid"},
-		{domain.HarnessAmp, "amp"},
-		{domain.HarnessAgy, "agy"},
-		{domain.HarnessCrush, "crush"},
-		{domain.HarnessAider, "aider"},
-		{domain.HarnessGoose, "goose"},
-		{domain.HarnessAuggie, "auggie"},
-		{domain.HarnessContinue, "continue"},
-		{domain.HarnessDevin, "devin"},
-		{domain.HarnessCline, "cline"},
-		{domain.HarnessKiro, "kiro"},
-		{domain.HarnessKilocode, "kilocode"},
-		{domain.HarnessVibe, "vibe"},
 		{domain.HarnessPi, "pi"},
-		{domain.HarnessPrimeAgent, "prime-agent"},
-		{domain.HarnessAutohand, "autohand"},
 	} {
 		agent, ok := resolver.Agent(tc.harness)
 		if !ok {
@@ -222,18 +191,14 @@ func TestWiring_ActiveTurnSteeringComesFromAdapters(t *testing.T) {
 	}
 	steers := activeTurnSteering(agents)
 
-	if !steers(domain.HarnessCodex) {
-		t.Error("codex declares SteersActiveTurn; want true from the adapter-backed policy")
-	}
-	if !steers(domain.HarnessPrimeAgent) {
-		t.Error("prime-agent declares SteersActiveTurn; want true from the adapter-backed policy")
-	}
-	for _, harness := range []domain.AgentHarness{domain.HarnessClaudeCode, domain.HarnessAider, "definitely-not-an-agent", ""} {
+	// The pi adapter declares no optional steering capability, so nothing is
+	// steerable mid-turn.
+	for _, harness := range []domain.AgentHarness{domain.HarnessPi, "definitely-not-an-agent", ""} {
 		if steers(harness) {
 			t.Errorf("harness %q must not be steerable mid-turn", harness)
 		}
 	}
-	if activeTurnSteering(nil)(domain.HarnessCodex) {
+	if activeTurnSteering(nil)(domain.HarnessPi) {
 		t.Error("a nil resolver must answer false, not steer")
 	}
 }
@@ -246,15 +211,13 @@ func TestWiring_StartupSignalGateComesFromAdapters(t *testing.T) {
 	}
 	gates := startupSignalGatesInput(agents)
 
-	if !gates(domain.HarnessCursor) {
-		t.Error("cursor declares startup-ready signaling; want its TUI input gated")
-	}
-	for _, harness := range []domain.AgentHarness{domain.HarnessAider, domain.HarnessOMP, "definitely-not-an-agent", ""} {
+	// The pi adapter does not promise a startup signal, so input is not gated.
+	for _, harness := range []domain.AgentHarness{domain.HarnessPi, "definitely-not-an-agent", ""} {
 		if gates(harness) {
 			t.Errorf("harness %q must not require a startup signal", harness)
 		}
 	}
-	if startupSignalGatesInput(nil)(domain.HarnessCursor) {
+	if startupSignalGatesInput(nil)(domain.HarnessPi) {
 		t.Error("a nil resolver must leave startup input ungated")
 	}
 }
@@ -274,24 +237,17 @@ func TestWiring_UrgentNudgeGateComesFromAdapters(t *testing.T) {
 	}
 	safe := urgentNudgeWaitingInputSafe(agents)
 
-	for _, harness := range []domain.AgentHarness{domain.HarnessClaudeCode, domain.HarnessKimchi} {
-		if !safe(harness) {
-			t.Errorf("harness %q reports permission dialogs as blocked; urgent nudge must be allowed at waiting_input", harness)
-		}
-	}
-	// Codex maps permission-request to waiting_input; Droid folds both permission
-	// decisions and idle notifications into waiting_input; Goose/Devin ride the
-	// shared name-only StandardDeriveActivityState with no blocked signal. All
-	// must keep urgent delivery suppressed at a waiting_input prompt.
+	// The pi adapter reports no blocked activity signal, so a waiting_input
+	// prompt cannot be proven to be a genuine idle composer: fail closed.
 	for _, harness := range []domain.AgentHarness{
-		domain.HarnessCodex, domain.HarnessDroid, domain.HarnessGoose, domain.HarnessDevin,
+		domain.HarnessPi,
 		"definitely-not-an-agent", "",
 	} {
 		if safe(harness) {
 			t.Errorf("harness %q cannot distinguish a masked permission prompt from an idle composer; urgent nudge must stay fail-closed", harness)
 		}
 	}
-	if urgentNudgeWaitingInputSafe(nil)(domain.HarnessClaudeCode) {
+	if urgentNudgeWaitingInputSafe(nil)(domain.HarnessPi) {
 		t.Error("a nil resolver must fail closed, not open the waiting_input boundary")
 	}
 }
@@ -317,7 +273,7 @@ func TestWiring_StartSessionBuildsSessionService(t *testing.T) {
 	if err != nil {
 		t.Fatalf("buildAgentResolver: %v", err)
 	}
-	svc, reviewSvc, lc, err := startSession(context.Background(), cfg, rt, store, lcm, messenger, telemetryadapter.NoopSink{}, agents, nil, nil, nil, nil, log)
+	svc, reviewSvc, lc, err := startSession(context.Background(), cfg, rt, store, lcm, messenger, telemetryadapter.NoopSink{}, agents, nil, nil, log)
 	if err != nil {
 		t.Fatalf("startSession: %v", err)
 	}
@@ -345,6 +301,13 @@ func TestWiring_StartSessionSpawnsScratchWithoutGitRepo(t *testing.T) {
 	writeFakeExecutable(t, filepath.Join(binDir, "claude.cmd"))
 	writeFakeExecutable(t, filepath.Join(binDir, "tmux"))
 	writeFakeExecutable(t, filepath.Join(binDir, "tmux.cmd"))
+	// pi's hooks installer probes `pi --version`; the stub must report a
+	// version >= the settled minimum for the fake to count as installed.
+	for _, name := range []string{"pi", "pi.cmd"} {
+		if err := os.WriteFile(filepath.Join(binDir, name), []byte("#!/bin/sh\necho pi 1.0.0\n"), 0o755); err != nil {
+			t.Fatalf("write fake pi %s: %v", name, err)
+		}
+	}
 	t.Setenv("PATH", binDir+string(os.PathListSeparator)+os.Getenv("PATH"))
 
 	homeDir := t.TempDir()
@@ -362,8 +325,8 @@ func TestWiring_StartSessionSpawnsScratchWithoutGitRepo(t *testing.T) {
 		Kind:         domain.ProjectKindScratch,
 		RegisteredAt: time.Now(),
 		Config: domain.ProjectConfig{
-			Worker:       domain.RoleOverride{Harness: domain.HarnessClaudeCode},
-			Orchestrator: domain.RoleOverride{Harness: domain.HarnessClaudeCode},
+			Worker:       domain.RoleOverride{Harness: domain.HarnessPi},
+			Orchestrator: domain.RoleOverride{Harness: domain.HarnessPi},
 		},
 	}); err != nil {
 		t.Fatalf("UpsertProject: %v", err)
@@ -372,13 +335,13 @@ func TestWiring_StartSessionSpawnsScratchWithoutGitRepo(t *testing.T) {
 	log := slog.New(slog.NewTextHandler(io.Discard, nil))
 	lcm := lifecycle.New(store, nil)
 	runtime := &selectableRuntime{}
-	cfg := config.Config{DataDir: dataDir, Agent: string(domain.HarnessClaudeCode)}
+	cfg := config.Config{DataDir: dataDir, Agent: string(domain.HarnessPi)}
 	messenger := newSessionMessenger(store, runtime, log)
-	agents, err := buildAgentResolver(string(domain.HarnessClaudeCode), log)
+	agents, err := buildAgentResolver(string(domain.HarnessPi), log)
 	if err != nil {
 		t.Fatalf("buildAgentResolver: %v", err)
 	}
-	svc, _, _, err := startSession(context.Background(), cfg, runtime, store, lcm, messenger, telemetryadapter.NoopSink{}, agents, nil, nil, nil, nil, log)
+	svc, _, _, err := startSession(context.Background(), cfg, runtime, store, lcm, messenger, telemetryadapter.NoopSink{}, agents, nil, nil, log)
 	if err != nil {
 		t.Fatalf("startSession: %v", err)
 	}
@@ -435,7 +398,7 @@ func TestStartSession_SpawnDoesNotPanicWhenNoTrackerToken(t *testing.T) {
 	if agentsErr != nil {
 		t.Fatalf("buildAgentResolver: %v", agentsErr)
 	}
-	svc, _, _, err := startSession(context.Background(), cfg, rt, store, lcm, messenger, telemetryadapter.NoopSink{}, agents, nil, nil, nil, nil, log)
+	svc, _, _, err := startSession(context.Background(), cfg, rt, store, lcm, messenger, telemetryadapter.NoopSink{}, agents, nil, nil, log)
 	if err != nil {
 		t.Fatalf("startSession: %v", err)
 	}
@@ -454,8 +417,8 @@ func TestWiring_SeedScratchProjectOnBootUsesDataDir(t *testing.T) {
 	}
 	t.Cleanup(func() { _ = store.Close() })
 
-	cfg := config.Config{DataDir: t.TempDir(), Agent: string(domain.HarnessCodex)}
-	projects := projectsvc.NewWithDeps(projectsvc.Deps{Store: store, DefaultHarness: domain.HarnessCodex})
+	cfg := config.Config{DataDir: t.TempDir(), Agent: string(domain.HarnessPi)}
+	projects := projectsvc.NewWithDeps(projectsvc.Deps{Store: store, DefaultHarness: domain.HarnessPi})
 	if err := seedScratchProjectOnBoot(ctx, cfg, projects); err != nil {
 		t.Fatalf("seedScratchProjectOnBoot: %v", err)
 	}
@@ -494,7 +457,7 @@ func TestStartTrackerIntake_RunsEvenWithoutEnabledProjects(t *testing.T) {
 	if agentsErr != nil {
 		t.Fatalf("buildAgentResolver: %v", agentsErr)
 	}
-	svc, _, _, err := startSession(context.Background(), cfg, rt, store, lcm, messenger, telemetryadapter.NoopSink{}, agents, nil, nil, nil, nil, log)
+	svc, _, _, err := startSession(context.Background(), cfg, rt, store, lcm, messenger, telemetryadapter.NoopSink{}, agents, nil, nil, log)
 	if err != nil {
 		t.Fatalf("startSession: %v", err)
 	}
@@ -868,57 +831,6 @@ type fakeSessionLifecycle struct {
 	restoreErr                error
 }
 
-type recordingAgentSwitchDaemonFaultStore struct {
-	inputs []ports.AgentSwitchDaemonFault
-}
-
-func (s *recordingAgentSwitchDaemonFaultStore) EnqueueAgentSwitchDaemonFault(_ context.Context, input ports.AgentSwitchDaemonFault) (ports.AgentSwitchMutationResult, error) {
-	s.inputs = append(s.inputs, input)
-	return ports.AgentSwitchMutationResult{Enrollment: domain.AgentSwitchEnrollmentEnrolled}, nil
-}
-
-type fixedAgentSwitchReportingPolicy struct {
-	authorization domain.AgentSwitchReportingAuthorization
-}
-
-func (p fixedAgentSwitchReportingPolicy) Authorization() domain.AgentSwitchReportingAuthorization {
-	return p.authorization
-}
-
-func TestEnqueueAgentSwitchWorkerShutdownTimeoutCreatesOneDaemonAggregate(t *testing.T) {
-	store := &recordingAgentSwitchDaemonFaultStore{}
-	authorization := domain.AgentSwitchReportingAuthorization{
-		Enabled: true, ConsentGeneration: "consent-generation", DestinationFingerprint: "destination-fingerprint",
-	}
-	at := time.Date(2026, 8, 28, 10, 0, 0, 0, time.UTC)
-	if err := enqueueAgentSwitchWorkerShutdownTimeout(context.Background(), store, fixedAgentSwitchReportingPolicy{authorization}, "daemon-run-1", at); err != nil {
-		t.Fatalf("enqueue shutdown timeout: %v", err)
-	}
-	if len(store.inputs) != 1 {
-		t.Fatalf("daemon fault inputs = %d, want 1", len(store.inputs))
-	}
-	got := store.inputs[0]
-	if got.DaemonRunID != "daemon-run-1" || got.Authorization != authorization {
-		t.Fatalf("daemon fault scope = %+v", got)
-	}
-	if got.Fault.ReportKind != domain.AgentSwitchReportDaemonLifecycleFailure ||
-		got.Fault.FailurePoint != domain.AgentSwitchFailureShutdownWorkerTimeout ||
-		got.Fault.FaultCode != domain.AgentSwitchFaultShutdownWorkersTimedOut ||
-		got.Fault.Execution != domain.AgentSwitchExecutionDaemonShutdown ||
-		got.Fault.CallOutcome != domain.AgentSwitchCallTimedOut {
-		t.Fatalf("daemon fault = %+v", got.Fault)
-	}
-}
-
-func TestAgentSwitchWorkerWaitCancellationIsNotReportable(t *testing.T) {
-	if agentSwitchWorkerWaitTimedOut(context.Canceled) {
-		t.Fatal("ordinary shutdown cancellation was classified as a timeout")
-	}
-	if !agentSwitchWorkerWaitTimedOut(context.DeadlineExceeded) {
-		t.Fatal("worker deadline was not classified as a timeout")
-	}
-}
-
 func (f *fakeSessionLifecycle) Send(context.Context, domain.SessionID, string, *ports.SpawnAttachment) error {
 	return nil
 }
@@ -947,8 +859,6 @@ func (f *fakeSessionLifecycle) RestoreAll(_ context.Context) error {
 	return f.restoreErr
 }
 
-func (*fakeSessionLifecycle) WaitAgentSwitchWorkers(context.Context) error { return nil }
-
 func (f *fakeSessionLifecycle) SetShellTerminalCloser(sessionmanager.ShellTerminalCloser) {}
 func (f *fakeSessionLifecycle) SetTerminalInputGate(sessionmanager.TerminalInputGate)     {}
 func (f *fakeSessionLifecycle) AcquireSessionInput(domain.SessionID) (func(), bool) {
@@ -957,18 +867,6 @@ func (f *fakeSessionLifecycle) AcquireSessionInput(domain.SessionID) (func(), bo
 
 func (f *fakeSessionLifecycle) SessionMutationInProgress(domain.SessionID) bool         { return false }
 func (f *fakeSessionLifecycle) SetReviewerTerminator(sessionmanager.ReviewerTerminator) {}
-func (f *fakeSessionLifecycle) SetHarnessUseGate(sessionmanager.HarnessUseGate)         {}
-func (f *fakeSessionLifecycle) CodexAccountSwitchInProgress() bool                      { return false }
-func (f *fakeSessionLifecycle) StartCodexAccountSwitch(context.Context, ports.CodexAccountSwitchConfig) (domain.CodexAccountSwitch, error) {
-	return domain.CodexAccountSwitch{}, nil
-}
-func (f *fakeSessionLifecycle) RecoverCodexAccountSwitch(context.Context, string) (domain.CodexAccountSwitch, error) {
-	return domain.CodexAccountSwitch{}, nil
-}
-func (f *fakeSessionLifecycle) GetActiveCodexAccountSwitch(context.Context) (domain.CodexAccountSwitch, bool, error) {
-	return domain.CodexAccountSwitch{}, false, nil
-}
-func (f *fakeSessionLifecycle) SetCodexAccountSwitchObserver(func()) {}
 
 // TestWiring_SessionLifecycleInterfaceInvokedByDaemon asserts the
 // sessionLifecycle interface is satisfied by *sessionmanager.Manager (compile

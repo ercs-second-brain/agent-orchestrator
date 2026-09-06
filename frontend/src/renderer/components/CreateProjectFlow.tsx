@@ -19,7 +19,9 @@ import { aoBridge } from "../lib/bridge";
 import { useShellMaybe } from "../lib/shell-context";
 import { cn } from "../lib/utils";
 import type { ProjectKind } from "../types/workspace";
-import { CreateProjectAgentSheet, type CreateProjectAgentSelection } from "./CreateProjectAgentSheet";
+// ADR 0005: pi is the only agent, so the former agent-pick sheet is gone. The
+// selection collapses to fixed pi values and the flow submits directly.
+export type CreateProjectAgentSelection = { workerAgent: string; orchestratorAgent: string };
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
@@ -116,7 +118,7 @@ export function CreateProjectFlow({
 	const [isInitializing, setIsInitializing] = useState(false);
 	const [isPreparingGit, setIsPreparingGit] = useState(false);
 	const [repositorySetup, setRepositorySetup] = useState<"NOT_A_GIT_REPO" | "PROJECT_UNBORN" | null>(null);
-	const [repositorySetupWarning, setRepositorySetupWarning] = useState<string | null>(null);
+	const [, setRepositorySetupWarning] = useState<string | null>(null);
 	// A path that arrived via droppedPath, staged until the user confirms
 	// Workspace vs Project. Consumed exactly once by openFolderStep.
 	const [pendingDropPath, setPendingDropPath] = useState<string | null>(null);
@@ -309,13 +311,11 @@ export function CreateProjectFlow({
 				return;
 			}
 			if (selectedKind === "single_repo" && repositorySetup) {
-				setIsCreating(false);
 				setIsInitializing(true);
 				await onInitializeProject(selectedPath);
 				setRepositorySetup(null);
 				setRepositorySetupWarning(null);
 				setIsInitializing(false);
-				setIsCreating(true);
 			}
 			const defaultBranch =
 				selectedKind === "single_repo" ? await aoBridge.app.getRepositoryBranch(selectedPath) : undefined;
@@ -333,7 +333,19 @@ export function CreateProjectFlow({
 				setRepositorySetup(code);
 			}
 			setError(message);
-			if (hasModePicker && !cloneSelection && !createSelection) {
+			if (cloneSelection || createSelection) {
+				// Clone/create submitted from their dialogs: reopen the dialog with the
+				// error visible so the user can retry instead of staring at a blank
+				// backdrop (there is no agent sheet to fall back to since ADR 0005).
+				if (cloneSelection) {
+					setCloneSelection(null);
+					setCloneDialogOpen(true);
+				} else {
+					setCreateSelection(null);
+					setCreateDialogOpen(true);
+				}
+				setSelectedPath(null);
+			} else if (hasModePicker) {
 				if (shouldScanCreateFailure(message)) {
 					try {
 						const scan = await aoBridge.app.scanImportFolder({
@@ -355,6 +367,20 @@ export function CreateProjectFlow({
 			setIsInitializing(false);
 		}
 	};
+
+	// ADR 0005: pi is the only supported harness, so there is no agent choice to
+	// collect — submit as soon as a path has been chosen. The submit lock keeps
+	// the isCreating/isInitializing handoffs inside createProject from retrig-
+	// gering this effect mid-flight; it resets only once the attempt settles.
+	const submitLockRef = useRef(false);
+	useEffect(() => {
+		if (!selectedPath || submitLockRef.current) return;
+		submitLockRef.current = true;
+		void createProject({ workerAgent: "pi", orchestratorAgent: "pi" }).finally(() => {
+			submitLockRef.current = false;
+		});
+		// eslint-disable-next-line react-hooks/exhaustive-deps -- createProject closes over the batch that set selectedPath
+	}, [selectedPath]);
 
 	const reopenSourcePicker = () => {
 		setProjectImportStep(null);
@@ -607,41 +633,7 @@ export function CreateProjectFlow({
 				events={projectPrepEvents}
 				validation={projectValidation}
 			/>
-			<CreateProjectAgentSheet
-				action={cloneSelection ? "clone" : "create"}
-				error={error}
-				isCreating={isCreating}
-				isInitializing={isInitializing}
-				kind={selectedKind}
-				onOpenChange={(open) => {
-					if (!open) {
-						setSelectedPath(null);
-						setCloneSelection(null);
-						setCreateSelection(null);
-						if (!folderPickerOpen) {
-							setError(null);
-						}
-					}
-				}}
-					onBack={
-					cloneSelection
-						? () => {
-								setSelectedPath(null);
-								setCloneDialogOpen(true);
-							}
-						: createSelection
-							? () => {
-									setSelectedPath(null);
-									setCreateDialogOpen(true);
-								}
-						: undefined
-				}
-				onSubmit={createProject}
-				open={selectedPath !== null}
-				path={selectedPath}
-				repositorySetupNeeded={repositorySetup !== null}
-				repositorySetupWarning={repositorySetupWarning}
-			/>
+			
 			{error && !hasModePicker && (
 				<span className="sr-only" role="status">
 					{error}

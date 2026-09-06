@@ -341,7 +341,7 @@ func TestManager_EnsureDefaultScratchProjectSeedsFreshRegistry(t *testing.T) {
 		t.Fatalf("open store: %v", err)
 	}
 	t.Cleanup(func() { _ = store.Close() })
-	m := project.NewWithDeps(project.Deps{Store: store, DefaultHarness: domain.HarnessCodex})
+	m := project.NewWithDeps(project.Deps{Store: store, DefaultHarness: domain.HarnessPi})
 	scratchPath := filepath.Join(t.TempDir(), "scratch", "default")
 
 	proj, err := m.EnsureDefaultScratchProject(ctx, scratchPath)
@@ -354,10 +354,10 @@ func TestManager_EnsureDefaultScratchProjectSeedsFreshRegistry(t *testing.T) {
 	if proj.Repo != "" || proj.DefaultBranch != "" {
 		t.Fatalf("scratch repo/default branch = %q/%q, want empty", proj.Repo, proj.DefaultBranch)
 	}
-	if proj.Agent != string(domain.HarnessCodex) || proj.Config == nil ||
-		proj.Config.Worker.Harness != domain.HarnessCodex ||
-		proj.Config.Orchestrator.Harness != domain.HarnessCodex {
-		t.Fatalf("scratch agents/config = agent:%q config:%#v, want codex role overrides", proj.Agent, proj.Config)
+	if proj.Agent != string(domain.HarnessPi) || proj.Config == nil ||
+		proj.Config.Worker.Harness != domain.HarnessPi ||
+		proj.Config.Orchestrator.Harness != domain.HarnessPi {
+		t.Fatalf("scratch agents/config = agent:%q config:%#v, want pi role overrides", proj.Agent, proj.Config)
 	}
 
 	list, err := m.List(ctx)
@@ -367,8 +367,8 @@ func TestManager_EnsureDefaultScratchProjectSeedsFreshRegistry(t *testing.T) {
 	if len(list) != 1 || list[0].ID != "scratch" || list[0].Kind != domain.ProjectKindScratch {
 		t.Fatalf("List = %#v, want one scratch project", list)
 	}
-	if list[0].OrchestratorAgent != domain.HarnessCodex {
-		t.Fatalf("summary orchestrator agent = %q, want codex", list[0].OrchestratorAgent)
+	if list[0].OrchestratorAgent != domain.HarnessPi {
+		t.Fatalf("summary orchestrator agent = %q, want pi", list[0].OrchestratorAgent)
 	}
 }
 
@@ -461,13 +461,13 @@ func TestManager_SetConfigRejectsScratchGitOnlyFields(t *testing.T) {
 	wantCode(t, err, "INVALID_PROJECT_CONFIG")
 
 	_, err = m.SetConfig(ctx, "scratch", project.SetConfigInput{Config: domain.ProjectConfig{
-		Reviewers: []domain.ReviewerConfig{{Harness: domain.ReviewerCodex}},
+		Reviewers: []domain.ReviewerConfig{{Harness: domain.ReviewerPi}},
 	}})
 	wantCode(t, err, "INVALID_PROJECT_CONFIG")
 
 	proj, err := m.SetConfig(ctx, "scratch", project.SetConfigInput{Config: domain.ProjectConfig{
 		AgentConfig: domain.AgentConfig{Model: "gpt-5"},
-		Worker:      domain.RoleOverride{Harness: domain.HarnessCodex},
+		Worker:      domain.RoleOverride{Harness: domain.HarnessPi},
 	}})
 	if err != nil {
 		t.Fatalf("allowed SetConfig: %v", err)
@@ -542,8 +542,8 @@ func TestManager_DefaultsWhenUnconfigured(t *testing.T) {
 	if got.Project.DefaultBranch != domain.DefaultBranchAuto {
 		t.Fatalf("default branch = %q, want %q", got.Project.DefaultBranch, domain.DefaultBranchAuto)
 	}
-	if got.Project.Agent != "claude-code" {
-		t.Fatalf("default agent = %q, want claude-code", got.Project.Agent)
+	if got.Project.Agent != "pi" {
+		t.Fatalf("default agent = %q, want pi", got.Project.Agent)
 	}
 	if got.Project.Config != nil {
 		t.Fatalf("unconfigured project should omit config, got %#v", got.Project.Config)
@@ -565,7 +565,7 @@ func TestManager_GetUsesConfiguredDefaultHarness(t *testing.T) {
 		t.Fatalf("open store: %v", err)
 	}
 	t.Cleanup(func() { _ = store.Close() })
-	m := project.NewWithDeps(project.Deps{Store: store, DefaultHarness: domain.HarnessCodex})
+	m := project.NewWithDeps(project.Deps{Store: store, DefaultHarness: domain.HarnessPi})
 	repo := gitRepo(t)
 
 	if _, err := m.Add(ctx, project.AddInput{Path: repo, ProjectID: ptr("ao")}); err != nil {
@@ -579,8 +579,8 @@ func TestManager_GetUsesConfiguredDefaultHarness(t *testing.T) {
 	if got.Project == nil {
 		t.Fatalf("Get returned no project: %#v", got)
 	}
-	if got.Project.Agent != "codex" {
-		t.Fatalf("default agent = %q, want codex", got.Project.Agent)
+	if got.Project.Agent != "pi" {
+		t.Fatalf("default agent = %q, want pi", got.Project.Agent)
 	}
 }
 
@@ -735,7 +735,7 @@ func TestManager_ListIncludesOnlySummarySafeProjectConfig(t *testing.T) {
 	cfg := domain.ProjectConfig{
 		DefaultBranch: "develop",
 		Env:           map[string]string{"GITHUB_TOKEN": "secret"},
-		Orchestrator:  domain.RoleOverride{Harness: domain.HarnessCodex},
+		Orchestrator:  domain.RoleOverride{Harness: domain.HarnessPi},
 	}
 	if _, err := m.Add(ctx, project.AddInput{Path: repo, ProjectID: ptr("ao"), Config: &cfg}); err != nil {
 		t.Fatalf("Add: %v", err)
@@ -748,8 +748,8 @@ func TestManager_ListIncludesOnlySummarySafeProjectConfig(t *testing.T) {
 	if len(list) != 1 {
 		t.Fatalf("List len = %d, want 1", len(list))
 	}
-	if list[0].OrchestratorAgent != domain.HarnessCodex {
-		t.Fatalf("summary orchestrator agent = %q, want codex", list[0].OrchestratorAgent)
+	if list[0].OrchestratorAgent != domain.HarnessPi {
+		t.Fatalf("summary orchestrator agent = %q, want pi", list[0].OrchestratorAgent)
 	}
 }
 

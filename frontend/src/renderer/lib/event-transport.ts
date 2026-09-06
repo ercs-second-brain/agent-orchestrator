@@ -5,11 +5,7 @@ import { setEventsConnectionState } from "./events-connection";
 import { computeSseRetryDelayMs } from "./sse-backoff";
 import { workspaceQueryKey } from "../hooks/useWorkspaceQuery";
 import { sessionScmSummaryQueryKey } from "../hooks/useSessionScmSummary";
-import { agentSwitchesQueryRoot } from "../hooks/useAgentSwitches";
 import { sessionUsageQueryRoot } from "../hooks/useSessionUsageSummaries";
-import { agentSwitchVisibility } from "./agent-switch-visibility";
-import { codexAccountsQueryKey, writeCodexAccounts } from "../hooks/codex-accounts-state";
-import type { components } from "../../api/schema";
 
 export type EventTransport = {
 	connect: () => () => void;
@@ -42,7 +38,6 @@ const CDC_EVENT_TYPES = [
  * Wires live server state into the TanStack Query cache. Three sources feed it:
  *   - daemon lifecycle over Electron IPC (coming up/down changes session availability)
  *   - the backend CDC stream over SSE (project/session/PR changes)
- *   - the Codex account stream over SSE (account, capacity, and switch state)
  * Both invalidate the ["workspaces"] query so the UI refetches. Invalidations are
  * debounced because a single user action can emit a burst of CDC events.
  */
@@ -55,24 +50,12 @@ export function createEventTransport(queryClient: QueryClient): EventTransport {
 			let retryTimer: ReturnType<typeof setTimeout> | undefined;
 			let source: EventSource | undefined;
 			let sourceBaseUrl: string | undefined;
-			let accountSource: EventSource | undefined;
-			let accountSourceBaseUrl: string | undefined;
-			const applyAccountEvent = (event: Event) => {
-				if (!("data" in event)) return;
-				try {
-					const decoded = JSON.parse(String((event as MessageEvent).data)) as components["schemas"]["CodexAccountsResponse"];
-					writeCodexAccounts(queryClient, decoded, "replace");
-				} catch {
-					// A malformed transient event cannot replace the cached safe snapshot.
-				}
-			};
 			const refreshWorkspaces = (_event?: Event) => {
 				workspaceInvalidationPending = true;
 				if (debounce) clearTimeout(debounce);
 				debounce = setTimeout(() => {
 					if (workspaceInvalidationPending) {
 						void queryClient.invalidateQueries({ queryKey: workspaceQueryKey });
-						void queryClient.invalidateQueries({ queryKey: agentSwitchesQueryRoot });
 						void queryClient.invalidateQueries({ queryKey: sessionScmSummaryQueryKey() });
 						void queryClient.invalidateQueries({ queryKey: sessionUsageQueryRoot });
 						workspaceInvalidationPending = false;
@@ -99,31 +82,12 @@ export function createEventTransport(queryClient: QueryClient): EventTransport {
 				if (!hasTrustedApiBaseUrl()) {
 					healthAttempt += 1;
 					source?.close();
-					accountSource?.close();
 					source = undefined;
-					accountSource = undefined;
 					sourceBaseUrl = undefined;
-					accountSourceBaseUrl = undefined;
 					setEventsConnectionState("disconnected");
-					agentSwitchVisibility.setTransportHealthy("active", false);
-					agentSwitchVisibility.setTransportHealthy("history", false);
 					return;
 				}
 				const baseUrl = getApiBaseUrl();
-				if (!accountSource || accountSourceBaseUrl !== baseUrl || accountSource.readyState === EVENTSOURCE_CLOSED) {
-					accountSource?.close();
-					accountSourceBaseUrl = baseUrl;
-					try {
-						accountSource = new EventSource(`${baseUrl.replace(/\/+$/, "")}/api/v1/agents/codex/accounts/events`);
-						accountSource.onopen = () => {
-							void queryClient.invalidateQueries({ queryKey: codexAccountsQueryKey });
-						};
-						accountSource.onerror = () => { if (accountSource?.readyState === EVENTSOURCE_CLOSED) scheduleRetry(); };
-						accountSource.addEventListener("codex_account", applyAccountEvent);
-					} catch {
-						accountSource = undefined;
-					}
-				}
 				// Keep a still-usable source on the same base URL; replace one the
 				// browser abandoned (CLOSED) or one bound to a stale port.
 				if (source && sourceBaseUrl === baseUrl && source.readyState !== EVENTSOURCE_CLOSED) return;
@@ -142,8 +106,6 @@ export function createEventTransport(queryClient: QueryClient): EventTransport {
 						healthAttempt += 1;
 						retries = 0;
 						setEventsConnectionState("connected");
-						agentSwitchVisibility.setTransportHealthy("active", true);
-						agentSwitchVisibility.setTransportHealthy("history", true);
 						// Events emitted during the gap were lost; refetch once on (re)open.
 						refreshWorkspaces();
 					};
@@ -161,13 +123,9 @@ export function createEventTransport(queryClient: QueryClient): EventTransport {
 						).then(
 							() => {
 								if (attempt !== healthAttempt || source !== connectedSource) return;
-								agentSwitchVisibility.setTransportHealthy("active", true);
-								agentSwitchVisibility.setTransportHealthy("history", true);
 							},
 							() => {
 								if (attempt !== healthAttempt || source !== connectedSource) return;
-								agentSwitchVisibility.setTransportHealthy("active", false);
-								agentSwitchVisibility.setTransportHealthy("history", false);
 							},
 						);
 					};
@@ -198,7 +156,6 @@ export function createEventTransport(queryClient: QueryClient): EventTransport {
 				removeDaemonListener();
 				removeBaseUrlListener();
 				source?.close();
-				accountSource?.close();
 				setEventsConnectionState("idle");
 			};
 		},

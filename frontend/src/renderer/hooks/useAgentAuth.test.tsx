@@ -15,20 +15,20 @@ describe("agent authentication hooks", () => {
 
 	it("loads display-safe authentication plans", async () => {
 		vi.spyOn(apiClient, "GET").mockResolvedValue({
-			data: { plans: [{ agentId: "codex", action: "login", launchMode: "terminal", available: true, documentationUrl: "https://example.test" }] },
+			data: { plans: [{ agentId: "pi", action: "login", launchMode: "terminal", available: true, documentationUrl: "https://example.test" }] },
 		} as never);
 		const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
 
 		const { result } = renderHook(() => useAgentAuthPlans(), { wrapper: wrapper(client) });
 
 		await waitFor(() => expect(result.current.isSuccess).toBe(true));
-		expect(result.current.data?.[0]).toMatchObject({ agentId: "codex", action: "login" });
+		expect(result.current.data?.[0]).toMatchObject({ agentId: "pi", action: "login" });
 		expect(apiClient.GET).toHaveBeenCalledWith("/api/v1/agents/auth-plans");
 	});
 
 	it("starts a fixed agent flow and adds its terminal to an existing cache before navigation", async () => {
-		const terminal = { handleId: "shellterm-auth", workingDir: "/tmp/ao", title: "Log in to Codex", createdAt: new Date().toISOString() };
-		vi.spyOn(apiClient, "POST").mockResolvedValue({ data: { agentId: "codex", action: "login", terminal } } as never);
+		const terminal = { handleId: "shellterm-auth", workingDir: "/tmp/ao", title: "Log in to pi", createdAt: new Date().toISOString() };
+		vi.spyOn(apiClient, "POST").mockResolvedValue({ data: { agentId: "pi", action: "login", terminal } } as never);
 		const client = new QueryClient({ defaultOptions: { mutations: { retry: false } } });
 		client.setQueryData(shellTerminalsQueryKey, [{
 			handleId: "shellterm-existing", workingDir: "/tmp/ao", title: "Existing", createdAt: new Date(0).toISOString(),
@@ -37,11 +37,11 @@ describe("agent authentication hooks", () => {
 		const { result } = renderHook(() => useStartAgentAuth(), { wrapper: wrapper(client) });
 
 		await act(async () => {
-			await result.current.mutateAsync("codex");
+			await result.current.mutateAsync("pi");
 		});
 
 		expect(apiClient.POST).toHaveBeenCalledWith("/api/v1/agents/{agent}/auth", {
-			params: { path: { agent: "codex" } },
+			params: { path: { agent: "pi" } },
 		});
 		expect(invalidate).toHaveBeenCalledWith({ queryKey: shellTerminalsQueryKey });
 		expect(client.getQueryData<Array<{ handleId: string }>>(shellTerminalsQueryKey)?.map((item) => item.handleId)).toEqual([
@@ -51,12 +51,12 @@ describe("agent authentication hooks", () => {
 	});
 
 	it("runs the existing fresh probe for Check login", async () => {
-		vi.spyOn(apiClient, "POST").mockResolvedValue({ data: { id: "codex", installed: true, authStatus: "authorized" } } as never);
+		vi.spyOn(apiClient, "POST").mockResolvedValue({ data: { agents: [] } } as never);
 
-		await probeAgentAuth("codex");
+		await probeAgentAuth("pi");
 
-		expect(apiClient.POST).toHaveBeenCalledWith("/api/v1/agents/{agent}/probe", {
-			params: { path: { agent: "codex" } },
+		expect(apiClient.POST).toHaveBeenCalledWith("/api/v1/agents/readiness/ensure", {
+			body: { agentIds: ["pi"], purpose: "launch" },
 		});
 	});
 });

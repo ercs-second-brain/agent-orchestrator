@@ -1,70 +1,19 @@
 package domain
 
 // ReviewerHarness identifies a code-review agent. It is a separate vocabulary
-// from AgentHarness on purpose: a reviewer-only tool (e.g. the Greptile CLI)
-// must not become a valid worker, and a worker harness does not automatically
-// become a valid reviewer. The two sets are maintained independently and only
-// happen to share ids where the same tool serves both roles.
+// from AgentHarness on purpose: a reviewer is still a distinct role from a
+// worker. Since ADR 0005 pi is the single supported harness.
 type ReviewerHarness string
 
-// Supported reviewer harnesses. Add a reviewer-only tool here (and register its
-// adapter) without widening the worker AgentHarness set.
+// Supported reviewer harnesses.
 const (
-	ReviewerClaudeCode ReviewerHarness = "claude-code"
-	ReviewerCodex      ReviewerHarness = "codex"
-	ReviewerCopilot    ReviewerHarness = "copilot"
-	ReviewerCursor     ReviewerHarness = "cursor"
-	ReviewerKiloCode   ReviewerHarness = "kilocode"
-	ReviewerKimchi     ReviewerHarness = "kimchi"
-	ReviewerOpenCode   ReviewerHarness = "opencode"
-	ReviewerKiro       ReviewerHarness = "kiro"
-	ReviewerPi         ReviewerHarness = "pi"
-	ReviewerQwen       ReviewerHarness = "qwen"
-	ReviewerAgy        ReviewerHarness = "agy"
-	ReviewerContinue   ReviewerHarness = "continue"
-	ReviewerGoose      ReviewerHarness = "goose"
-	ReviewerVibe       ReviewerHarness = "vibe"
-	ReviewerDevin      ReviewerHarness = "devin"
-	ReviewerDroid      ReviewerHarness = "droid"
-	ReviewerKimi       ReviewerHarness = "kimi"
-	ReviewerMuse       ReviewerHarness = "muse"
-	ReviewerAmp        ReviewerHarness = "amp"
-	ReviewerAider      ReviewerHarness = "aider"
-	ReviewerGrok       ReviewerHarness = "grok"
-	ReviewerCrush      ReviewerHarness = "crush"
-	ReviewerAuggie     ReviewerHarness = "auggie"
-	ReviewerCline      ReviewerHarness = "cline"
-	ReviewerAutohand   ReviewerHarness = "autohand"
+	ReviewerPi ReviewerHarness = "pi"
 )
 
 // AllReviewerHarnesses is the canonical set used to validate a configured
 // reviewer harness.
 var AllReviewerHarnesses = []ReviewerHarness{
-	ReviewerClaudeCode,
-	ReviewerCodex,
-	ReviewerCopilot,
-	ReviewerCursor,
-	ReviewerKiloCode,
-	ReviewerKimchi,
-	ReviewerOpenCode,
-	ReviewerKiro,
 	ReviewerPi,
-	ReviewerQwen,
-	ReviewerAgy,
-	ReviewerContinue,
-	ReviewerGoose,
-	ReviewerVibe,
-	ReviewerDevin,
-	ReviewerDroid,
-	ReviewerKimi,
-	ReviewerMuse,
-	ReviewerAmp,
-	ReviewerAider,
-	ReviewerGrok,
-	ReviewerCrush,
-	ReviewerAuggie,
-	ReviewerCline,
-	ReviewerAutohand,
 }
 
 // IsKnown reports whether h is one of the supported reviewer harnesses.
@@ -75,4 +24,14 @@ func (h ReviewerHarness) IsKnown() bool {
 		}
 	}
 	return false
+}
+
+// Normalize resolves a stored reviewer harness value under the ADR 0005
+// store-and-ignore rule: pi is the only supported reviewer, so any other
+// stored value resolves to pi.
+func (h ReviewerHarness) Normalize() ReviewerHarness {
+	if h == "" {
+		return h
+	}
+	return ReviewerPi
 }

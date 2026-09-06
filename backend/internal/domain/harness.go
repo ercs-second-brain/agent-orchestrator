@@ -1,37 +1,12 @@
 package domain
 
-// AgentHarness identifies which agent CLI/runtime a session drives.
+// AgentHarness identifies which agent CLI/runtime a session drives. Since
+// ADR 0005 pi is the single supported harness.
 type AgentHarness string
 
 // Supported agent harnesses.
 const (
-	HarnessClaudeCode AgentHarness = "claude-code"
-	HarnessCodex      AgentHarness = "codex"
-	HarnessAider      AgentHarness = "aider"
-	HarnessOpenCode   AgentHarness = "opencode"
-	HarnessGrok       AgentHarness = "grok"
-	HarnessDroid      AgentHarness = "droid"
-	HarnessAmp        AgentHarness = "amp"
-	HarnessAgy        AgentHarness = "agy"
-	HarnessCrush      AgentHarness = "crush"
-	HarnessCursor     AgentHarness = "cursor"
-	HarnessQwen       AgentHarness = "qwen"
-	HarnessCopilot    AgentHarness = "copilot"
-	HarnessGoose      AgentHarness = "goose"
-	HarnessAuggie     AgentHarness = "auggie"
-	HarnessContinue   AgentHarness = "continue"
-	HarnessDevin      AgentHarness = "devin"
-	HarnessCline      AgentHarness = "cline"
-	HarnessKimi       AgentHarness = "kimi"
-	HarnessMuse       AgentHarness = "muse"
-	HarnessKiro       AgentHarness = "kiro"
-	HarnessKilocode   AgentHarness = "kilocode"
-	HarnessVibe       AgentHarness = "vibe"
-	HarnessPi         AgentHarness = "pi"
-	HarnessKimchi     AgentHarness = "kimchi"
-	HarnessPrimeAgent AgentHarness = "prime-agent"
-	HarnessAutohand   AgentHarness = "autohand"
-	HarnessOMP        AgentHarness = "omp"
+	HarnessPi AgentHarness = "pi"
 	// HarnessFake is retained for existing test fixtures and historical session
 	// rows, but is not user-selectable.
 	HarnessFake AgentHarness = "fake"
@@ -40,12 +15,7 @@ const (
 // AllHarnesses lists every supported harness. It is the canonical set used to
 // validate user-supplied harness names (e.g. per-project role overrides).
 var AllHarnesses = []AgentHarness{
-	HarnessClaudeCode, HarnessCodex, HarnessAider, HarnessOpenCode, HarnessGrok,
-	HarnessDroid, HarnessAmp, HarnessAgy, HarnessCrush, HarnessCursor, HarnessQwen,
-	HarnessCopilot, HarnessGoose, HarnessAuggie, HarnessContinue, HarnessDevin,
-	HarnessCline, HarnessKimi, HarnessMuse, HarnessKiro, HarnessKilocode, HarnessVibe, HarnessPi,
-	HarnessKimchi, HarnessPrimeAgent, HarnessAutohand,
-	HarnessOMP,
+	HarnessPi,
 }
 
 // IsKnown reports whether h is one of the supported harnesses.
@@ -56,4 +26,17 @@ func (h AgentHarness) IsKnown() bool {
 		}
 	}
 	return false
+}
+
+// Normalize resolves a stored harness value under the ADR 0005
+// store-and-ignore rule: pi is the only harness that can launch, so any other
+// non-empty value (e.g. a legacy "claude-code" in project config or a spawn
+// request) resolves to pi while the stored value is preserved unchanged.
+// HarnessFake passes through for test wiring.
+func (h AgentHarness) Normalize() AgentHarness {
+	if h == HarnessPi || h == HarnessFake || h == "" {
+		// Empty stays empty: it means "no override; resolve from config".
+		return h
+	}
+	return HarnessPi
 }

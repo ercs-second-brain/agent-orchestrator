@@ -208,7 +208,6 @@ func TestE2E_SpawnAndProjectAddDTORoundTrip(t *testing.T) {
 		root.SetArgs([]string{
 			"spawn",
 			"--project", "mer",
-			"--harness", "codex",
 			"--branch", "feat/x",
 			"--prompt", "hi",
 			"--issue", "ISS-1",
@@ -223,8 +222,8 @@ func TestE2E_SpawnAndProjectAddDTORoundTrip(t *testing.T) {
 		if got.ProjectID != "mer" {
 			t.Errorf("ProjectID = %q, want %q (CLI json:\"projectId\" vs SpawnSessionRequest)", got.ProjectID, "mer")
 		}
-		if got.Harness != "codex" {
-			t.Errorf("Harness = %q, want %q", got.Harness, "codex")
+		if got.Harness != "pi" {
+			t.Errorf("Harness = %q, want pi (single supported harness)", got.Harness)
 		}
 		if got.Branch != "feat/x" {
 			t.Errorf("Branch = %q, want %q", got.Branch, "feat/x")
@@ -262,8 +261,8 @@ func TestE2E_SpawnAndProjectAddDTORoundTrip(t *testing.T) {
 			"--path", "/repo/mer",
 			"--id", "demo",
 			"--name", "Demo",
-			"--worker-agent", "codex",
-			"--orchestrator-agent", "claude-code",
+			"--worker-agent", "pi",
+			"--orchestrator-agent", "pi",
 			"--as-workspace",
 		})
 		if err := root.Execute(); err != nil {
@@ -283,11 +282,11 @@ func TestE2E_SpawnAndProjectAddDTORoundTrip(t *testing.T) {
 		if got.Config == nil {
 			t.Fatal("Config = nil, want role agent config")
 		}
-		if got.Config.Worker.Harness != domain.HarnessCodex {
-			t.Errorf("Config.Worker.Harness = %q, want codex", got.Config.Worker.Harness)
+		if got.Config.Worker.Harness != domain.HarnessPi {
+			t.Errorf("Config.Worker.Harness = %q, want pi", got.Config.Worker.Harness)
 		}
-		if got.Config.Orchestrator.Harness != domain.HarnessClaudeCode {
-			t.Errorf("Config.Orchestrator.Harness = %q, want claude-code", got.Config.Orchestrator.Harness)
+		if got.Config.Orchestrator.Harness != domain.HarnessPi {
+			t.Errorf("Config.Orchestrator.Harness = %q, want pi", got.Config.Orchestrator.Harness)
 		}
 		if !got.AsWorkspace {
 			t.Errorf("AsWorkspace = false, want true (CLI json:\"asWorkspace\" vs AddInput)")

@@ -110,7 +110,7 @@ const worker = {
 	workspaceId: "proj-1",
 	workspaceName: "my-app",
 	title: "do the thing",
-	provider: "claude-code",
+	provider: "pi",
 	kind: "worker",
 	branch: "ao/sess-1",
 	status: "working",
@@ -251,7 +251,7 @@ describe("TerminalPane empty states", () => {
 			kind: "shell" as const,
 			handleId: "shellterm-login-1",
 			generation: "2026-08-29T12:00:00Z",
-			title: "Codex login",
+			title: "pi login",
 		};
 		const view = render(
 			<QueryClientProvider client={queryClient}>
@@ -661,7 +661,7 @@ describe("TerminalCacheProvider", () => {
 	it("does not retain reviewer terminals in the worker cache", async () => {
 		const reviewer = {
 			handleId: "stable-reviewer-handle",
-			harness: "codex",
+			harness: "pi",
 			kind: "reviewer",
 			sessionId: sessionA.id,
 		} satisfies TerminalTarget;
@@ -760,13 +760,11 @@ describe("terminal restore", () => {
 });
 
 describe("providerScrollsByKeyboard", () => {
-	// opencode, its fork kilocode, and grok use TUIs that scroll their own transcripts
-	// by keyboard and ignore SGR wheel reports, so they must opt into the
-	// PageUp/PageDown wheel routing (see XtermTerminal's paneScrollsByKeyboard).
-	it("is true for keyboard-scroll TUIs", () => {
-		expect(providerScrollsByKeyboard("opencode")).toBe(true);
-		expect(providerScrollsByKeyboard("kilocode")).toBe(true);
-		expect(providerScrollsByKeyboard("grok")).toBe(true);
+	// pi's TUI scrolls its own transcript by keyboard and ignores SGR wheel
+	// reports, so it opts into the PageUp/PageDown wheel routing (see
+	// XtermTerminal's paneScrollsByKeyboard). Legacy provider names answer false.
+	it("is true for the keyboard-scroll TUI", () => {
+		expect(providerScrollsByKeyboard("pi")).toBe(true);
 	});
 
 	it("is false for mouse-report/native-scroll providers", () => {

@@ -42,7 +42,6 @@ import {
 import {
 	useCallback,
 	useEffect,
-	useId,
 	useLayoutEffect,
 	memo,
 	useMemo,
@@ -66,7 +65,6 @@ import {
 	workerSessions,
 } from "../types/workspace";
 import { getSessionStatusDotView } from "../lib/session-presentation";
-import { deriveSessionAgentSwitchPresentation } from "../lib/agent-switch-presentation";
 import { aoBridge } from "../lib/bridge";
 import { useCommandPaletteEnabled } from "../hooks/useCommandPaletteEnabled";
 import {
@@ -143,7 +141,7 @@ const HOVER_ACTION_CLASS =
 const SESSION_ACTION_CLASS =
 	"grid size-5 shrink-0 place-items-center rounded-md bg-transparent p-1 text-passive hover:bg-transparent focus:bg-transparent focus-visible:bg-transparent active:bg-transparent data-[state=open]:bg-transparent hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent/50 disabled:pointer-events-none disabled:opacity-50 [&_svg]:size-3!";
 
-// Shared nav-row chrome (Codex-style): inset pill hover/selected, 14px type, no accent bar.
+// Shared nav-row chrome: inset pill hover/selected, 14px type, no accent bar.
 const NAV_ROW_CLASS =
 	"h-9 gap-2.5 rounded-lg px-2.5 text-sm font-medium text-muted-foreground transition-[background-color,color] hover:bg-interactive-hover hover:text-foreground active:bg-interactive-hover active:text-foreground data-[active=true]:bg-interactive-active data-[active=true]:font-medium data-[active=true]:text-foreground";
 
@@ -1577,8 +1575,6 @@ const ProjectDragPreview = memo(function ProjectDragPreview({ workspace, expande
 			{expanded && sessions.length > 0 ? (
 				<div className="ml-3.5 py-1">
 					{sessions.map((session) => {
-						const switchPresentation = deriveSessionAgentSwitchPresentation(session);
-						const switchLabel = switchPresentation?.compactLabel;
 						const active = selection.activeSessionId === session.id;
 						return (
 							<div className="pl-0.5" data-project-drag-preview-session="" key={session.id}>
@@ -1589,9 +1585,6 @@ const ProjectDragPreview = memo(function ProjectDragPreview({ workspace, expande
 											<span className={cn("min-w-0 flex-1 truncate", active ? "text-foreground" : "text-muted-foreground")}>
 												{session.title}
 											</span>
-											{switchLabel ? (
-												<span className="max-w-28 shrink-0 truncate text-2xs text-muted-foreground">{switchLabel}</span>
-											) : null}
 										</span>
 									</div>
 								</div>
@@ -1691,10 +1684,6 @@ function SessionRow({
 }) {
 	const prefersReducedMotion = useReducedMotion();
 	useGrabbingCursor(Boolean(reorder?.isDragging));
-	const switchPresentation = deriveSessionAgentSwitchPresentation(session);
-	const switchLabel = switchPresentation?.compactLabel;
-	const switchStatusId = useId();
-	const describedBy = switchLabel ? switchStatusId : undefined;
 	const queryClient = useQueryClient();
 	const refreshWorkspaces = useCallback(
 		() => queryClient.invalidateQueries({ queryKey: workspaceQueryKey }),
@@ -1789,8 +1778,7 @@ function SessionRow({
 					<div className={cn("flex min-w-0 flex-1", reorder?.isDragging && "cursor-grabbing")}>
 						<button
 							aria-current={active ? "page" : undefined}
-							aria-describedby={describedBy}
-							aria-keyshortcuts="F2"
+										aria-keyshortcuts="F2"
 							aria-label={`Open ${session.title}`}
 							className={cn(
 								"flex h-8 min-w-0 flex-1 items-center gap-1.5 rounded-lg py-0 pl-1.5 text-left text-sm outline-hidden focus-visible:ring-2 focus-visible:ring-sidebar-ring",
@@ -1856,11 +1844,6 @@ function SessionRow({
 								>
 									{session.title}
 								</span>
-								{switchLabel ? (
-									<span id={switchStatusId} className="max-w-28 shrink-0 truncate text-2xs text-muted-foreground">
-										{switchLabel}
-									</span>
-								) : null}
 							</span>
 						</button>
 					</div>

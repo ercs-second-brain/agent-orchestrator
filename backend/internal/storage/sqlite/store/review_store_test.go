@@ -20,12 +20,12 @@ func TestInsertReviewRunDuplicatePRSHAMapsToSentinel(t *testing.T) {
 	now := time.Now().UTC().Truncate(time.Second)
 	if err := s.UpsertReview(ctx, domain.Review{
 		ID: "rev-1", SessionID: rec.ID, ProjectID: rec.ProjectID,
-		Harness: domain.ReviewerClaudeCode, CreatedAt: now, UpdatedAt: now,
+		Harness: domain.ReviewerPi, CreatedAt: now, UpdatedAt: now,
 	}); err != nil {
 		t.Fatalf("upsert review: %v", err)
 	}
 	run := domain.ReviewRun{
-		ID: "run-1", ReviewID: "rev-1", SessionID: rec.ID, Harness: domain.ReviewerClaudeCode,
+		ID: "run-1", ReviewID: "rev-1", SessionID: rec.ID, Harness: domain.ReviewerPi,
 		PRURL: "https://example/pr/1", TargetSHA: "sha1", Status: domain.ReviewRunRunning, Verdict: domain.VerdictNone, CreatedAt: now,
 	}
 	if err := s.InsertReviewRun(ctx, run); err != nil {
@@ -67,47 +67,6 @@ func TestInsertReviewRunDuplicatePRSHAMapsToSentinel(t *testing.T) {
 	}
 }
 
-// Harness is part of the idempotency key, so a different reviewer on the same
-// commit is a second opinion rather than a duplicate. Without this the reviewer
-// picker is inert on an already-reviewed commit.
-func TestInsertReviewRunAllowsADifferentHarnessForTheSameCommit(t *testing.T) {
-	s := newTestStore(t)
-	ctx := context.Background()
-	seedProject(t, s, "mer")
-	rec, err := s.CreateSession(ctx, sampleRecord("mer"))
-	if err != nil {
-		t.Fatalf("create session: %v", err)
-	}
-	now := time.Now().UTC().Truncate(time.Second)
-	if err := s.UpsertReview(ctx, domain.Review{
-		ID: "rev-1", SessionID: rec.ID, ProjectID: rec.ProjectID,
-		Harness: domain.ReviewerClaudeCode, CreatedAt: now, UpdatedAt: now,
-	}); err != nil {
-		t.Fatalf("upsert review: %v", err)
-	}
-	first := domain.ReviewRun{
-		ID: "run-1", ReviewID: "rev-1", SessionID: rec.ID, Harness: domain.ReviewerClaudeCode,
-		PRURL: "https://example/pr/1", TargetSHA: "sha1", Status: domain.ReviewRunRunning, Verdict: domain.VerdictNone, CreatedAt: now,
-	}
-	if err := s.InsertReviewRun(ctx, first); err != nil {
-		t.Fatalf("first insert: %v", err)
-	}
-
-	other := first
-	other.ID = "run-other-harness"
-	other.Harness = domain.ReviewerCodex
-	if err := s.InsertReviewRun(ctx, other); err != nil {
-		t.Fatalf("a different harness on the same commit should insert: %v", err)
-	}
-
-	// ...but the same harness twice is still a duplicate.
-	same := first
-	same.ID = "run-same-harness"
-	if err := s.InsertReviewRun(ctx, same); !errors.Is(err, domain.ErrDuplicateReviewRun) {
-		t.Fatalf("same harness duplicate err = %v, want ErrDuplicateReviewRun", err)
-	}
-}
-
 func TestInsertReviewRunAllowsRerunAfterChangesRequested(t *testing.T) {
 	s := newTestStore(t)
 	ctx := context.Background()
@@ -119,12 +78,12 @@ func TestInsertReviewRunAllowsRerunAfterChangesRequested(t *testing.T) {
 	now := time.Now().UTC().Truncate(time.Second)
 	if err := s.UpsertReview(ctx, domain.Review{
 		ID: "rev-1", SessionID: rec.ID, ProjectID: rec.ProjectID,
-		Harness: domain.ReviewerClaudeCode, CreatedAt: now, UpdatedAt: now,
+		Harness: domain.ReviewerPi, CreatedAt: now, UpdatedAt: now,
 	}); err != nil {
 		t.Fatalf("upsert review: %v", err)
 	}
 	run := domain.ReviewRun{
-		ID: "run-1", ReviewID: "rev-1", SessionID: rec.ID, Harness: domain.ReviewerClaudeCode,
+		ID: "run-1", ReviewID: "rev-1", SessionID: rec.ID, Harness: domain.ReviewerPi,
 		PRURL: "https://example/pr/1", TargetSHA: "sha1", Status: domain.ReviewRunRunning, Verdict: domain.VerdictNone, CreatedAt: now,
 	}
 	if err := s.InsertReviewRun(ctx, run); err != nil {
@@ -155,12 +114,12 @@ func TestInsertReviewRunAllowsRerunAfterTerminalEmptyVerdict(t *testing.T) {
 	now := time.Now().UTC().Truncate(time.Second)
 	if err := s.UpsertReview(ctx, domain.Review{
 		ID: "rev-1", SessionID: rec.ID, ProjectID: rec.ProjectID,
-		Harness: domain.ReviewerClaudeCode, CreatedAt: now, UpdatedAt: now,
+		Harness: domain.ReviewerPi, CreatedAt: now, UpdatedAt: now,
 	}); err != nil {
 		t.Fatalf("upsert review: %v", err)
 	}
 	run := domain.ReviewRun{
-		ID: "run-1", ReviewID: "rev-1", SessionID: rec.ID, Harness: domain.ReviewerClaudeCode,
+		ID: "run-1", ReviewID: "rev-1", SessionID: rec.ID, Harness: domain.ReviewerPi,
 		PRURL: "https://example/pr/1", TargetSHA: "sha1", Status: domain.ReviewRunComplete, Verdict: domain.VerdictNone, CreatedAt: now,
 	}
 	if err := s.InsertReviewRun(ctx, run); err != nil {
@@ -189,7 +148,7 @@ func TestReviewUpsertReusesRowAndRunRoundTrip(t *testing.T) {
 	// First upsert creates the review row.
 	if err := s.UpsertReview(ctx, domain.Review{
 		ID: "rev-1", SessionID: rec.ID, ProjectID: rec.ProjectID,
-		Harness: domain.ReviewerClaudeCode, PRURL: "https://example/pr/1",
+		Harness: domain.ReviewerPi, PRURL: "https://example/pr/1",
 		ReviewerHandleID: "review-mer-1",
 		CreatedAt:        now, UpdatedAt: now,
 	}); err != nil {
@@ -204,7 +163,7 @@ func TestReviewUpsertReusesRowAndRunRoundTrip(t *testing.T) {
 	}); err != nil {
 		t.Fatalf("upsert review (second harness): %v", err)
 	}
-	got, ok, err := s.GetReviewBySessionAndHarness(ctx, rec.ID, domain.ReviewerClaudeCode)
+	got, ok, err := s.GetReviewBySessionAndHarness(ctx, rec.ID, domain.ReviewerPi)
 	if err != nil || !ok {
 		t.Fatalf("get claude review: ok=%v err=%v", ok, err)
 	}
@@ -245,7 +204,7 @@ func TestReviewUpsertReusesRowAndRunRoundTrip(t *testing.T) {
 	if err != nil || !updated {
 		t.Fatalf("update claude native session: updated=%v err=%v", updated, err)
 	}
-	got, ok, err = s.GetReviewBySessionAndHarness(ctx, rec.ID, domain.ReviewerClaudeCode)
+	got, ok, err = s.GetReviewBySessionAndHarness(ctx, rec.ID, domain.ReviewerPi)
 	if err != nil || !ok {
 		t.Fatalf("get claude review after native update: ok=%v err=%v", ok, err)
 	}
@@ -306,7 +265,7 @@ func TestReviewUpsertReusesRowAndRunRoundTrip(t *testing.T) {
 	if byHarness.ID != "run-1" {
 		t.Fatalf("by harness = %+v, want run-1", byHarness)
 	}
-	if _, ok, _ := s.GetReviewRunBySessionPRSHAAndHarness(ctx, rec.ID, got.PRURL, "sha1", domain.ReviewerCodex); ok {
+	if _, ok, _ := s.GetReviewRunBySessionPRSHAAndHarness(ctx, rec.ID, got.PRURL, "sha1", domain.ReviewerPi); ok {
 		t.Fatal("unexpected run for a different harness")
 	}
 	if _, ok, _ := s.GetReviewRunBySessionPRAndSHA(ctx, rec.ID, got.PRURL, "other"); ok {
@@ -346,14 +305,14 @@ func TestCancelRunningReviewRunsBySession(t *testing.T) {
 	now := time.Now().UTC().Truncate(time.Second)
 	if err := s.UpsertReview(ctx, domain.Review{
 		ID: "rev-1", SessionID: rec.ID, ProjectID: rec.ProjectID,
-		Harness: domain.ReviewerCodex, CreatedAt: now, UpdatedAt: now,
+		Harness: domain.ReviewerPi, CreatedAt: now, UpdatedAt: now,
 	}); err != nil {
 		t.Fatalf("upsert review: %v", err)
 	}
 	for _, run := range []domain.ReviewRun{
-		{ID: "run-1", ReviewID: "rev-1", SessionID: rec.ID, Harness: domain.ReviewerCodex, PRURL: "https://example/pr/1", TargetSHA: "sha1", Status: domain.ReviewRunRunning, CreatedAt: now},
-		{ID: "run-2", ReviewID: "rev-1", SessionID: rec.ID, Harness: domain.ReviewerCodex, PRURL: "https://example/pr/2", TargetSHA: "sha2", Status: domain.ReviewRunRunning, CreatedAt: now.Add(time.Second)},
-		{ID: "run-3", ReviewID: "rev-1", SessionID: rec.ID, Harness: domain.ReviewerCodex, PRURL: "https://example/pr/3", TargetSHA: "sha3", Status: domain.ReviewRunComplete, Verdict: domain.VerdictApproved, CreatedAt: now.Add(2 * time.Second)},
+		{ID: "run-1", ReviewID: "rev-1", SessionID: rec.ID, Harness: domain.ReviewerPi, PRURL: "https://example/pr/1", TargetSHA: "sha1", Status: domain.ReviewRunRunning, CreatedAt: now},
+		{ID: "run-2", ReviewID: "rev-1", SessionID: rec.ID, Harness: domain.ReviewerPi, PRURL: "https://example/pr/2", TargetSHA: "sha2", Status: domain.ReviewRunRunning, CreatedAt: now.Add(time.Second)},
+		{ID: "run-3", ReviewID: "rev-1", SessionID: rec.ID, Harness: domain.ReviewerPi, PRURL: "https://example/pr/3", TargetSHA: "sha3", Status: domain.ReviewRunComplete, Verdict: domain.VerdictApproved, CreatedAt: now.Add(2 * time.Second)},
 	} {
 		if err := s.InsertReviewRun(ctx, run); err != nil {
 			t.Fatalf("insert %s: %v", run.ID, err)

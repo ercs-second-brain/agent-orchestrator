@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { LoaderCircle, PanelRight, Plus } from "lucide-react";
+import { PanelRight, Plus } from "lucide-react";
 import { motion, useReducedMotion } from "motion/react";
 import {
 	useCallback,
@@ -24,15 +24,9 @@ import { SessionFileWorkspace } from "./SessionFileWorkspace";
 import { SessionActionsMenu } from "./SessionActionsMenu";
 import { SessionInspector } from "./SessionInspector";
 import { ShellTopbar } from "./ShellTopbar";
-import { SwitchAgentDialog } from "./SwitchAgentDialog";
 import { SessionTopbarHost } from "./SessionTopbarPortal";
-import { TerminalSwitchAgentButton } from "./TerminalSwitchAgentButton";
 import { TopbarButton } from "./TopbarButton";
 import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip";
-import { Button } from "./ui/button";
-import { useCodexAccountActions } from "../hooks/useCodexAccountActions";
-import { useCodexAccountsQuery } from "../hooks/useCodexAccountsQuery";
-import { codexSwitchDisplay } from "../hooks/codex-accounts-state";
 import { useFileAnnotation } from "../hooks/useFileAnnotation";
 import { useResizable } from "../hooks/useResizable";
 import {
@@ -41,10 +35,7 @@ import {
 	useRenameShellTerminal,
 	useShellTerminals,
 } from "../hooks/useShellTerminals";
-import { useAgentSwitchRouteVisibility } from "../hooks/useAgentSwitchVisibility";
 import { useWorkspaceSession } from "../hooks/useWorkspaceQuery";
-import { useSessionHandoffMenu } from "../hooks/useSessionHandoffMenu";
-import { clearSwitchAgentState } from "../hooks/useSwitchAgent";
 import { useWindowFullScreen } from "../hooks/useWindowFullScreen";
 import { apiClient, apiErrorCode, apiErrorMessage } from "../lib/api-client";
 import { sessionWorkspaceFilesQueryOptions } from "../hooks/useSessionWorkspaceFiles";
@@ -159,7 +150,7 @@ function reviewerTerminalFromReviews(data?: ReviewsResponse): ReviewerTerminalTa
 	const handleId = data?.reviewerHandleId?.trim();
 	if (!handleId) return undefined;
 	const latest = data?.reviews?.find((review) => review.latestRun)?.latestRun;
-	return { handleId, harness: data?.reviewerHarness || latest?.harness || "codex" };
+	return { handleId, harness: data?.reviewerHarness || latest?.harness || "pi" };
 }
 
 type SessionViewProps = {
@@ -354,13 +345,6 @@ export function SessionView({ sessionId, projectId }: SessionViewProps) {
 		},
 		[sessionId],
 	);
-	const [handoffDialogOpen, setHandoffDialogOpen] = useState(false);
-	const handoffDialogContainerRef = useRef<HTMLDivElement | null>(null);
-	const [handoffDialogContainer, setHandoffDialogContainer] = useState<HTMLDivElement | null>(null);
-	const bindHandoffDialogContainer = useCallback((node: HTMLDivElement | null) => {
-		handoffDialogContainerRef.current = node;
-		setHandoffDialogContainer(node);
-	}, []);
 	const isNativeFullScreen = useWindowFullScreen();
 	const stopTerminalLiveResize = useCallback(() => {
 		if (terminalLiveResizeTimerRef.current !== null) {
@@ -394,25 +378,7 @@ export function SessionView({ sessionId, projectId }: SessionViewProps) {
 	useEffect(() => stopTerminalLiveResize, [stopTerminalLiveResize]);
 
 	const session = workspaceQuery.data;
-	const routeVisibilityOperation =
-		session?.activeAgentSwitch &&
-		session.activeAgentSwitch.state !== "completed" &&
-		session.activeAgentSwitch.state !== "failed"
-			? "active"
-			: "history";
-	useAgentSwitchRouteVisibility(`session/${sessionId}`, routeVisibilityOperation);
-	const codexAccounts = useCodexAccountsQuery(session?.provider === "codex");
-	const codexAccountActions = useCodexAccountActions(queryClient);
-	const codexAccountSwitch = codexAccounts.data?.currentSwitch;
-	const codexAccountSwitchPresentation = codexAccountSwitch ? codexSwitchDisplay(codexAccountSwitch) : null;
-	const codexAccountSwitchBlocksSession = Boolean(
-		session?.provider === "codex" &&
-			codexAccountSwitch &&
-			!["completed", "failed"].includes(codexAccountSwitch.phase) &&
-			(codexAccountSwitch.sessions.length === 0 ||
-				codexAccountSwitch.sessions.some((entry) => entry.sessionId === session.id)),
-	);
-	const reviewerQuery = useQuery({
+		const reviewerQuery = useQuery({
 		queryKey: ["session-reviews", sessionId],
 		enabled: Boolean(
 			window.ao && session && sessionIsActive(session) && !isOrchestratorSession(session) && session.prs.length > 0,
@@ -814,37 +780,8 @@ export function SessionView({ sessionId, projectId }: SessionViewProps) {
 		: ({ kind: "worker" } satisfies TerminalTarget);
 	// A terminal pane (reviewer or shell) renders as a tab beside the agent's
 	// terminal, so opening one never costs the user the agent surface.
-	const {
-		agentSwitch: handoffAgentSwitch,
-		switchControlPresentation: handoffControlPresentation,
-		switchError: handoffSwitchError,
-	} = useSessionHandoffMenu(session);
-	const handleHandoffDialogOpenChange = useCallback(
-		(nextOpen: boolean) => {
-			setHandoffDialogOpen(nextOpen);
-			if (!nextOpen && handoffSwitchError && session) {
-				clearSwitchAgentState(queryClient, session.id);
-			}
-		},
-		[handoffSwitchError, queryClient, session],
-	);
-	useEffect(() => {
-		if (handoffSwitchError) setHandoffDialogOpen(true);
-	}, [handoffSwitchError]);
-	const handoffMenuItem = session ? (
-		<TerminalSwitchAgentButton
-			key={session.id}
-			variant="menu-item"
-			agentSwitch={handoffAgentSwitch}
-			onOpenChange={handleHandoffDialogOpenChange}
-			open={handoffDialogOpen}
-			presentation={handoffControlPresentation}
-			session={session}
-			switchError={handoffSwitchError}
-		/>
-	) : null;
 	const sessionTabActions = (
-		<SessionActionsMenu>{handoffMenuItem}</SessionActionsMenu>
+		<SessionActionsMenu>{null}</SessionActionsMenu>
 	);
 	const sessionHeaderActions = (
 		<div
@@ -854,10 +791,6 @@ export function SessionView({ sessionId, projectId }: SessionViewProps) {
 			<ShellTopbar embedded />
 		</div>
 	);
-
-	useEffect(() => {
-		setHandoffDialogOpen(false);
-	}, [sessionId]);
 
 	// The pane shows one terminal at a time, so selecting a shell or the reviewer
 	// takes the agent's terminal off screen while the route still points here.
@@ -983,37 +916,6 @@ export function SessionView({ sessionId, projectId }: SessionViewProps) {
 
 	return (
 		<div className="relative flex h-full min-h-0 flex-col bg-background text-foreground" data-testid="session-detail">
-			{codexAccountSwitchBlocksSession ? (
-				<div
-					className="absolute inset-0 z-50 grid place-items-center bg-background/80 p-6 backdrop-blur-sm"
-					data-testid="codex-account-switch-blocker"
-				>
-					<div className="flex max-w-sm flex-col items-center gap-3 rounded-xl border border-border bg-card px-6 py-5 text-center shadow-lg">
-						<div aria-live="assertive" className="flex flex-col items-center gap-3" role="status">
-							{codexAccountSwitchPresentation?.busy ? <LoaderCircle className="size-5 animate-spin text-passive" aria-label={codexAccountSwitchPresentation.key} /> : null}
-							<p className="text-sm font-medium">
-								{codexAccountSwitchPresentation?.canRecover
-									? codexAccountSwitchPresentation.key
-									: "Switching the device Codex account and restarting AO sessions"}
-							</p>
-							{codexAccountSwitchPresentation && !codexAccountSwitchPresentation.canRecover ? <p className="text-xs text-passive">{codexAccountSwitchPresentation.key}</p> : null}
-						</div>
-						{codexAccountSwitchPresentation?.canRecover && codexAccountSwitch ? (
-							<Button
-								type="button"
-								size="sm"
-								variant="outline"
-								disabled={codexAccountActions.recoverPending}
-								onClick={() => void codexAccountActions.recoverSwitch(codexAccountSwitch.id)}
-							>
-								{codexAccountActions.recoverPending ? <LoaderCircle className="animate-spin" aria-label={"Recovering sessions"} /> : null}
-								{"Retry recovery"}
-							</Button>
-						) : null}
-						{codexAccountActions.error ? <p className="text-xs text-error" role="alert">{codexAccountActions.error}</p> : null}
-					</div>
-				</div>
-			) : null}
 			<div
 				className="session-split relative flex min-h-0 flex-1 overflow-hidden"
 				data-testid="panel-group"
@@ -1041,16 +943,7 @@ export function SessionView({ sessionId, projectId }: SessionViewProps) {
 							className="relative z-chrome flex h-inspector-tabs w-full shrink-0 overflow-hidden"
 							data-testid="session-topbar-host"
 						/>
-						<div className="relative min-h-0 flex-1" ref={bindHandoffDialogContainer}>
-							{session && handoffDialogContainer ? (
-								<SwitchAgentDialog
-									agentSwitch={handoffAgentSwitch}
-									container={handoffDialogContainer}
-									onOpenChange={handleHandoffDialogOpenChange}
-									open={handoffDialogOpen}
-									session={session}
-								/>
-							) : null}
+						<div className="relative min-h-0 flex-1">
 							{/* The committed mode owns the agent surface. Auxiliary shell and
 							    reviewer targets remain terminal surfaces in either mode. */}
 							<div
@@ -1072,7 +965,6 @@ export function SessionView({ sessionId, projectId }: SessionViewProps) {
 								topbarActions={sessionHeaderActions}
 								sessionTabAction={sessionTabActions}
 								tabStripAction={newShellTerminalAction}
-								handoffDialogOpen={handoffDialogOpen}
 								workspaceTabs={centerFileTabs}
 								workspaceActiveTabKey={activeWorkspaceTabKey}
 								workspaceFileActive={Boolean(fileTabs.activePath)}

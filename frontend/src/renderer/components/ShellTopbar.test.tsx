@@ -75,7 +75,7 @@ const worker: WorkspaceSession = {
 	workspaceId: "proj-1",
 	workspaceName: "my-app",
 	title: "do the thing",
-	provider: "claude-code",
+	provider: "pi",
 	kind: "worker",
 	branch: "ao/sess-1",
 	status: "working",
@@ -95,7 +95,7 @@ const orchestrator: WorkspaceSession = {
 	workspaceId: "proj-1",
 	workspaceName: "my-app",
 	title: "orchestrator",
-	provider: "claude-code",
+	provider: "pi",
 	kind: "orchestrator",
 	branch: "main",
 	status: "working",
@@ -107,19 +107,6 @@ function sessionWith(overrides: Partial<WorkspaceSession> = {}): WorkspaceSessio
 	return {
 		...worker,
 		activity: { state: "active", lastActivityAt: "2026-06-10T00:00:00Z" },
-		...overrides,
-	};
-}
-
-function activeAgentSwitch(
-	overrides: Partial<NonNullable<WorkspaceSession["activeAgentSwitch"]>> = {},
-): NonNullable<WorkspaceSession["activeAgentSwitch"]> {
-	return {
-		agentHandoffStatus: "received",
-		fromHarness: "claude-code",
-		id: "switch-1",
-		state: "starting_target",
-		targetHarness: "codex",
 		...overrides,
 	};
 }
@@ -140,7 +127,7 @@ function renderTopbarSessions(
 			id: sessions[0].workspaceId,
 			name: sessions[0].workspaceName,
 			path: "/repo/my-app",
-			orchestratorAgent: "claude-code",
+			orchestratorAgent: "pi",
 			kind: projectKind,
 			sessions,
 		},
@@ -331,21 +318,6 @@ describe("ShellTopbar status pill", () => {
 		expect(screen.getByText("Working")).toBeInTheDocument();
 	});
 
-	it("shows switch progress instead of the exited source in the status pill", () => {
-		renderTopbar(sessionWith({
-			status: "exited",
-			activity: {
-				state: "exited",
-				lastActivityAt: "2026-06-10T00:00:00Z",
-			},
-			activeAgentSwitch: activeAgentSwitch(),
-		}));
-
-		const pill = screen.getByText("Switching to Codex").closest("span") as HTMLElement;
-		expect(pill).toHaveStyle({ color: "var(--color-status-working)" });
-		expect(pill.querySelector("span")).toHaveClass("animate-status-pulse");
-		expect(screen.queryByText("Exited")).not.toBeInTheDocument();
-	});
 });
 
 describe("ShellTopbar orchestrator actions", () => {

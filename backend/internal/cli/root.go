@@ -86,22 +86,20 @@ type Deps struct {
 // DefaultDeps returns production dependencies.
 func DefaultDeps() Deps {
 	return Deps{
-		In:                    os.Stdin,
-		Out:                   os.Stdout,
-		Err:                   os.Stderr,
-		HTTPClient:            &http.Client{Timeout: 2 * time.Second},
-		Executable:            os.Executable,
-		StartProcess:          startProcess,
-		ProcessAlive:          processalive.Alive,
-		LookPath:              exec.LookPath,
-		CommandOutput:         commandOutput,
-		CommandOutputInDir:    commandOutputInDir,
-		RunInteractiveCommand: runInteractiveCommand,
-		ReadSecret:            readSecret,
-		DoctorGitHubRESTBase:  defaultDoctorGitHubRESTBase,
-		DoctorGitLabRESTBase:  defaultDoctorGitLabRESTBase,
-		Now:                   time.Now,
-		Sleep:                 time.Sleep,
+		In:                   os.Stdin,
+		Out:                  os.Stdout,
+		Err:                  os.Stderr,
+		HTTPClient:           &http.Client{Timeout: 2 * time.Second},
+		Executable:           os.Executable,
+		StartProcess:         startProcess,
+		ProcessAlive:         processalive.Alive,
+		LookPath:             exec.LookPath,
+		CommandOutput:        commandOutput,
+		CommandOutputInDir:   commandOutputInDir,
+		DoctorGitHubRESTBase: defaultDoctorGitHubRESTBase,
+		DoctorGitLabRESTBase: defaultDoctorGitLabRESTBase,
+		Now:                  time.Now,
+		Sleep:                time.Sleep,
 	}
 }
 
@@ -202,7 +200,6 @@ func NewRootCommand(deps Deps) *cobra.Command {
 	root.AddCommand(newStopCommand(ctx))
 	root.AddCommand(newStatusCommand(ctx))
 	root.AddCommand(newDoctorCommand(ctx))
-	root.AddCommand(newAgentCommand(ctx))
 	root.AddCommand(newSpawnCommand(ctx))
 	root.AddCommand(newSendCommand(ctx))
 	root.AddCommand(newMobileCommand(ctx))
@@ -210,7 +207,6 @@ func NewRootCommand(deps Deps) *cobra.Command {
 	root.AddCommand(newAgentProcessCommand(ctx))
 	root.AddCommand(newLaunchCommand(ctx))
 	root.AddCommand(newPtyHostCommand())
-	root.AddCommand(newCodexLoginCommand(ctx))
 	root.AddCommand(newProjectCommand(ctx))
 	root.AddCommand(newSessionCommand(ctx))
 	root.AddCommand(newOrchestratorCommand(ctx))
@@ -236,7 +232,7 @@ func shouldEmitCLIInvocation(cmd *cobra.Command) bool {
 	// "ao completion"/"ao help" are shell setup and self-documentation.
 	// "ao pty-host" and "ao agent-process" are internal runtime processes.
 	// None reflect user activity.
-	case "ao daemon", "ao start", "ao completion", "ao help", "ao pty-host", "ao codex-login", "ao agent-process", "ao agent-process supervise":
+	case "ao daemon", "ao start", "ao completion", "ao help", "ao pty-host", "ao agent-process", "ao agent-process supervise":
 		return false
 	default:
 		return true

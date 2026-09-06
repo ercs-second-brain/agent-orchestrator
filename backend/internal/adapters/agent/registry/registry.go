@@ -1,76 +1,22 @@
 // Package registry is the single source of truth for the agent adapters the
-// daemon ships. The daemon wires sessions through it, so adding a harness is a
-// single edit to Constructors rather than a list maintained in several places.
+// daemon ships. The daemon wires sessions through it.
 package registry
 
 import (
 	"fmt"
 
 	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/adapters"
-	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/adapters/agent/agy"
-	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/adapters/agent/aider"
-	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/adapters/agent/amp"
-	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/adapters/agent/auggie"
-	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/adapters/agent/autohand"
-	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/adapters/agent/claudecode"
-	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/adapters/agent/cline"
-	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/adapters/agent/codex"
-	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/adapters/agent/continueagent"
-	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/adapters/agent/copilot"
-	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/adapters/agent/crush"
-	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/adapters/agent/cursor"
-	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/adapters/agent/devin"
-	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/adapters/agent/droid"
-	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/adapters/agent/goose"
-	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/adapters/agent/grok"
-	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/adapters/agent/kilocode"
-	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/adapters/agent/kimchi"
-	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/adapters/agent/kimi"
-	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/adapters/agent/kiro"
-	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/adapters/agent/muse"
-	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/adapters/agent/omp"
-	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/adapters/agent/opencode"
 	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/adapters/agent/pi"
-	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/adapters/agent/primeagent"
-	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/adapters/agent/qwen"
-	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/adapters/agent/vibe"
 	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/domain"
 	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/ports"
 )
 
 // Constructors returns a fresh instance of every agent adapter the daemon
-// ships, in a stable registration order. Adding a new harness means adding its
-// constructor here (and a domain.AgentHarness constant) — the one edit the
-// daemon picks up.
+// ships. Since ADR 0005 pi is the single supported harness, so the list is
+// exactly one entry.
 func Constructors() []adapters.Adapter {
 	return []adapters.Adapter{
-		claudecode.New(),
-		codex.New(),
-		opencode.New(),
-		grok.New(),
-		cursor.New(),
-		qwen.New(),
-		copilot.New(),
-		kimi.New(),
-		muse.New(),
-		droid.New(),
-		amp.New(),
-		agy.New(),
-		crush.New(),
-		aider.New(),
-		goose.New(),
-		auggie.New(),
-		continueagent.New(),
-		devin.New(),
-		omp.New(),
-		cline.New(),
-		kiro.New(),
-		kilocode.New(),
-		vibe.New(),
 		pi.New(),
-		kimchi.New(),
-		primeagent.New(),
-		autohand.New(),
 	}
 }
 
@@ -89,7 +35,7 @@ func Build() (*adapters.Registry, error) {
 
 // HarnessAgent pairs a session harness with the adapter that drives it. The
 // harness is the adapter's manifest id, which is also the domain.AgentHarness
-// value a session carries and the `--harness` flag users pass.
+// value a session carries.
 type HarnessAgent struct {
 	Harness  domain.AgentHarness
 	Manifest adapters.Manifest

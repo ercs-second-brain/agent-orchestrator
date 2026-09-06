@@ -24,7 +24,7 @@ import { apiClient, apiErrorMessage } from "../lib/api-client";
 import { OrchestratorSpawnError, spawnOrchestrator } from "../lib/spawn-orchestrator";
 import { type OrchestratorReplacementFailure, useUiStore } from "../stores/ui-store";
 import { newestActiveOrchestrator } from "../types/workspace";
-import { RequiredAgentField } from "./CreateProjectAgentSheet";
+import { RequiredAgentField } from "./settings/RequiredAgentField";
 import { buildIntake, deriveRepoPath, deriveRepoHost, IntakeFields, type IntakeForm } from "./IntakeFields";
 import { ProductExternalLink } from "./ProductExternalLink";
 import { ReviewerSelect, reviewerTrustWarning } from "./ReviewerSelect";

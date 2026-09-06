@@ -37,7 +37,7 @@ function sessionWith(overrides: Partial<WorkspaceSession>): WorkspaceSession {
 		workspaceId: "ws-1",
 		workspaceName: "my-app",
 		title: "fix-bug",
-		provider: "claude-code",
+		provider: "pi",
 		branch: "feat/x",
 		status: "working",
 		updatedAt: "2026-01-01T00:00:00Z",
@@ -128,8 +128,8 @@ describe("findProjectOrchestrator", () => {
 	});
 
 	it("prefers the newest live orchestrator when multiple replacements overlap", () => {
-		const older = sessionWith({ id: "skills-4", kind: "orchestrator", status: "idle", provider: "claude-code" });
-		const newer = sessionWith({ id: "skills-5", kind: "orchestrator", status: "working", provider: "codex" });
+		const older = sessionWith({ id: "skills-4", kind: "orchestrator", status: "idle", provider: "pi" });
+		const newer = sessionWith({ id: "skills-5", kind: "orchestrator", status: "working", provider: "pi" });
 		expect(findProjectOrchestrator([workspaceWith([older, newer])], "skills")).toBe(newer);
 	});
 
@@ -217,7 +217,7 @@ describe("orchestratorHealth", () => {
 		const older = sessionWith({
 			id: "skills-1",
 			kind: "orchestrator",
-			provider: "codex",
+			provider: "pi",
 			status: "working",
 			createdAt: "2026-01-01T00:00:00Z",
 			updatedAt: "2026-01-01T00:00:00Z",
@@ -225,7 +225,7 @@ describe("orchestratorHealth", () => {
 		const newest = sessionWith({
 			id: "skills-2",
 			kind: "orchestrator",
-			provider: "claude-code",
+			provider: "pi",
 			status: "working",
 			createdAt: "2026-01-02T00:00:00Z",
 			updatedAt: "2026-01-02T00:00:00Z",
@@ -236,7 +236,7 @@ describe("orchestratorHealth", () => {
 				id: "skills",
 				name: "skills",
 				path: "/tmp/skills",
-				orchestratorAgent: "codex",
+				orchestratorAgent: "pi",
 				sessions: [older, newest],
 			}),
 		).toEqual({
@@ -250,10 +250,10 @@ describe("orchestratorHealth", () => {
 				id: "skills",
 				name: "skills",
 				path: "/tmp/skills",
-				orchestratorAgent: "codex",
+				orchestratorAgent: "pi",
 				sessions: [newest],
 			}).state,
-		).toBe("restart_needed");
+		).toBe("ok");
 	});
 });
 
@@ -261,13 +261,10 @@ describe("toAgentProvider", () => {
 	it.each(AGENT_OPTIONS)("passes through the shared provider %s", (provider) => {
 		expect(toAgentProvider(provider)).toBe(provider);
 	});
-	it("passes through Prime Agent", () => {
-		expect(toAgentProvider("prime-agent")).toBe("prime-agent");
-	});
 
 	it("defaults unknown and undefined providers to codex", () => {
-		expect(toAgentProvider("totally-unknown")).toBe("codex");
-		expect(toAgentProvider(undefined)).toBe("codex");
+		expect(toAgentProvider("totally-unknown")).toBe("pi");
+		expect(toAgentProvider(undefined)).toBe("pi");
 	});
 
 	it("keeps the fake harness (test sessions must not normalize to codex)", () => {

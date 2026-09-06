@@ -185,7 +185,7 @@ func TestReviewActivityPersistsReviewerNativeSessionID(t *testing.T) {
 func TestReviewsListIncludesReviewStates(t *testing.T) {
 	srv := newReviewTestServer(t, &fakeReviewService{list: reviewcore.SessionReviews{
 		ReviewerHandleID: "review-mer-1",
-		ReviewerHarness:  domain.ReviewerCodex,
+		ReviewerHarness:  domain.ReviewerPi,
 		Runs:             []domain.ReviewRun{{ID: "run-1", PRURL: "https://github.com/o/r/pull/1", TargetSHA: "sha1", AutoInjectReview: false}},
 		Reviews:          []reviewcore.PRReviewState{{PRURL: "https://github.com/o/r/pull/1", PRNumber: 1, TargetSHA: "sha1", Status: reviewcore.ReviewStateUpToDate}},
 	}})
@@ -195,7 +195,7 @@ func TestReviewsListIncludesReviewStates(t *testing.T) {
 	if status != http.StatusOK {
 		t.Fatalf("status = %d body=%s", status, body)
 	}
-	if !strings.Contains(string(body), `"reviews"`) || !strings.Contains(string(body), `"up_to_date"`) || !strings.Contains(string(body), `"reviewerHandleId":"review-mer-1"`) || !strings.Contains(string(body), `"reviewerHarness":"codex"`) {
+	if !strings.Contains(string(body), `"reviews"`) || !strings.Contains(string(body), `"up_to_date"`) || !strings.Contains(string(body), `"reviewerHandleId":"review-mer-1"`) || !strings.Contains(string(body), `"reviewerHarness":"pi"`) {
 		t.Fatalf("body missing review states/handle: %s", body)
 	}
 	if !strings.Contains(string(body), `"autoInjectReview":false`) {
@@ -303,9 +303,9 @@ func TestReviewsCancelIncludesReviewStates(t *testing.T) {
 func TestReviewsKillClearsReviewerHandle(t *testing.T) {
 	svc := &fakeReviewService{list: reviewcore.SessionReviews{
 		ReviewerHandleID: "review-mer-1",
-		ReviewerHarness:  domain.ReviewerCodex,
+		ReviewerHarness:  domain.ReviewerPi,
 		Reviews:          []reviewcore.PRReviewState{{PRURL: "https://github.com/o/r/pull/1", PRNumber: 1, TargetSHA: "sha1", Status: reviewcore.ReviewStateNeedsReview}},
-		Runs:             []domain.ReviewRun{{ID: "run-1", SessionID: "mer-1", Harness: domain.ReviewerCodex}},
+		Runs:             []domain.ReviewRun{{ID: "run-1", SessionID: "mer-1", Harness: domain.ReviewerPi}},
 	}}
 	srv := newReviewTestServer(t, svc)
 
@@ -326,9 +326,9 @@ func TestReviewsKillClearsReviewerHandle(t *testing.T) {
 
 func TestReviewsRestoreReturnsReviewerHandle(t *testing.T) {
 	svc := &fakeReviewService{list: reviewcore.SessionReviews{
-		ReviewerHarness: domain.ReviewerCodex,
+		ReviewerHarness: domain.ReviewerPi,
 		Reviews:         []reviewcore.PRReviewState{{PRURL: "https://github.com/o/r/pull/1", PRNumber: 1, TargetSHA: "sha1", Status: reviewcore.ReviewStateNeedsReview}},
-		Runs:            []domain.ReviewRun{{ID: "run-1", SessionID: "mer-1", Harness: domain.ReviewerCodex}},
+		Runs:            []domain.ReviewRun{{ID: "run-1", SessionID: "mer-1", Harness: domain.ReviewerPi}},
 	}}
 	srv := newReviewTestServer(t, svc)
 
@@ -351,19 +351,19 @@ func TestReviewsSwitchReturnsAuthoritativeReviewState(t *testing.T) {
 	svc := &fakeReviewService{list: reviewcore.SessionReviews{
 		ReviewerHandleID: "review-mer-2",
 		Reviews:          []reviewcore.PRReviewState{{PRURL: "https://github.com/o/r/pull/1", PRNumber: 1, TargetSHA: "sha1", Status: reviewcore.ReviewStateNeedsReview}},
-		Runs:             []domain.ReviewRun{{ID: "run-1", SessionID: "mer-1", Harness: domain.ReviewerClaudeCode}},
+		Runs:             []domain.ReviewRun{{ID: "run-1", SessionID: "mer-1", Harness: domain.ReviewerPi}},
 	}}
 	srv := newReviewTestServer(t, svc)
 
-	body, status, headers := doRequest(t, srv, "POST", "/api/v1/sessions/mer-1/reviews/switch", `{"harness":"claude-code"}`)
+	body, status, headers := doRequest(t, srv, "POST", "/api/v1/sessions/mer-1/reviews/switch", `{"harness":"pi"}`)
 	assertJSON(t, headers)
 	if status != http.StatusOK {
 		t.Fatalf("status = %d body=%s", status, body)
 	}
-	if svc.switchedHarness != domain.ReviewerClaudeCode {
+	if svc.switchedHarness != domain.ReviewerPi {
 		t.Fatalf("switched harness = %q, want claude-code", svc.switchedHarness)
 	}
-	for _, want := range []string{`"reviewerHandleId":"review-mer-2"`, `"reviewerHarness":"claude-code"`, `"reviews"`, `"runs"`, `"run-1"`} {
+	for _, want := range []string{`"reviewerHandleId":"review-mer-2"`, `"reviewerHarness":"pi"`, `"reviews"`, `"runs"`, `"run-1"`} {
 		if !strings.Contains(string(body), want) {
 			t.Fatalf("body missing %s: %s", want, body)
 		}

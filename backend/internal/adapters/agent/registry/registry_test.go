@@ -68,48 +68,21 @@ func TestEveryHarnessReportsAuthStatus(t *testing.T) {
 	}
 }
 
-func TestRegistryIncludesPrimeAgent(t *testing.T) {
+func TestRegistryIncludesPi(t *testing.T) {
 	reg, err := Build()
 	if err != nil {
 		t.Fatal(err)
 	}
-	adapter, ok := reg.Get("prime-agent")
+	_, ok := reg.Get("pi")
 	if !ok {
-		t.Fatal("registry does not contain prime-agent")
+		t.Fatal("registry does not contain pi")
 	}
-	manifest := adapter.Manifest()
-	if manifest.Name != "Prime Agent" {
-		t.Fatalf("prime-agent manifest name = %q, want Prime Agent", manifest.Name)
-	}
-
 	for _, item := range Harnessed() {
-		if item.Harness == "prime-agent" {
+		if item.Harness == domain.HarnessPi {
 			return
 		}
 	}
-	t.Fatal("Harnessed does not contain prime-agent")
-}
-
-func TestRegistryIncludesOMP(t *testing.T) {
-	reg, err := Build()
-	if err != nil {
-		t.Fatal(err)
-	}
-	adapter, ok := reg.Get("omp")
-	if !ok {
-		t.Fatal("registry does not contain omp")
-	}
-	manifest := adapter.Manifest()
-	if manifest.Name != "OMP" {
-		t.Fatalf("omp manifest name = %q, want OMP", manifest.Name)
-	}
-
-	for _, item := range Harnessed() {
-		if item.Harness == domain.HarnessOMP {
-			return
-		}
-	}
-	t.Fatal("Harnessed does not contain omp")
+	t.Fatal("Harnessed does not contain pi")
 }
 
 func TestHarnessedExcludesFakeHarness(t *testing.T) {
@@ -165,9 +138,6 @@ func ensureAgentBinary(t *testing.T, name string) {
 	dir := t.TempDir()
 	binPath := filepath.Join(dir, name)
 	version := "0.80.6"
-	if name == "omp" {
-		version = "17.1.0"
-	}
 	script := "#!/usr/bin/env sh\nif [ \"${1:-}\" = \"--version\" ]; then\n  echo \"" + name + " " + version + "\"\nfi\nexit 0\n"
 	if err := os.WriteFile(binPath, []byte(script), 0755); err != nil {
 		t.Fatalf("write fake agent binary %q: %v", binPath, err)

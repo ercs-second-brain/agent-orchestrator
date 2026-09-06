@@ -47,8 +47,8 @@ export function useStartAgentAuth() {
 }
 
 export async function probeAgentAuth(agentId: string) {
-	const { data, error } = await apiClient.POST("/api/v1/agents/{agent}/probe", {
-		params: { path: { agent: agentId } },
+	const { data, error } = await apiClient.POST("/api/v1/agents/readiness/ensure", {
+		body: { agentIds: [agentId], purpose: "launch" },
 	});
 	if (error || !data) throw new Error(apiErrorMessage(error, "Could not check agent login."));
 	return data;

@@ -66,10 +66,10 @@ func (f *fakeInstaller) Verify(_ context.Context, target systeminstall.Target) (
 func TestAgentInstallRoutes(t *testing.T) {
 	log := slog.New(slog.NewTextHandler(io.Discard, nil))
 	installer := &fakeInstaller{
-		plans:     []systeminstall.AgentPlan{{AgentID: "codex", Available: true, Automatic: true, Method: "npm"}},
-		startJob:  systeminstall.Job{Target: systeminstall.TargetCodex, Status: systeminstall.StatusInstalling, Method: "npm"},
-		agentJobs: []systeminstall.Job{{Target: systeminstall.TargetCodex, Status: systeminstall.StatusInterrupted, Method: "npm", Error: "AO restarted"}},
-		verifyJob: systeminstall.Job{Target: systeminstall.TargetCodex, Status: systeminstall.StatusVerifying},
+		plans:     []systeminstall.AgentPlan{{AgentID: "pi", Available: true, Automatic: true, Method: "npm"}},
+		startJob:  systeminstall.Job{Target: systeminstall.TargetTmux, Status: systeminstall.StatusInstalling, Method: "npm"},
+		agentJobs: []systeminstall.Job{{Target: systeminstall.TargetTmux, Status: systeminstall.StatusInterrupted, Method: "npm", Error: "AO restarted"}},
+		verifyJob: systeminstall.Job{Target: systeminstall.TargetTmux, Status: systeminstall.StatusVerifying},
 	}
 	srv := httptest.NewServer(httpd.NewRouterWithControl(config.Config{}, log, nil, httpd.APIDeps{
 		Installer: installer,
@@ -77,18 +77,18 @@ func TestAgentInstallRoutes(t *testing.T) {
 	defer srv.Close()
 
 	body, status, _ := doRequest(t, srv, http.MethodGet, "/api/v1/agents/installers", "")
-	if status != http.StatusOK || !strings.Contains(string(body), `"agentId":"codex"`) {
+	if status != http.StatusOK || !strings.Contains(string(body), `"agentId":"pi"`) {
 		t.Fatalf("GET /agents/installers = %d, body=%s", status, body)
 	}
-	body, status, _ = doRequest(t, srv, http.MethodPost, "/api/v1/agents/codex/install", `{"method":"npm","operation":"reinstall"}`)
-	if status != http.StatusAccepted || installer.lastTarget != systeminstall.TargetCodex || installer.lastMethod != "npm" || installer.lastOperation != systeminstall.AgentOperationReinstall {
+	body, status, _ = doRequest(t, srv, http.MethodPost, "/api/v1/agents/pi/install", `{"method":"npm","operation":"reinstall"}`)
+	if status != http.StatusAccepted || installer.lastTarget != systeminstall.TargetPi || installer.lastMethod != "npm" || installer.lastOperation != systeminstall.AgentOperationReinstall {
 		t.Fatalf("POST /agents/codex/install = %d, target=%q method=%q operation=%q, body=%s", status, installer.lastTarget, installer.lastMethod, installer.lastOperation, body)
 	}
 	body, status, _ = doRequest(t, srv, http.MethodGet, "/api/v1/agents/install-jobs", "")
 	if status != http.StatusOK || !strings.Contains(string(body), `"status":"interrupted"`) {
 		t.Fatalf("GET /agents/install-jobs = %d, body=%s", status, body)
 	}
-	body, status, _ = doRequest(t, srv, http.MethodPost, "/api/v1/agents/codex/verify", "")
+	body, status, _ = doRequest(t, srv, http.MethodPost, "/api/v1/agents/pi/verify", "")
 	if status != http.StatusAccepted || !strings.Contains(string(body), `"status":"verifying"`) {
 		t.Fatalf("POST /agents/codex/verify = %d, body=%s", status, body)
 	}
@@ -104,7 +104,7 @@ func TestAgentInstallRejectsUnknownOperation(t *testing.T) {
 	srv := httptest.NewServer(httpd.NewRouterWithControl(config.Config{}, log, nil, httpd.APIDeps{Installer: installer}, httpd.ControlDeps{}))
 	defer srv.Close()
 
-	body, status, _ := doRequest(t, srv, http.MethodPost, "/api/v1/agents/codex/install", `{"method":"npm","operation":"repair"}`)
+	body, status, _ := doRequest(t, srv, http.MethodPost, "/api/v1/agents/pi/install", `{"method":"npm","operation":"repair"}`)
 	if status != http.StatusBadRequest || !strings.Contains(string(body), `"code":"INVALID_INSTALL_OPERATION"`) || installer.startCalls != 0 {
 		t.Fatalf("status=%d calls=%d body=%s", status, installer.startCalls, body)
 	}
@@ -112,11 +112,11 @@ func TestAgentInstallRejectsUnknownOperation(t *testing.T) {
 
 func TestAgentInstallDefaultsOmittedOperationToInstall(t *testing.T) {
 	log := slog.New(slog.NewTextHandler(io.Discard, nil))
-	installer := &fakeInstaller{startJob: systeminstall.Job{Target: systeminstall.TargetCodex, Status: systeminstall.StatusInstalling}}
+	installer := &fakeInstaller{startJob: systeminstall.Job{Target: systeminstall.TargetTmux, Status: systeminstall.StatusInstalling}}
 	srv := httptest.NewServer(httpd.NewRouterWithControl(config.Config{}, log, nil, httpd.APIDeps{Installer: installer}, httpd.ControlDeps{}))
 	defer srv.Close()
 
-	_, status, _ := doRequest(t, srv, http.MethodPost, "/api/v1/agents/codex/install", `{"method":"npm"}`)
+	_, status, _ := doRequest(t, srv, http.MethodPost, "/api/v1/agents/pi/install", `{"method":"npm"}`)
 	if status != http.StatusAccepted || installer.lastOperation != systeminstall.AgentOperationInstall {
 		t.Fatalf("status=%d operation=%q, want install", status, installer.lastOperation)
 	}
@@ -131,14 +131,14 @@ func TestAgentInstallMapsMethodAndActiveHarnessErrors(t *testing.T) {
 		wantCode   string
 	}{
 		{name: "invalid method", err: systeminstall.ErrInstallMethod, wantStatus: http.StatusBadRequest, wantCode: "INSTALL_METHOD_UNAVAILABLE"},
-		{name: "active droid", err: systeminstall.ErrHarnessActive, wantStatus: http.StatusConflict, wantCode: "HARNESS_ACTIVE"},
+		{name: "harness active", err: systeminstall.ErrHarnessActive, wantStatus: http.StatusConflict, wantCode: "HARNESS_ACTIVE"},
 		{name: "install active", err: systeminstall.ErrInstallActive, wantStatus: http.StatusConflict, wantCode: "INSTALL_ACTIVE"},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			installer := &fakeInstaller{startErr: tt.err}
 			srv := httptest.NewServer(httpd.NewRouterWithControl(config.Config{}, log, nil, httpd.APIDeps{Installer: installer}, httpd.ControlDeps{}))
 			defer srv.Close()
-			body, status, _ := doRequest(t, srv, http.MethodPost, "/api/v1/agents/droid/install", `{"method":"homebrew"}`)
+			body, status, _ := doRequest(t, srv, http.MethodPost, "/api/v1/agents/pi/install", `{"method":"npm"}`)
 			if status != tt.wantStatus || !strings.Contains(string(body), `"code":"`+tt.wantCode+`"`) || !strings.Contains(string(body), `"requestId":"`) {
 				t.Fatalf("status = %d body=%s", status, body)
 			}
@@ -178,9 +178,9 @@ func TestPostSystemInstallMapsActiveAgentConflict(t *testing.T) {
 	srv := httptest.NewServer(httpd.NewRouterWithControl(config.Config{}, log, nil, httpd.APIDeps{Installer: installer}, httpd.ControlDeps{}))
 	defer srv.Close()
 
-	body, status, _ := doRequest(t, srv, http.MethodPost, "/api/v1/system/install/codex", "")
+	body, status, _ := doRequest(t, srv, http.MethodPost, "/api/v1/system/install/tmux", "")
 	if status != http.StatusConflict || !strings.Contains(string(body), `"code":"INSTALL_ACTIVE"`) {
-		t.Fatalf("POST /system/install/codex = %d, body=%s", status, body)
+		t.Fatalf("POST /system/install/tmux = %d, body=%s", status, body)
 	}
 }
 
@@ -231,7 +231,7 @@ func TestPostSystemInstall_NotImplemented(t *testing.T) {
 func TestGetSystemInstallStatus(t *testing.T) {
 	log := slog.New(slog.NewTextHandler(io.Discard, nil))
 	installer := &fakeInstaller{statusJob: systeminstall.Job{
-		Target: systeminstall.TargetOpencode,
+		Target: systeminstall.TargetTmux,
 		Status: systeminstall.StatusSucceeded,
 	}}
 	srv := httptest.NewServer(httpd.NewRouterWithControl(config.Config{}, log, nil, httpd.APIDeps{
@@ -239,15 +239,15 @@ func TestGetSystemInstallStatus(t *testing.T) {
 	}, httpd.ControlDeps{}))
 	defer srv.Close()
 
-	body, status, _ := doRequest(t, srv, http.MethodGet, "/api/v1/system/install/opencode", "")
+	body, status, _ := doRequest(t, srv, http.MethodGet, "/api/v1/system/install/tmux", "")
 	if status != http.StatusOK {
 		t.Fatalf("GET /system/install/opencode = %d, body=%s", status, body)
 	}
 	if !strings.Contains(string(body), `"status":"succeeded"`) {
 		t.Fatalf("body missing status: %s", body)
 	}
-	if installer.lastTarget != systeminstall.TargetOpencode {
-		t.Fatalf("lastTarget = %q, want %q", installer.lastTarget, systeminstall.TargetOpencode)
+	if installer.lastTarget != systeminstall.TargetTmux {
+		t.Fatalf("lastTarget = %q, want %q", installer.lastTarget, systeminstall.TargetPi)
 	}
 }
 

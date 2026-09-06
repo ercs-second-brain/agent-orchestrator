@@ -607,7 +607,7 @@ export function TerminalPane({
 				</pre>
 			);
 		}
-		const provider = terminalTarget?.kind === "reviewer" ? terminalTarget.harness : (session?.provider ?? "claude");
+		const provider = terminalTarget?.kind === "reviewer" ? terminalTarget.harness : (session?.provider ?? "pi");
 		const lines =
 			terminalTarget?.kind === "reviewer" ? reviewerPreviewLines(session) : workerPreviewLines(session, provider);
 		return (
@@ -718,12 +718,12 @@ function workerPreviewLines(session: WorkspaceSession | undefined, provider: str
 			"│ 3 │ session-pr-surface │ PR checks missing on board cards         │ Additive; touches board only     │",
 			"└───┴────────────────────┴──────────────────────────────────────────┴──────────────────────────────────┘",
 			"",
-			"Want me to spawn all three? I'd put #1–2 on codex and #3 on claude-code.",
+			"Want me to spawn all three? I'd put #1–2 and #3 on pi.",
 			"",
 			"> yes, spawn all three",
 			"",
 			"Running 3 shell commands…",
-			'└ $ ao spawn --project ao-demo --name "new-task-flake" --agent codex --prompt',
+			'└ $ ao spawn --project ao-demo --name "new-task-flake" --prompt',
 			'  "Fix the flaky NewTaskDialog smoke test: submit is debounced 300ms while the',
 			'  e2e check asserts synchronously. Reproduce, fix, and push to update PR #324."',
 			"PASS 3 sessions spawned — board updated",
@@ -760,7 +760,7 @@ function workerPreviewLines(session: WorkspaceSession | undefined, provider: str
 	if (session?.id === "demo-ci-failed") {
 		return [
 			"╭────────────────────────────────────────────╮",
-			"│ >_ OpenAI Codex (v0.133.0)                 │",
+			"│ >_ pi (v0.133.0)                           │",
 			"│ model:        gpt-5.5 high  /model to change",
 			"│ directory:    ~/ao-demo/demo-new-task-flake",
 			"│ permissions:  YOLO mode                    │",
@@ -803,13 +803,10 @@ function reviewerPreviewLines(session: WorkspaceSession | undefined): string[] {
 	];
 }
 
-// Agents whose full-screen TUI keeps its own transcript and scrolls it only by
-// keyboard, ignoring SGR wheel reports. The terminal routes the wheel to
+// The full-screen TUI keeps its own transcript and scrolls it only by
+// keyboard, ignoring SGR wheel reports, so the terminal routes the wheel to
 // PageUp/PageDown for these (see XtermTerminal's paneScrollsByKeyboard).
-// kilocode is a fork of opencode and shares its TUI surface; grok also uses a
-// full-screen keyboard-scroll TUI, so both scroll the same way. Muse Code uses
-// the normal terminal buffer instead and must keep the SGR -> tmux scroll path.
-const KEYBOARD_SCROLL_PROVIDERS = new Set(["opencode", "kilocode", "grok"]);
+const KEYBOARD_SCROLL_PROVIDERS = new Set(["pi"]);
 
 // Whether the given provider's TUI is one of the keyboard-scroll agents above.
 export function providerScrollsByKeyboard(provider?: string): boolean {

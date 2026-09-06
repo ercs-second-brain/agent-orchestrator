@@ -1,36 +1,13 @@
 // Package reviewer is the single source of truth for the code-review adapters
 // the daemon ships. It mirrors the worker agent registry but is a separate set:
-// adding a reviewer here does not widen the worker AgentHarness vocabulary.
+// a reviewer is still a distinct role from a worker. Since ADR 0005 pi is the
+// single supported harness, so the set is exactly one entry.
 package reviewer
 
 import (
 	"fmt"
 
-	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/adapters/reviewer/agy"
-	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/adapters/reviewer/aider"
-	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/adapters/reviewer/amp"
-	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/adapters/reviewer/auggie"
-	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/adapters/reviewer/autohand"
-	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/adapters/reviewer/claudecode"
-	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/adapters/reviewer/cline"
-	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/adapters/reviewer/codex"
-	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/adapters/reviewer/continueagent"
-	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/adapters/reviewer/copilot"
-	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/adapters/reviewer/crush"
-	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/adapters/reviewer/cursor"
-	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/adapters/reviewer/devin"
-	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/adapters/reviewer/droid"
-	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/adapters/reviewer/goose"
-	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/adapters/reviewer/grok"
-	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/adapters/reviewer/kilocode"
-	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/adapters/reviewer/kimchi"
-	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/adapters/reviewer/kimi"
-	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/adapters/reviewer/kiro"
-	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/adapters/reviewer/muse"
-	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/adapters/reviewer/opencode"
 	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/adapters/reviewer/pi"
-	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/adapters/reviewer/qwen"
-	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/adapters/reviewer/vibe"
 	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/domain"
 	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/ports"
 )
@@ -45,31 +22,7 @@ type Adapter interface {
 // here (and to domain.AllReviewerHarnesses) to register it.
 func Constructors() []Adapter {
 	return []Adapter{
-		aider.New(),
-		agy.New(),
-		amp.New(),
-		auggie.New(),
-		autohand.New(),
-		claudecode.New(),
-		cline.New(),
-		codex.New(),
-		continueagent.New(),
-		copilot.New(),
-		cursor.New(),
-		devin.New(),
-		droid.New(),
-		crush.New(),
-		goose.New(),
-		grok.New(),
-		kimchi.New(),
-		kilocode.New(),
-		kiro.New(),
-		kimi.New(),
-		muse.New(),
-		opencode.New(),
 		pi.New(),
-		qwen.New(),
-		vibe.New(),
 	}
 }
 

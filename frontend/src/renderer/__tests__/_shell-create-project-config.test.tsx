@@ -2,28 +2,30 @@ import { describe, expect, it } from "vitest";
 import { createProjectConfig } from "../routes/_shell";
 
 describe("createProjectConfig", () => {
-	it("persists selected worker and orchestrator agents without tracker intake by default", () => {
+	// ADR 0005: pi is the single supported harness, so the create flow pins both
+	// roles to pi; legacy role values from a stale caller must not persist.
+	it("pins worker and orchestrator agents to pi", () => {
 		expect(
 			createProjectConfig({
-				workerAgent: "codex",
-				orchestratorAgent: "claude-code",
+				workerAgent: "pi",
+				orchestratorAgent: "pi",
 			}),
 		).toEqual({
-			worker: { agent: "codex" },
-			orchestrator: { agent: "claude-code" },
+			worker: { agent: "pi" },
+			orchestrator: { agent: "pi" },
 		});
 	});
 
-	it("preserves tracker intake alongside selected agent defaults", () => {
+	it("preserves tracker intake alongside the agent defaults", () => {
 		expect(
 			createProjectConfig({
-				workerAgent: "cursor",
-				orchestratorAgent: "opencode",
+				workerAgent: "pi",
+				orchestratorAgent: "pi",
 				trackerIntake: { enabled: true, provider: "github", assignee: "octocat" },
 			}),
 		).toEqual({
-			worker: { agent: "cursor" },
-			orchestrator: { agent: "opencode" },
+			worker: { agent: "pi" },
+			orchestrator: { agent: "pi" },
 			trackerIntake: { enabled: true, provider: "github", assignee: "octocat" },
 		});
 	});

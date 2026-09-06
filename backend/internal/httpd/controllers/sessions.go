@@ -1,13 +1,10 @@
 package controllers
 
 import (
-	"bytes"
 	"context"
 	"encoding/base64"
-	"encoding/json"
 	"errors"
 	"fmt"
-	"log/slog"
 	"mime"
 	"net/http"
 	"strconv"
@@ -23,7 +20,6 @@ import (
 	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/httpd/envelope"
 	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/ports"
 	sessionsvc "github.com/ercs-second-brain/agent-orchestrator/backend/internal/service/session"
-	usagesvc "github.com/ercs-second-brain/agent-orchestrator/backend/internal/service/usage"
 	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/workspacewatch"
 )
 
@@ -33,11 +29,6 @@ const (
 	maxModelLen       = 256
 	maxDisplayNameLen = 20
 	maxIdempotencyKey = 128
-
-	// Agent-authored handoffs are deliberately bounded. Deterministic AO
-	// context is stored separately and does not need to be repeated here.
-	maxAgentHandoffBodyBytes = 256 << 10
-	maxAgentHandoffBytes     = 64 << 10
 
 	// Attachment limits guard the daemon against oversized spawn bodies. Files
 	// are pasted/dropped into the task brief and inlined as base64 in the JSON
@@ -74,10 +65,6 @@ type SessionService interface {
 	Restore(ctx context.Context, id domain.SessionID) (sessionsvc.RestoreOutcome, error)
 	ExitAgent(ctx context.Context, id domain.SessionID) (sessionsvc.ExitAgentOutcome, error)
 	ResumeAgent(ctx context.Context, id domain.SessionID) (sessionsvc.ResumeAgentOutcome, error)
-	SwitchAgent(ctx context.Context, id domain.SessionID, in sessionsvc.SwitchAgentInput) (domain.AgentSwitch, error)
-	RecoverAgentSwitch(ctx context.Context, id domain.SessionID, switchID domain.AgentSwitchID) (domain.AgentSwitch, error)
-	ListAgentSwitches(ctx context.Context, id domain.SessionID) ([]domain.AgentSwitch, error)
-	SubmitAgentHandoff(ctx context.Context, id domain.SessionID, switchID domain.AgentSwitchID, sourceGenerationID domain.AgentGenerationID, handoff json.RawMessage) (domain.AgentSwitch, error)
 	Kill(ctx context.Context, id domain.SessionID) (bool, error)
 	RollbackSpawn(ctx context.Context, id domain.SessionID) (sessionsvc.RollbackOutcome, error)
 	Cleanup(ctx context.Context, project domain.ProjectID) (sessionsvc.CleanupOutcome, error)
@@ -111,18 +98,11 @@ type ActivityRecorder interface {
 	ApplyActivitySignal(ctx context.Context, id domain.SessionID, s ports.ActivitySignal) error
 }
 
-// UsageHookRecorder consumes transcript metadata from the same native hook
-// callback without changing activity-state semantics.
-type UsageHookRecorder interface {
-	RecordHook(ctx context.Context, id domain.SessionID, signal usagesvc.HookSignal) error
-}
-
 // SessionsController owns the session routes. Nil keeps routes registered but
 // returns OpenAPI-backed 501s.
 type SessionsController struct {
 	Svc         SessionService
 	Activity    ActivityRecorder
-	Usage       UsageHookRecorder
 	Attachments *attachmentstore.Store
 }
 
@@ -148,10 +128,6 @@ func (c *SessionsController) Register(r chi.Router) {
 	r.Post("/sessions/{sessionId}/restore", c.restore)
 	r.Post("/sessions/{sessionId}/exit-agent", c.exitAgent)
 	r.Post("/sessions/{sessionId}/resume-agent", c.resumeAgent)
-	r.Post("/sessions/{sessionId}/switch-agent", c.switchAgent)
-	r.Get("/sessions/{sessionId}/agent-switches", c.listAgentSwitches)
-	r.Post("/sessions/{sessionId}/agent-switches/{switchId}/recover", c.recoverAgentSwitch)
-	r.Post("/sessions/{sessionId}/agent-switches/{switchId}/handoff", c.submitAgentHandoff)
 	r.Post("/sessions/{sessionId}/kill", c.kill)
 	r.Post("/sessions/{sessionId}/rollback", c.rollback)
 	r.Post("/sessions/{sessionId}/send", c.send)
@@ -751,103 +727,6 @@ func (c *SessionsController) exitAgent(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func (c *SessionsController) switchAgent(w http.ResponseWriter, r *http.Request) {
-	if c.Svc == nil {
-		apispec.NotImplemented(w, r, "POST", "/api/v1/sessions/{sessionId}/switch-agent")
-		return
-	}
-	var in SwitchAgentRequest
-	if err := decodeJSONStrict(r, &in); err != nil {
-		envelope.WriteAPIError(w, r, http.StatusBadRequest, "bad_request", "INVALID_JSON", "Invalid JSON body", nil)
-		return
-	}
-	targetHarness := domain.AgentHarness(strings.TrimSpace(string(in.TargetHarness)))
-	if targetHarness == "" {
-		envelope.WriteAPIError(w, r, http.StatusBadRequest, "bad_request", "TARGET_HARNESS_REQUIRED", "targetHarness is required", nil)
-		return
-	}
-	model := strings.TrimSpace(domain.SanitizeControlChars(in.Model))
-	if utf8.RuneCountInString(model) > maxModelLen {
-		envelope.WriteAPIError(w, r, http.StatusBadRequest, "bad_request", "MODEL_TOO_LONG", "Model must be 256 characters or fewer", nil)
-		return
-	}
-	idempotencyKey := strings.TrimSpace(in.IdempotencyKey)
-	if len(idempotencyKey) > maxIdempotencyKey {
-		envelope.WriteAPIError(w, r, http.StatusBadRequest, "bad_request", "IDEMPOTENCY_KEY_TOO_LONG", "idempotencyKey is too long", nil)
-		return
-	}
-	switchRecord, err := c.Svc.SwitchAgent(r.Context(), sessionID(r), sessionsvc.SwitchAgentInput{
-		TargetHarness:  targetHarness,
-		Model:          model,
-		IdempotencyKey: idempotencyKey,
-	})
-	if err != nil {
-		envelope.WriteError(w, r, err)
-		return
-	}
-	envelope.WriteJSON(w, http.StatusAccepted, AgentSwitchResponse{Switch: agentSwitchView(switchRecord)})
-}
-
-func (c *SessionsController) listAgentSwitches(w http.ResponseWriter, r *http.Request) {
-	if c.Svc == nil {
-		apispec.NotImplemented(w, r, "GET", "/api/v1/sessions/{sessionId}/agent-switches")
-		return
-	}
-	switches, err := c.Svc.ListAgentSwitches(r.Context(), sessionID(r))
-	if err != nil {
-		envelope.WriteError(w, r, err)
-		return
-	}
-	envelope.WriteJSON(w, http.StatusOK, ListAgentSwitchesResponse{Switches: agentSwitchViews(switches)})
-}
-
-func (c *SessionsController) recoverAgentSwitch(w http.ResponseWriter, r *http.Request) {
-	if c.Svc == nil {
-		apispec.NotImplemented(w, r, "POST", "/api/v1/sessions/{sessionId}/agent-switches/{switchId}/recover")
-		return
-	}
-	switchRecord, err := c.Svc.RecoverAgentSwitch(r.Context(), sessionID(r), agentSwitchID(r))
-	if err != nil {
-		envelope.WriteError(w, r, err)
-		return
-	}
-	envelope.WriteJSON(w, http.StatusAccepted, AgentSwitchResponse{Switch: agentSwitchView(switchRecord)})
-}
-
-func (c *SessionsController) submitAgentHandoff(w http.ResponseWriter, r *http.Request) {
-	if c.Svc == nil {
-		apispec.NotImplemented(w, r, "POST", "/api/v1/sessions/{sessionId}/agent-switches/{switchId}/handoff")
-		return
-	}
-	r.Body = http.MaxBytesReader(w, r.Body, maxAgentHandoffBodyBytes)
-	var in SubmitAgentHandoffRequest
-	if err := decodeJSON(r, &in); err != nil {
-		envelope.WriteAPIError(w, r, http.StatusBadRequest, "bad_request", "INVALID_JSON", "Invalid JSON body", nil)
-		return
-	}
-	sourceGenerationID := domain.AgentGenerationID(strings.TrimSpace(string(in.SourceGenerationID)))
-	if sourceGenerationID == "" {
-		envelope.WriteAPIError(w, r, http.StatusBadRequest, "bad_request", "SOURCE_GENERATION_REQUIRED", "sourceGenerationId is required", nil)
-		return
-	}
-	if len(bytes.TrimSpace(in.Handoff)) == 0 {
-		envelope.WriteAPIError(w, r, http.StatusBadRequest, "bad_request", "HANDOFF_REQUIRED", "handoff is required", nil)
-		return
-	}
-	if len(in.Handoff) > maxAgentHandoffBytes {
-		envelope.WriteAPIError(w, r, http.StatusBadRequest, "bad_request", "HANDOFF_TOO_LARGE", "handoff must be no larger than 64 KiB", nil)
-		return
-	}
-	switchRecord, err := c.Svc.SubmitAgentHandoff(
-		r.Context(), sessionID(r), agentSwitchID(r), sourceGenerationID, in.Handoff,
-	)
-	if err != nil {
-		envelope.WriteError(w, r, err)
-		return
-	}
-	envelope.WriteJSON(w, http.StatusOK, AgentSwitchResponse{Switch: agentSwitchView(switchRecord)})
-}
-
 func (c *SessionsController) kill(w http.ResponseWriter, r *http.Request) {
 	if c.Svc == nil {
 		apispec.NotImplemented(w, r, "POST", "/api/v1/sessions/{sessionId}/kill")
@@ -995,7 +874,7 @@ func (c *SessionsController) delegateTask(w http.ResponseWriter, r *http.Request
 // lifecycle.Manager so the reaper and hooks never race on the session's
 // activity/termination columns.
 func (c *SessionsController) activity(w http.ResponseWriter, r *http.Request) {
-	if c.Activity == nil && c.Usage == nil {
+	if c.Activity == nil {
 		apispec.NotImplemented(w, r, "POST", "/api/v1/sessions/{sessionId}/activity")
 		return
 	}
@@ -1014,7 +893,7 @@ func (c *SessionsController) activity(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	agentSessionID := capActivityMeta(domain.SanitizeControlChars(strings.TrimSpace(in.AgentSessionID)))
-	if state == "" && agentSessionID == "" && in.Usage == nil {
+	if state == "" && agentSessionID == "" {
 		envelope.WriteAPIError(w, r, http.StatusBadRequest, "bad_request", "ACTIVITY_OR_SESSION_ID_REQUIRED", "Activity state or agent session ID is required", nil)
 		return
 	}
@@ -1045,32 +924,6 @@ func (c *SessionsController) activity(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	if c.Usage != nil {
-		usageSignal := usagesvc.HookSignal{
-			Event:           sig.Event,
-			LaunchID:        sig.LaunchID,
-			NativeSessionID: agentSessionID,
-		}
-		if in.Usage != nil {
-			usageSignal.Harness = domain.AgentHarness(capActivityMeta(domain.SanitizeControlChars(strings.TrimSpace(string(in.Usage.Harness)))))
-			usageSignal.TranscriptPath = capUsagePath(domain.SanitizeControlChars(strings.TrimSpace(in.Usage.TranscriptPath)))
-			usageSignal.ModelID = capActivityMeta(domain.SanitizeControlChars(strings.TrimSpace(in.Usage.ModelID)))
-			usageSignal.SubagentID = capActivityMeta(domain.SanitizeControlChars(strings.TrimSpace(in.Usage.SubagentID)))
-			usageSignal.SubagentTranscriptPath = capUsagePath(domain.SanitizeControlChars(strings.TrimSpace(in.Usage.SubagentTranscriptPath)))
-		}
-		if err := c.Usage.RecordHook(r.Context(), sessionID(r), usageSignal); err != nil {
-			if errors.Is(err, usagesvc.ErrUsageSessionNotFound) {
-				envelope.WriteAPIError(w, r, http.StatusNotFound, "not_found", "SESSION_NOT_FOUND", "Unknown session", nil)
-				return
-			}
-			slog.Default().Warn(
-				"usage hook processing failed",
-				"session", sessionID(r),
-				"event", sig.Event,
-				"err", err,
-			)
-		}
-	}
 	envelope.WriteJSON(w, http.StatusOK, SetActivityResponse{OK: true, SessionID: sessionID(r), State: in.State})
 }
 
@@ -1078,14 +931,6 @@ func (c *SessionsController) activity(w http.ResponseWriter, r *http.Request) {
 // values are dropped, not truncated (see the comment at its call site).
 func capActivityMeta(v string) string {
 	const maxLen = 256
-	if len(v) > maxLen {
-		return ""
-	}
-	return v
-}
-
-func capUsagePath(v string) string {
-	const maxLen = 4096
 	if len(v) > maxLen {
 		return ""
 	}
@@ -1170,10 +1015,6 @@ func sessionID(r *http.Request) domain.SessionID {
 	return domain.SessionID(chi.URLParam(r, "sessionId"))
 }
 
-func agentSwitchID(r *http.Request) domain.AgentSwitchID {
-	return domain.AgentSwitchID(chi.URLParam(r, "switchId"))
-}
-
 func orchestratorID(r *http.Request) domain.SessionID {
 	return domain.SessionID(chi.URLParam(r, "id"))
 }
@@ -1247,36 +1088,7 @@ func sessionView(s domain.Session) SessionView {
 		}(),
 		PRs: sessionPRFacts(s.PRs),
 	}
-	if s.ActiveAgentSwitch != nil {
-		active := agentSwitchView(*s.ActiveAgentSwitch)
-		view.ActiveAgentSwitch = &active
-	}
 	return view
-}
-
-func agentSwitchView(s domain.AgentSwitch) AgentSwitchView {
-	return AgentSwitchView{
-		ID:                      s.ID,
-		SessionID:               s.SessionID,
-		FromHarness:             s.FromHarness,
-		TargetHarness:           s.TargetHarness,
-		TargetStartMode:         s.TargetStartMode,
-		State:                   s.State,
-		AgentHandoffStatus:      s.AgentHandoffStatus,
-		SemanticHandoffIncluded: s.SemanticHandoffIncluded,
-		SourceTranscriptStatus:  s.SourceTranscriptStatus,
-		ErrorCode:               s.ErrorCode,
-		RequestedAt:             s.RequestedAt,
-		UpdatedAt:               s.UpdatedAt,
-	}
-}
-
-func agentSwitchViews(switches []domain.AgentSwitch) []AgentSwitchView {
-	out := make([]AgentSwitchView, 0, len(switches))
-	for _, agentSwitch := range switches {
-		out = append(out, agentSwitchView(agentSwitch))
-	}
-	return out
 }
 
 func sessionViews(sessions []domain.Session) []SessionView {

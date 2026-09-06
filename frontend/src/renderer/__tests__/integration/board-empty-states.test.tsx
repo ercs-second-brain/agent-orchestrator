@@ -67,7 +67,7 @@ function respondWith(projects: Project[], sessions: Session[]) {
 					requirements: [
 						{ id: "git", label: "git", satisfied: true, required: true, detail: "/usr/bin/git" },
 						{ id: "tmux", label: "tmux", satisfied: true, required: true, detail: "/usr/bin/tmux" },
-						{ id: "harness", label: "agent harness", satisfied: true, required: true, detail: "Claude Code" },
+						{ id: "harness", label: "agent harness", satisfied: true, required: true, detail: "pi" },
 						{ id: "gh", label: "gh", satisfied: true, required: false, detail: "/usr/bin/gh" },
 					],
 				},
@@ -82,14 +82,14 @@ const project: Project = {
 	id: "proj-1",
 	name: "my-app",
 	path: "/repo/my-app",
-	orchestratorAgent: "claude-code",
+	orchestratorAgent: "pi",
 };
 
 const workerSession: Session = {
 	id: "sess-1",
 	projectId: "proj-1",
 	displayName: "fix the bug",
-	harness: "claude-code",
+	harness: "pi",
 	kind: "worker",
 	status: "working",
 	isTerminated: false,
@@ -101,7 +101,7 @@ const orchestratorSession: Session = {
 	id: "proj-1-orchestrator",
 	projectId: "proj-1",
 	displayName: "orchestrator",
-	harness: "claude-code",
+	harness: "pi",
 	kind: "orchestrator",
 	status: "working",
 	isTerminated: false,
@@ -292,7 +292,7 @@ describe("project board with no sessions", () => {
 
 	it("offers an explicit Terminal UI fallback when Chat preflight fails", async () => {
 		respondWith([project], []);
-		const preflightError = Object.assign(new Error("Claude Code is unavailable"), {
+		const preflightError = Object.assign(new Error("pi is unavailable"), {
 			code: "CHAT_DRIVER_UNAVAILABLE",
 		});
 		spawnOrchestratorMock.mockRejectedValueOnce(preflightError).mockResolvedValueOnce("proj-1-orchestrator");

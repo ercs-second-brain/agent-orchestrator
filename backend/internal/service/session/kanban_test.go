@@ -226,7 +226,7 @@ func TestSessionGetUsesLatestCurrentHeadRunPerHarness(t *testing.T) {
 	rec, err := st.CreateSession(ctx, domain.SessionRecord{
 		ProjectID:         "mer",
 		Kind:              domain.KindWorker,
-		Harness:           domain.HarnessClaudeCode,
+		Harness:           domain.HarnessPi,
 		AutoReviewEnabled: true,
 		AutoInjectReview:  true,
 		CreatedAt:         now,

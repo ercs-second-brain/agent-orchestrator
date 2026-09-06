@@ -51,16 +51,6 @@ export type PullRequestFacts = {
 /** The daemon-committed controller currently responsible for the session. */
 export type SessionMode = "chat" | "tui";
 
-export type AgentSwitchSummary = {
-	agentHandoffStatus: string;
-	errorCode?: string;
-	fromHarness: string;
-	id: string;
-	state: string;
-	targetHarness: string;
-	updatedAt?: string;
-};
-
 export type WorkspaceSession = {
 	id: string;
 	terminalHandleId?: string;
@@ -129,7 +119,6 @@ export type WorkspaceSession = {
 	pinnedAt?: string;
 	/** Raw agent lifecycle activity from the daemon. */
 	activity?: SessionActivity;
-	activeAgentSwitch?: AgentSwitchSummary;
 	/** The session's git diff against its base, when known. */
 	changedFiles?: ChangedFile[];
 	/** Pre-filled commit subject for the Git rail, when known. */
@@ -353,5 +342,7 @@ export function orchestratorHealth(workspace: WorkspaceSummary, restarting = fal
 
 export function toAgentProvider(provider?: string): AgentProvider {
 	if (provider === "fake") return provider;
-	return AGENT_OPTIONS.find((candidate) => candidate === provider) ?? "codex";
+	// Legacy harness names in historical session rows are stored but ignored
+	// (ADR 0005); they render as the single supported provider.
+	return AGENT_OPTIONS.find((candidate) => candidate === provider) ?? "pi";
 }

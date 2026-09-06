@@ -8,13 +8,11 @@ const {
 	getApiBaseUrlMock,
 	getMock,
 	hasTrustedApiBaseUrlMock,
-	setQueryHealthyMock,
 	subscribeApiBaseUrlMock,
 } = vi.hoisted(() => ({
 	getApiBaseUrlMock: vi.fn(() => "http://127.0.0.1:3001"),
 	getMock: vi.fn(),
 	hasTrustedApiBaseUrlMock: vi.fn(() => true),
-	setQueryHealthyMock: vi.fn(),
 	subscribeApiBaseUrlMock: vi.fn(() => () => undefined),
 }));
 
@@ -25,7 +23,6 @@ vi.mock("../lib/api-client", () => ({
 	subscribeApiBaseUrl: subscribeApiBaseUrlMock,
 }));
 
-vi.mock("../lib/agent-switch-visibility", () => ({ agentSwitchVisibility: { setQueryHealthy: setQueryHealthyMock } }));
 
 import { useWorkspaceQuery, useWorkspaceSession, useWorkspaceTraySessions, workspaceQueryKey } from "./useWorkspaceQuery";
 
@@ -51,7 +48,6 @@ beforeEach(() => {
 	getApiBaseUrlMock.mockReset().mockReturnValue("http://127.0.0.1:3001");
 	hasTrustedApiBaseUrlMock.mockReset().mockReturnValue(true);
 	subscribeApiBaseUrlMock.mockReset().mockReturnValue(() => undefined);
-	setQueryHealthyMock.mockReset();
 });
 
 describe("useWorkspaceQuery", () => {
@@ -73,7 +69,7 @@ describe("useWorkspaceQuery", () => {
 							id: "proj-1",
 							name: "my-app",
 							path: "/home/me/my-app",
-							orchestratorAgent: "codex",
+							orchestratorAgent: "pi",
 						},
 					],
 				},
@@ -89,7 +85,7 @@ describe("useWorkspaceQuery", () => {
 							terminalGeneration: "launch-2",
 							displayName: "fix-bug",
 							issueId: "github:acme/project-one#42",
-							harness: "claude-code",
+							harness: "pi",
 							reviewerHarness: "qwen",
 							branch: "qa/modal-worker",
 							status: "mergeable",
@@ -100,30 +96,15 @@ describe("useWorkspaceQuery", () => {
 							autoInjectReview: false,
 							autoInjectCI: false,
 							activity: { state: "idle", lastActivityAt: "2026-06-10T15:30:00Z" },
-							activeAgentSwitch: {
-								agentHandoffStatus: "received",
-								errorCode: "delivery_unconfirmed",
-								fromHarness: "claude-code",
-								id: "switch-1",
-								privateFutureField: "must-not-leak",
-								requestedAt: "2026-06-10T15:31:00Z",
-								semanticHandoffIncluded: true,
-								sessionId: "sess-1",
-								sourceTranscriptStatus: "available",
-								state: "delivering_context",
-								targetHarness: "codex",
-								targetStartMode: "resumed",
-								updatedAt: "2026-06-10T15:32:00Z",
-							},
 							lastUserMessageAt: "2026-06-10T16:10:00Z",
 							updatedAt: "2026-06-10T16:15:04Z",
 						},
 						{
 							// Unknown harness/status and no displayName/issueId: falls back
-							// to codex / unknown / the session id.
+							// to unknown values / the session id.
 							id: "sess-2",
 							projectId: "proj-1",
-							harness: "mystery-agent",
+							harness: "legacy-harness",
 							reviewerHarness: "mystery-reviewer",
 							status: "bogus",
 							isTerminated: false,
@@ -145,7 +126,7 @@ describe("useWorkspaceQuery", () => {
 			id: "proj-1",
 			name: "my-app",
 			path: "/home/me/my-app",
-			orchestratorAgent: "codex",
+			orchestratorAgent: "pi",
 		});
 		expect(workspace.sessions).toHaveLength(2);
 		expect(workspace.sessions[0]).toMatchObject({
@@ -154,8 +135,8 @@ describe("useWorkspaceQuery", () => {
 			terminalGeneration: "launch-2",
 			title: "fix-bug",
 			issueId: "github:acme/project-one#42",
-			provider: "claude-code",
-			reviewerHarness: "qwen",
+			provider: "pi",
+			reviewerHarness: undefined,
 			branch: "qa/modal-worker",
 			status: "mergeable",
 			scmStatus: "review_pending",
@@ -166,19 +147,10 @@ describe("useWorkspaceQuery", () => {
 			autoInjectReview: false,
 			autoInjectCI: false,
 		});
-		expect(workspace.sessions[0].activeAgentSwitch).toEqual({
-			agentHandoffStatus: "received",
-			errorCode: "delivery_unconfirmed",
-			fromHarness: "claude-code",
-			id: "switch-1",
-			state: "delivering_context",
-			targetHarness: "codex",
-			updatedAt: "2026-06-10T15:32:00Z",
-		});
 		expect(workspace.sessions[1]).toMatchObject({
 			id: "sess-2",
 			title: "sess-2",
-			provider: "codex",
+			provider: "pi",
 			reviewerHarness: undefined,
 			status: "unknown",
 			branch: undefined,
@@ -195,7 +167,7 @@ describe("useWorkspaceQuery", () => {
 						{
 							id: "sess-legacy",
 							projectId: "proj-1",
-							harness: "codex",
+							harness: "pi",
 							status: "working",
 							isTerminated: false,
 							updatedAt: "2026-06-10T16:15:04Z",
@@ -206,7 +178,7 @@ describe("useWorkspaceQuery", () => {
 			},
 			projects: {
 				data: {
-					projects: [{ id: "proj-1", name: "my-app", path: "/home/me/my-app", orchestratorAgent: "codex" }],
+					projects: [{ id: "proj-1", name: "my-app", path: "/home/me/my-app", orchestratorAgent: "pi" }],
 				},
 				error: undefined,
 			},
@@ -227,7 +199,7 @@ describe("useWorkspaceQuery", () => {
 						{
 							id: "sess-off",
 							projectId: "proj-1",
-							harness: "codex",
+							harness: "pi",
 							status: "working",
 							autoReviewEnabled: false,
 							isTerminated: false,
@@ -239,7 +211,7 @@ describe("useWorkspaceQuery", () => {
 			},
 			projects: {
 				data: {
-					projects: [{ id: "proj-1", name: "my-app", path: "/home/me/my-app", orchestratorAgent: "codex" }],
+					projects: [{ id: "proj-1", name: "my-app", path: "/home/me/my-app", orchestratorAgent: "pi" }],
 				},
 				error: undefined,
 			},
@@ -272,7 +244,7 @@ describe("useWorkspaceQuery", () => {
 						{
 							id: "scratch-worker-1",
 							projectId: "scratch",
-							harness: "codex",
+							harness: "pi",
 							status: "working",
 							isTerminated: false,
 							updatedAt: "2026-06-10T16:15:04Z",
@@ -332,7 +304,7 @@ describe("useWorkspaceQuery", () => {
 					id: "sess-orch",
 					projectId: "proj-1",
 					displayName: "orchestrate",
-					harness: "codex",
+					harness: "pi",
 					kind: "orchestrator",
 					mode: "tui",
 					status: "working",
@@ -361,7 +333,7 @@ describe("useWorkspaceQuery", () => {
 			if (url === "/api/v1/projects") {
 				return {
 					data: {
-						projects: [{ id: "proj-1", name: "workspace3", path: "/tmp/workspace3", orchestratorAgent: "codex" }],
+						projects: [{ id: "proj-1", name: "workspace3", path: "/tmp/workspace3", orchestratorAgent: "pi" }],
 					},
 					error: undefined,
 				};
@@ -377,7 +349,7 @@ describe("useWorkspaceQuery", () => {
 							id: "sess-orch",
 							projectId: "proj-1",
 							displayName: "orchestrate",
-							harness: "codex",
+							harness: "pi",
 							kind: "orchestrator",
 							mode: "tui",
 							status: "working",
@@ -414,7 +386,7 @@ describe("useWorkspaceQuery", () => {
 			workspaceId: "proj-1",
 			workspaceName: "workspace3",
 			title: "orchestrate",
-			provider: "codex",
+			provider: "pi",
 			kind: "orchestrator",
 		});
 		await waitFor(() => {
@@ -542,7 +514,6 @@ describe("useWorkspaceQuery", () => {
 
 		await waitFor(() => expect(result.current.isError).toBe(true), { timeout: 3_000 });
 		expect(result.current.error).toBe(failure);
-		expect(setQueryHealthyMock).toHaveBeenCalledWith("history", false, "workspaces");
 	});
 
 	it("surfaces a sessions fetch error even when projects load", async () => {
@@ -564,11 +535,11 @@ describe("useWorkspaceQuery", () => {
 			sessions: {
 				data: {
 					sessions: [
-						{ id: "needs-input", projectId: "proj-1", displayName: "Needs input", harness: "codex", status: "needs_input", updatedAt: "2026-08-01T00:00:00Z" },
-						{ id: "mergeable", projectId: "proj-1", displayName: "Mergeable", harness: "codex", status: "mergeable", updatedAt: "2026-08-01T00:00:00Z" },
-						{ id: "working", projectId: "proj-1", displayName: "Working", harness: "codex", status: "working", updatedAt: "2026-08-01T00:00:00Z" },
-						{ id: "merged", projectId: "proj-1", displayName: "Merged", harness: "codex", status: "merged", updatedAt: "2026-08-01T00:00:00Z" },
-						{ id: "orchestrator", projectId: "proj-1", displayName: "Orchestrator", harness: "codex", kind: "orchestrator", status: "needs_input", updatedAt: "2026-08-01T00:00:00Z" },
+						{ id: "needs-input", projectId: "proj-1", displayName: "Needs input", harness: "pi", status: "needs_input", updatedAt: "2026-08-01T00:00:00Z" },
+						{ id: "mergeable", projectId: "proj-1", displayName: "Mergeable", harness: "pi", status: "mergeable", updatedAt: "2026-08-01T00:00:00Z" },
+						{ id: "working", projectId: "proj-1", displayName: "Working", harness: "pi", status: "working", updatedAt: "2026-08-01T00:00:00Z" },
+						{ id: "merged", projectId: "proj-1", displayName: "Merged", harness: "pi", status: "merged", updatedAt: "2026-08-01T00:00:00Z" },
+						{ id: "orchestrator", projectId: "proj-1", displayName: "Orchestrator", harness: "pi", kind: "orchestrator", status: "needs_input", updatedAt: "2026-08-01T00:00:00Z" },
 					],
 				},
 				error: undefined,

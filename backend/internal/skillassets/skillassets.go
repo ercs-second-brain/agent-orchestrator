@@ -11,8 +11,7 @@
 // because the daemon binary already is the version.
 //
 // Materialize writes that same embedded tree into an arbitrary destination
-// directory (used by the opencode adapter to place the skill where opencode's
-// skill tool discovers it under .opencode/skills/).
+// directory.
 package skillassets
 
 import (
@@ -48,7 +47,7 @@ func Install(dataDir string) error {
 }
 
 // Materialize writes the embedded using-ao skill into destDir (the skill root
-// itself, e.g. <dataDir>/skills/using-ao or <workspace>/.opencode/skills/using-ao),
+// itself, e.g. <dataDir>/skills/using-ao),
 // replacing any existing copy. Callers that need AO-ownership guards must apply
 // them before calling Materialize.
 func Materialize(destDir string) error {

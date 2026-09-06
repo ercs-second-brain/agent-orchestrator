@@ -23,37 +23,6 @@ type openAPISchemaNode struct {
 	OneOf      []openAPISchemaNode          `yaml:"oneOf"`
 }
 
-func TestBuild_CodexSwitchContractIsRedactedAndOnlyMountedRoutesAreDocumented(t *testing.T) {
-	got, err := specgen.Build()
-	if err != nil {
-		t.Fatalf("Build: %v", err)
-	}
-	var doc struct {
-		Paths      map[string]any `yaml:"paths"`
-		Components struct {
-			Schemas map[string]openAPISchemaNode `yaml:"schemas"`
-		} `yaml:"components"`
-	}
-	if err := yaml.Unmarshal(got, &doc); err != nil {
-		t.Fatalf("parse generated OpenAPI: %v", err)
-	}
-
-	phase := doc.Components.Schemas["CodexAccountSwitchResponse"].Properties["phase"]
-	want := []string{
-		"requested", "stopping_sessions", "sessions_stopped", "checkpointing_source", "activating_target",
-		"verifying_target", "restarting_sessions", "rollback_required", "recovery_required", "completed", "failed",
-	}
-	if !slices.Equal(phase.Enum, want) {
-		t.Fatalf("CodexAccountSwitchResponse.phase enum = %v, want %v", phase.Enum, want)
-	}
-	if _, ok := doc.Paths["/api/v1/agents/codex/account-switches/{switchId}"]; ok {
-		t.Fatal("stale switch GET path remains in generated contract")
-	}
-	if _, ok := doc.Paths["/api/v1/agents/codex/account-switches/{switchId}/cancel"]; ok {
-		t.Fatal("stale switch cancel path remains in generated contract")
-	}
-}
-
 // TestBuild_MatchesEmbedded is the drift guard: the committed (embedded)
 // openapi.yaml must equal fresh Build() output. If this fails, run
 // `go generate ./...` and commit the result.
@@ -83,9 +52,14 @@ func TestBuild_InstallJobTargetRemainsAnEnum(t *testing.T) {
 		t.Fatalf("parse generated OpenAPI: %v", err)
 	}
 	targets := doc.Components.Schemas["InstallJob"].Properties["target"].Enum
-	for _, target := range []string{"tmux", "cloudflared", "cursor", "prime-agent"} {
+	for _, target := range []string{"tmux", "cloudflared", "pi"} {
 		if !slices.Contains(targets, target) {
 			t.Fatalf("InstallJob.target enum = %v, missing %q", targets, target)
+		}
+	}
+	for _, removed := range []string{"cursor", "prime-agent", "codex"} {
+		if slices.Contains(targets, removed) {
+			t.Fatalf("InstallJob.target enum = %v, legacy target %q must be gone", targets, removed)
 		}
 	}
 }
@@ -95,8 +69,8 @@ func TestBuild_SpawnHarnessEnumIncludesPrimeAgent(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Build: %v", err)
 	}
-	if !strings.Contains(string(got), "          - prime-agent\n") {
-		t.Fatal("SpawnSessionRequest harness enum does not contain prime-agent")
+	if !strings.Contains(string(got), "          - pi\n") {
+		t.Fatal("SpawnSessionRequest harness enum does not contain pi")
 	}
 }
 
@@ -118,24 +92,24 @@ func TestBuild_DelegateAgentEnumIncludesPrimeAgent(t *testing.T) {
 		t.Fatalf("parse generated OpenAPI: %v", err)
 	}
 	agents := doc.Components.Schemas["DelegateTaskRequest"].Properties["agent"].Enum
-	if !slices.Contains(agents, "prime-agent") {
-		t.Fatalf("DelegateTaskRequest agent enum = %v, want prime-agent", agents)
+	if !slices.Contains(agents, "pi") {
+		t.Fatalf("DelegateTaskRequest agent enum = %v, want pi", agents)
 	}
 }
 
 func TestBuild_OMPIsPubliclySpawnable(t *testing.T) {
 	doc := buildSchemas(t)
 	harnesses := doc.Components.Schemas["SpawnSessionRequest"].Properties["harness"].Enum
-	if !slices.Contains(harnesses, "omp") {
-		t.Fatalf("SpawnSessionRequest harness enum = %v, want omp", harnesses)
+	if !slices.Contains(harnesses, "pi") {
+		t.Fatalf("SpawnSessionRequest harness enum = %v, want pi", harnesses)
 	}
 }
 
 func TestBuild_OMPIsPubliclyDelegatable(t *testing.T) {
 	doc := buildSchemas(t)
 	agents := doc.Components.Schemas["DelegateTaskRequest"].Properties["agent"].Enum
-	if !slices.Contains(agents, "omp") {
-		t.Fatalf("DelegateTaskRequest agent enum = %v, want omp", agents)
+	if !slices.Contains(agents, "pi") {
+		t.Fatalf("DelegateTaskRequest agent enum = %v, want pi", agents)
 	}
 }
 

@@ -107,7 +107,7 @@ describe("AgentModelCombobox", () => {
 	it("adds simple model search at ten models", async () => {
 		renderCombobox(
 			Array.from({ length: 10 }, (_, index) => ({
-				id: index === 8 ? "gpt-luna" : index === 9 ? "claude-fable" : `model-${index}`,
+				id: index === 8 ? "gpt-luna" : index === 9 ? "model-fable" : `model-${index}`,
 				label: index === 8 ? "Luna" : index === 9 ? "Fable" : `Model ${index}`,
 				provider: "OpenAI",
 			})),
@@ -139,13 +139,13 @@ describe("AgentModelCombobox", () => {
 		renderCombobox([{ id: "configured/model", label: "Configured model" }], {
 			allowCustom: false,
 			customModelEntry: "configured",
-			agentLabel: "OpenCode",
+			agentLabel: "pi",
 			onRefresh,
 		});
 
 		await userEvent.click(screen.getByRole("button", { name: "Worker model" }));
 		expect(screen.getByText("Can’t find your model?")).toBeInTheDocument();
-		expect(screen.getByText("Configure the model in OpenCode, then refresh.")).toBeInTheDocument();
+		expect(screen.getByText("Configure the model in pi, then refresh.")).toBeInTheDocument();
 		await userEvent.click(screen.getByRole("button", { name: "Refresh models" }));
 		expect(onRefresh).toHaveBeenCalledOnce();
 	});
@@ -168,12 +168,12 @@ describe("AgentModelCombobox", () => {
 			{ id: "gpt-5.6-terra", label: "GPT-5.6 Terra", provider: "OpenAI" },
 			{ id: "gpt-5.6-luna", label: "GPT-5.6 Luna", provider: "OpenAI" },
 		];
-		const first = renderCombobox(models, { recentScope: "codex" });
+		const first = renderCombobox(models, { recentScope: "pi" });
 		await userEvent.click(screen.getByRole("button", { name: "Worker model" }));
 		await userEvent.click(screen.getByRole("menuitem", { name: "GPT-5.6 Luna" }));
 		first.unmount();
 
-		renderCombobox(models, { recentScope: "codex" });
+		renderCombobox(models, { recentScope: "pi" });
 		await userEvent.click(screen.getByRole("button", { name: "Worker model" }));
 
 		const groupLabels = screen.getAllByText(/Current & defaults|Recent/).map((node) => node.textContent);

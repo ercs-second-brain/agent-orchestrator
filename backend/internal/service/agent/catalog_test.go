@@ -435,22 +435,6 @@ func TestRefreshUsesNormalResolutionInsteadOfStartupPresenceShortcut(t *testing.
 	}
 }
 
-func TestDefaultCatalogDisplaysPrimeAgent(t *testing.T) {
-	got, err := New().List(context.Background())
-	if err != nil {
-		t.Fatal(err)
-	}
-	for _, info := range got.Supported {
-		if info.ID == "prime-agent" {
-			if info.Label != "Prime Agent" {
-				t.Fatalf("prime-agent label = %q, want Prime Agent", info.Label)
-			}
-			return
-		}
-	}
-	t.Fatal("default catalog does not contain prime-agent")
-}
-
 func TestRefreshReportsInstalledAgentsAndIgnoresDetectorErrors(t *testing.T) {
 	svc := NewWithAgents([]agentregistry.HarnessAgent{
 		harnessAgent("codex", "Codex", nil),
@@ -952,9 +936,7 @@ func TestModelsUsesCapabilityAwareFallbackWhenDiscoveryCannotRun(t *testing.T) {
 		wantSelection  ports.ModelSelectionMode
 		wantAllowInput bool
 	}{
-		{agent: "qwen", wantEntryMode: ports.CustomModelEntryDirect, wantSelection: ports.ModelSelectionText, wantAllowInput: true},
-		{agent: "opencode", wantEntryMode: ports.CustomModelEntryDirect, wantSelection: ports.ModelSelectionText, wantAllowInput: true},
-		{agent: "grok", wantEntryMode: ports.CustomModelEntryDirect, wantSelection: ports.ModelSelectionText, wantAllowInput: true},
+		{agent: "pi", wantEntryMode: ports.CustomModelEntryConfigured, wantSelection: ports.ModelSelectionCatalog, wantAllowInput: false},
 	} {
 		t.Run(tc.agent, func(t *testing.T) {
 			emptyHome := testenv.PrivateTempDir(t)
@@ -971,7 +953,7 @@ func TestModelsUsesCapabilityAwareFallbackWhenDiscoveryCannotRun(t *testing.T) {
 			if got.SelectionMode != tc.wantSelection || got.CustomModelEntry != tc.wantEntryMode || got.AllowCustom != tc.wantAllowInput || got.Source != "manual" || len(got.Models) != 0 {
 				t.Fatalf("catalog = %#v, want capability-aware fallback", got)
 			}
-			if tc.agent != "qwen" && (!got.Stale || got.Warning == "") {
+			if !got.Stale || got.Warning == "" {
 				t.Fatalf("catalog = %#v, want discovery warning on manual fallback", got)
 			}
 		})
@@ -984,9 +966,7 @@ func TestModelsNormalizesCustomEntryPolicyInOldCache(t *testing.T) {
 		wantEntryMode  ports.CustomModelEntryMode
 		wantAllowInput bool
 	}{
-		{agent: "codex", wantEntryMode: ports.CustomModelEntryDirect, wantAllowInput: true},
-		{agent: "opencode", wantEntryMode: ports.CustomModelEntryDirect, wantAllowInput: true},
-		{agent: "grok", wantEntryMode: ports.CustomModelEntryDirect, wantAllowInput: true},
+		{agent: "pi", wantEntryMode: ports.CustomModelEntryConfigured, wantAllowInput: false},
 	} {
 		t.Run(tc.agent, func(t *testing.T) {
 			oldCatalog := map[string]any{
@@ -1320,25 +1300,22 @@ func cachedModelRecord(t *testing.T, agentID, projectID string, validatedAt time
 	return ports.CachedAgentModelCatalog{AgentID: agentID, ProjectID: projectID, CatalogJSON: string(data), FetchedAt: validatedAt}
 }
 
-func TestWarmModelCatalogsRevalidatesOnlyCachedClaudeAndMuseScopesSequentially(t *testing.T) {
+func TestWarmModelCatalogsRevalidatesOnlyCachedPiScopesSequentially(t *testing.T) {
 	old := time.Now().Add(-time.Hour)
 	cache := &fakeModelCache{records: map[string]ports.CachedAgentModelCatalog{
-		"claude-code\x00project-a": cachedModelRecord(t, "claude-code", "project-a", old, false),
-		"muse\x00project-b":        cachedModelRecord(t, "muse", "project-b", old, false),
-		"codex\x00project-c":       cachedModelRecord(t, "codex", "project-c", old, false),
+		"pi\x00project-a": cachedModelRecord(t, "pi", "project-a", old, false),
+		"pi\x00project-b": cachedModelRecord(t, "pi", "project-b", old, false),
 	}}
 	discoverer := &fakeModelDiscoverer{delay: 10 * time.Millisecond, catalog: ports.AgentModelCatalog{
 		SelectionMode: ports.ModelSelectionCatalog, Models: []ports.AgentModelInfo{{ID: "fresh-model"}}, Source: "cli",
 	}}
 	svc := newService([]agentregistry.HarnessAgent{
-		harnessAgent("claude-code", "Claude Code", nil),
-		harnessAgent("muse", "Muse", nil),
-		harnessAgent("codex", "Codex", nil),
+		harnessAgent("pi", "Pi", nil),
 	}, cache, nil, discoverer)
 
 	svc.warmModelCatalogs(context.Background())
 	if got := discoverer.discoverCalls.Load(); got != 2 {
-		t.Fatalf("discovery calls = %d, want cached Claude and Muse scopes only", got)
+		t.Fatalf("discovery calls = %d, want cached pi scopes only", got)
 	}
 	if discoverer.overlap.Load() {
 		t.Fatal("startup model discoveries overlapped")
@@ -1348,13 +1325,13 @@ func TestWarmModelCatalogsRevalidatesOnlyCachedClaudeAndMuseScopesSequentially(t
 func TestWarmModelCatalogsSuppressesOnlyRecentSuccessfulValidation(t *testing.T) {
 	recent := time.Now().Add(-time.Minute)
 	cache := &fakeModelCache{records: map[string]ports.CachedAgentModelCatalog{
-		"claude-code\x00fresh": cachedModelRecord(t, "claude-code", "fresh", recent, false),
-		"claude-code\x00stale": cachedModelRecord(t, "claude-code", "stale", recent, true),
+		"pi\x00fresh": cachedModelRecord(t, "pi", "fresh", recent, false),
+		"pi\x00stale": cachedModelRecord(t, "pi", "stale", recent, true),
 	}}
 	discoverer := &fakeModelDiscoverer{catalog: ports.AgentModelCatalog{
 		SelectionMode: ports.ModelSelectionCatalog, Models: []ports.AgentModelInfo{{ID: "fresh-model"}}, Source: "cli",
 	}}
-	svc := newService([]agentregistry.HarnessAgent{harnessAgent("claude-code", "Claude Code", nil)}, cache, nil, discoverer)
+	svc := newService([]agentregistry.HarnessAgent{harnessAgent("pi", "Pi", nil)}, cache, nil, discoverer)
 
 	svc.warmModelCatalogs(context.Background())
 	if got := discoverer.discoverCalls.Load(); got != 1 {
@@ -1365,12 +1342,12 @@ func TestWarmModelCatalogsSuppressesOnlyRecentSuccessfulValidation(t *testing.T)
 func TestWarmModelCatalogsStartsAsynchronously(t *testing.T) {
 	old := time.Now().Add(-time.Hour)
 	cache := &fakeModelCache{records: map[string]ports.CachedAgentModelCatalog{
-		"muse\x00project-a": cachedModelRecord(t, "muse", "project-a", old, false),
+		"pi\x00project-a": cachedModelRecord(t, "pi", "project-a", old, false),
 	}}
 	discoverer := &fakeModelDiscoverer{delay: 100 * time.Millisecond, catalog: ports.AgentModelCatalog{
 		SelectionMode: ports.ModelSelectionCatalog, Models: []ports.AgentModelInfo{{ID: "fresh-model"}}, Source: "cli",
 	}}
-	svc := newService([]agentregistry.HarnessAgent{harnessAgent("muse", "Muse", nil)}, cache, nil, discoverer)
+	svc := newService([]agentregistry.HarnessAgent{harnessAgent("pi", "Pi", nil)}, cache, nil, discoverer)
 
 	started := time.Now()
 	svc.WarmModelCatalogs(context.Background())

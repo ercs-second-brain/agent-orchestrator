@@ -1,7 +1,6 @@
 import { StrictMode, type ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, fireEvent, render as rtlRender, screen, waitFor, within } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { SessionView } from "./SessionView";
 import { SessionTopbarProvider } from "./SessionTopbarPortal";
@@ -15,9 +14,6 @@ const closeShellTerminalMock = vi.hoisted(() => vi.fn());
 const nativeFullScreenMock = vi.hoisted(() => vi.fn(() => false));
 const reviewGetMock = vi.hoisted(() => vi.fn());
 const inspectorVisibilityRenders = vi.hoisted(() => [] as boolean[]);
-const codexAccountsQueryState = vi.hoisted(() => ({ data: undefined as unknown }));
-const recoverCodexAccountSwitchMock = vi.hoisted(() => vi.fn());
-
 vi.mock("@tanstack/react-router", () => ({
 	useNavigate: () => navigateMock,
 }));
@@ -31,18 +27,6 @@ vi.mock("../lib/platform", () => ({
 vi.mock("../hooks/useWindowFullScreen", () => ({
 	useWindowFullScreen: () => nativeFullScreenMock(),
 }));
-vi.mock("../hooks/useCodexAccountsQuery", () => ({
-	useCodexAccountsQuery: () => ({ data: codexAccountsQueryState.data, isLoading: false }),
-}));
-
-vi.mock("../hooks/useCodexAccountActions", () => ({
-	useCodexAccountActions: () => ({
-		error: null,
-		recoverPending: false,
-		recoverSwitch: recoverCodexAccountSwitchMock,
-	}),
-}));
-
 vi.mock("../lib/api-client", () => ({
 	getApiBaseUrl: () => "",
 	subscribeApiBaseUrl: () => () => undefined,
@@ -59,7 +43,7 @@ const { workspaces, workspaceQueryState, shellTerminalsState } = vi.hoisted(() =
 		workspaceId: "proj-1",
 		workspaceName: "my-app",
 		title: "do the thing",
-		provider: "claude-code",
+		provider: "pi",
 		kind: "worker",
 		branch: "ao/sess-1",
 		status: "working",
@@ -373,7 +357,7 @@ describe("SessionView", () => {
 		for (const session of workspaces.flatMap((workspace) => workspace.sessions)) {
 			delete session.isTerminated;
 			session.status = "working";
-			session.provider = "claude-code";
+			session.provider = "pi";
 			delete session.mode;
 			session.prs = [];
 		}
@@ -399,8 +383,6 @@ describe("SessionView", () => {
 			optimistic: true,
 		}));
 		closeShellTerminalMock.mockReset();
-		codexAccountsQueryState.data = undefined;
-		recoverCodexAccountSwitchMock.mockReset();
 		reviewGetMock.mockReset();
 		reviewGetMock.mockImplementation(async (path: string) => {
 			if (path === "/api/v1/sessions/{sessionId}/workspace/files") {
@@ -456,37 +438,6 @@ describe("SessionView", () => {
 		expect(
 			screen.queryByText("Session not found. It may have been cleaned up — pick another from the sidebar."),
 		).not.toBeInTheDocument();
-	});
-
-	it("offers recovery directly from a Codex session blocked by a failed account switch", async () => {
-		const session = workerSession("sess-1");
-		session.provider = "codex";
-		codexAccountsQueryState.data = {
-			currentSwitch: {
-				id: "switch-1",
-				sourceAccountId: "account-a",
-				targetAccountId: "account-b",
-				phase: "recovery_required",
-				canRecover: true,
-				sessions: [{
-					sessionId: "sess-1",
-					interfaceMode: "tui",
-					wasRunning: true,
-					stopState: "stopped",
-					restartState: "failed",
-				}],
-				createdAt: "2026-09-02T00:00:00Z",
-				updatedAt: "2026-09-02T00:01:00Z",
-			},
-		};
-		recoverCodexAccountSwitchMock.mockResolvedValue(undefined);
-
-		render(<SessionView sessionId="sess-1" />);
-
-		const retry = screen.getByRole("button", { name: "Retry recovery" });
-		expect(retry).toBeEnabled();
-		await userEvent.click(retry);
-		expect(recoverCodexAccountSwitchMock).toHaveBeenCalledWith("switch-1");
 	});
 
 	// Regression: shell terminals are an app-wide list, so without a per-session
@@ -745,7 +696,7 @@ describe("SessionView", () => {
 			},
 		];
 		reviewGetMock.mockResolvedValueOnce({
-			data: { reviewerHandleId: "review-sess-1", reviewerHarness: "codex", reviews: [] },
+			data: { reviewerHandleId: "review-sess-1", reviewerHarness: "pi", reviews: [] },
 			error: undefined,
 		});
 		const view = render(<SessionView sessionId="sess-1" />);
@@ -854,13 +805,13 @@ describe("SessionView", () => {
 			},
 		];
 		reviewGetMock.mockResolvedValueOnce({
-			data: { reviewerHandleId: "review-sess-1", reviewerHarness: "codex", reviews: [], runs: [] },
+			data: { reviewerHandleId: "review-sess-1", reviewerHarness: "pi", reviews: [], runs: [] },
 			error: undefined,
 		});
 
 		render(<SessionView sessionId="sess-1" />);
 
-		await waitFor(() => expect(screen.getByTestId("reviewer-harness")).toHaveTextContent("codex"));
+		await waitFor(() => expect(screen.getByTestId("reviewer-harness")).toHaveTextContent("pi"));
 	});
 
 	it("keeps the reviewer terminal reachable from the session pane", async () => {
@@ -876,7 +827,7 @@ describe("SessionView", () => {
 			updatedAt: "2026-06-15T00:00:00Z",
 		}];
 		reviewGetMock.mockResolvedValueOnce({
-			data: { reviewerHandleId: "review-sess-1", reviewerHarness: "codex", reviews: [], runs: [] },
+			data: { reviewerHandleId: "review-sess-1", reviewerHarness: "pi", reviews: [], runs: [] },
 			error: undefined,
 		});
 
@@ -904,7 +855,7 @@ describe("SessionView", () => {
 			},
 		];
 		reviewGetMock.mockResolvedValueOnce({
-			data: { reviewerHandleId: "review-sess-1", reviewerHarness: "codex", reviews: [] },
+			data: { reviewerHandleId: "review-sess-1", reviewerHarness: "pi", reviews: [] },
 			error: undefined,
 		});
 
@@ -936,7 +887,7 @@ describe("SessionView", () => {
 				},
 			];
 			reviewGetMock.mockResolvedValueOnce({
-				data: { reviewerHandleId: "review-sess-1", reviewerHarness: "codex", reviews: [] },
+				data: { reviewerHandleId: "review-sess-1", reviewerHarness: "pi", reviews: [] },
 				error: undefined,
 			});
 

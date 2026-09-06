@@ -58,18 +58,18 @@ func TestSummaryReaderGetPreservesStrongestPartialLowerBoundWithoutDoubleCountin
 	store := &usageSummaryStoreStub{
 		found:      true,
 		incomplete: true,
-		session:    domain.SessionRecord{ID: "reverb-12", Harness: domain.HarnessCodex},
+		session:    domain.SessionRecord{ID: "reverb-12", Harness: domain.HarnessFake},
 		models: []domain.UsageModelAggregate{
 			{
-				Harness: domain.HarnessClaudeCode, ModelID: "<synthetic>",
+				Harness: domain.HarnessFake, ModelID: "<synthetic>",
 				Tokens: testUsageMetrics(0, 0, 0, 0),
 			},
 			{
-				Harness: domain.HarnessCodex, ModelID: "gpt-5.6",
+				Harness: domain.HarnessFake, ModelID: "gpt-5.6",
 				Tokens: testUsageMetrics(1000, 400, 600, 200),
 			},
 			{
-				Harness: domain.HarnessClaudeCode, ModelID: "claude-sonnet",
+				Harness: domain.HarnessFake, ModelID: "claude-sonnet",
 				Tokens: testUsageMetrics(100, 20, 80, 25),
 			},
 		},
@@ -85,9 +85,9 @@ func TestSummaryReaderGetPreservesStrongestPartialLowerBoundWithoutDoubleCountin
 		got.Totals.ProcessedTokens == nil || *got.Totals.ProcessedTokens != 1325 {
 		t.Fatalf("totals = %+v", got.Totals)
 	}
-	if len(got.Harnesses) != 2 || len(got.Harnesses[0].Models) != 1 || len(got.Harnesses[1].Models) != 1 ||
+	if len(got.Harnesses) != 1 || len(got.Harnesses[0].Models) != 2 ||
 		got.Harnesses[0].Models[0].ModelID != "gpt-5.6" ||
-		got.Harnesses[1].Models[0].ModelID != "claude-sonnet" {
+		got.Harnesses[0].Models[1].ModelID != "claude-sonnet" {
 		t.Fatalf("model grouping = %+v", got.Harnesses)
 	}
 	for _, harness := range got.Harnesses {
@@ -97,9 +97,11 @@ func TestSummaryReaderGetPreservesStrongestPartialLowerBoundWithoutDoubleCountin
 			}
 		}
 	}
-	if got.Harnesses[0].Totals.ProcessedTokens == nil || *got.Harnesses[0].Totals.ProcessedTokens != 1200 ||
+	// With a single supported harness, both models now aggregate into one
+	// harness scope: the scope total is the sum of the per-model totals.
+	if got.Harnesses[0].Totals.ProcessedTokens == nil || *got.Harnesses[0].Totals.ProcessedTokens != 1325 ||
 		got.Harnesses[0].Models[0].Totals.ProcessedTokens == nil || *got.Harnesses[0].Models[0].Totals.ProcessedTokens != 1200 ||
-		got.Harnesses[1].Totals.ProcessedTokens == nil || *got.Harnesses[1].Totals.ProcessedTokens != 125 {
+		got.Harnesses[0].Models[1].Totals.ProcessedTokens == nil || *got.Harnesses[0].Models[1].Totals.ProcessedTokens != 125 {
 		t.Fatalf("processed totals by scope = %+v", got.Harnesses)
 	}
 	if store.calls != [4]int{0, 1, 1, 1} {
@@ -125,5 +127,12 @@ func TestSummaryReaderGetReturnsUnavailableMetricsWithoutEvents(t *testing.T) {
 	if got.Totals.InputTokens != nil || got.Totals.OutputTokens != nil ||
 		got.Totals.ProcessedTokens != nil || len(got.Harnesses) != 0 {
 		t.Fatalf("empty usage = %+v", got)
+	}
+}
+
+func mustNoError(t *testing.T, err error) {
+	t.Helper()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
 	}
 }

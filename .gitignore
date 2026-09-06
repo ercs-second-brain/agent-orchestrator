@@ -31,6 +31,9 @@ session-events.jsonl.*
 # Agent Orchestrator local session state
 .ao/
 
+# pi agent local session state (plans, tool outputs)
+.pi/
+
 # Local scratch workspace (icon generation, throwaway scripts)
 .cache/
 frontend/.tanstack/

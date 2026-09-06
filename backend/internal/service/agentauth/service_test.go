@@ -24,8 +24,7 @@ func TestStartRejectsUnstartablePlans(t *testing.T) {
 		code    string
 	}{
 		{name: "unknown target", agentID: "not-a-harness", code: "AGENT_AUTH_TARGET_UNKNOWN"},
-		{name: "unavailable command", agentID: "codex", code: "AGENT_AUTH_UNAVAILABLE"},
-		{name: "documentation setup", agentID: "aider", code: "AGENT_AUTH_DOCUMENTATION_ONLY"},
+		{name: "unavailable command", agentID: "pi", code: "AGENT_AUTH_UNAVAILABLE"},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -41,19 +40,19 @@ func TestStartRejectsUnstartablePlans(t *testing.T) {
 	}
 }
 
-func TestStartOpensDevinNativeLogin(t *testing.T) {
+func TestStartOpensResolvedPiPlan(t *testing.T) {
 	t.Parallel()
 
 	opener := &recordingTerminalOpener{}
-	svc := New(foundExecutable("devin"), opener)
+	svc := New(foundExecutable("pi"), opener)
 
-	_, err := svc.Start(context.Background(), "devin")
+	_, err := svc.Start(context.Background(), "pi")
 	if err != nil {
-		t.Fatalf("Start(devin): %v", err)
+		t.Fatalf("Start(pi): %v", err)
 	}
 	want := shellterm.OpenCommandTerminalInput{
-		Argv:  []string{"/test/bin/devin", "auth", "login"},
-		Title: "Log in to Devin",
+		Argv:  []string{"/test/bin/pi"},
+		Title: "Log in to Pi",
 	}
 	if !reflect.DeepEqual(opener.input, want) {
 		t.Fatalf("OpenCommandTerminal input = %#v, want %#v", opener.input, want)
@@ -97,15 +96,15 @@ func TestStartFallsBackToAgentResolvedBinaryOutsidePATH(t *testing.T) {
 	t.Parallel()
 
 	opener := &recordingTerminalOpener{}
-	resolver := managedExecutableResolver{agentID: "claude-code", path: "/Users/test/.claude/local/claude"}
+	resolver := managedExecutableResolver{agentID: "pi", path: "/managed/pi/current/bin/pi"}
 	svc := NewWithAgentResolver(resolver, resolver, opener)
 
-	_, err := svc.Start(context.Background(), "claude-code")
+	_, err := svc.Start(context.Background(), "pi")
 	if err != nil {
-		t.Fatalf("Start(claude-code): %v", err)
+		t.Fatalf("Start(pi): %v", err)
 	}
-	if got := opener.input.Argv; !reflect.DeepEqual(got, []string{"/Users/test/.claude/local/claude", "auth", "login"}) {
-		t.Fatalf("terminal argv = %#v, want adapter-resolved Claude binary", got)
+	if got := opener.input.Argv; !reflect.DeepEqual(got, []string{"/managed/pi/current/bin/pi"}) {
+		t.Fatalf("terminal argv = %#v, want adapter-resolved pi binary", got)
 	}
 }
 
@@ -113,15 +112,15 @@ func TestStartPrefersAdapterResolvedBinaryOverGenericPATHMatch(t *testing.T) {
 	t.Parallel()
 
 	opener := &recordingTerminalOpener{}
-	resolver := managedExecutableResolver{agentID: "muse", path: "/validated/meta/muse"}
-	svc := NewWithAgentResolver(foundExecutable("muse"), resolver, opener)
+	resolver := managedExecutableResolver{agentID: "pi", path: "/managed/pi/current/bin/pi"}
+	svc := NewWithAgentResolver(foundExecutable("pi"), resolver, opener)
 
-	_, err := svc.Start(context.Background(), "muse")
+	_, err := svc.Start(context.Background(), "pi")
 	if err != nil {
-		t.Fatalf("Start(muse): %v", err)
+		t.Fatalf("Start(pi): %v", err)
 	}
-	if got := opener.input.Argv; !reflect.DeepEqual(got, []string{"/validated/meta/muse", "login"}) {
-		t.Fatalf("terminal argv = %#v, want adapter-validated Muse binary", got)
+	if got := opener.input.Argv; !reflect.DeepEqual(got, []string{"/managed/pi/current/bin/pi"}) {
+		t.Fatalf("terminal argv = %#v, want adapter-validated pi binary", got)
 	}
 }
 

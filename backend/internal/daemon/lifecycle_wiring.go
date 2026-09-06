@@ -169,7 +169,6 @@ type sessionLifecycle interface {
 	ReconcileStartupSafety(ctx context.Context) error
 	ReconcileBackground(ctx context.Context) error
 	RestoreAll(ctx context.Context) error
-	WaitAgentSwitchWorkers(ctx context.Context) error
 	Kill(ctx context.Context, id domain.SessionID) (bool, error)
 	Send(ctx context.Context, id domain.SessionID, message string, attachment *ports.SpawnAttachment) error
 	// SetShellTerminalCloser late-binds Kill/Cleanup to close a session's
@@ -183,19 +182,11 @@ type sessionLifecycle interface {
 	// SessionMutationInProgress suppresses observation-driven termination while
 	// Session Manager deliberately replaces or relaunches a provider process.
 	SessionMutationInProgress(id domain.SessionID) bool
-	CodexAccountSwitchInProgress() bool
-	StartCodexAccountSwitch(context.Context, ports.CodexAccountSwitchConfig) (domain.CodexAccountSwitch, error)
-	RecoverCodexAccountSwitch(context.Context, string) (domain.CodexAccountSwitch, error)
-	GetActiveCodexAccountSwitch(context.Context) (domain.CodexAccountSwitch, bool, error)
-	SetCodexAccountSwitchObserver(func())
 	// SetTerminalInputGate prevents mux input from racing a TUI-to-Chat handoff.
 	SetTerminalInputGate(gate sessionmanager.TerminalInputGate)
 	// SetReviewerTerminator late-binds worker lifecycle teardown to the review
 	// service, which is built alongside the controller-facing service below.
 	SetReviewerTerminator(terminator sessionmanager.ReviewerTerminator)
-	// SetHarnessUseGate prevents lifecycle operations from racing a harness
-	// executable replacement.
-	SetHarnessUseGate(gate sessionmanager.HarnessUseGate)
 }
 
 // sessionLifecycleMessenger adapts sessionLifecycle to ports.AgentMessenger so
@@ -219,7 +210,7 @@ func (m sessionLifecycleMessenger) Send(ctx context.Context, id domain.SessionID
 // (issue #2685). The returned service is mounted at httpd APIDeps.Sessions.
 // It also returns the manager so the caller can wire Reconcile into the boot
 // sequence.
-func startSession(ctx context.Context, cfg config.Config, runtime runtimeselect.Runtime, store *sqlite.Store, lcm *lifecycle.Manager, messenger ports.AgentMessenger, telemetry ports.EventSink, agents ports.AgentResolver, agentReadiness ports.AgentReadinessProvider, reportingPolicy ports.AgentSwitchReportingPolicy, tracker ports.Tracker, codexOperationGate ports.CodexOperationGate, log *slog.Logger) (*sessionsvc.Service, reviewsvc.Manager, sessionLifecycle, error) {
+func startSession(ctx context.Context, cfg config.Config, runtime runtimeselect.Runtime, store *sqlite.Store, lcm *lifecycle.Manager, messenger ports.AgentMessenger, telemetry ports.EventSink, agents ports.AgentResolver, agentReadiness ports.AgentReadinessProvider, tracker ports.Tracker, log *slog.Logger) (*sessionsvc.Service, reviewsvc.Manager, sessionLifecycle, error) {
 	gitWS, err := gitworktree.New(gitworktree.Options{
 		// Per-session worktrees live under the data dir, so a single AO_DATA_DIR
 		// override moves all durable per-user state together.
@@ -245,20 +236,18 @@ func startSession(ctx context.Context, cfg config.Config, runtime runtimeselect.
 		Projects: store,
 	})
 	mgr := sessionmanager.New(sessionmanager.Deps{
-		Runtime:            runtime,
-		Agents:             agents,
-		Workspace:          ws,
-		Store:              store,
-		ReportingPolicy:    reportingPolicy,
-		DaemonRunID:        cfg.AppRunID,
-		Messenger:          messenger,
-		Lifecycle:          lcm,
-		DataDir:            cfg.DataDir,
-		RunFilePath:        cfg.RunFilePath,
-		BackgroundContext:  ctx,
-		Logger:             log,
-		ReconcileWorkers:   startupReconcileWorkers,
-		CodexOperationGate: codexOperationGate,
+		Runtime:           runtime,
+		Agents:            agents,
+		Workspace:         ws,
+		Store:             store,
+		DaemonRunID:       cfg.AppRunID,
+		Messenger:         messenger,
+		Lifecycle:         lcm,
+		DataDir:           cfg.DataDir,
+		RunFilePath:       cfg.RunFilePath,
+		BackgroundContext: ctx,
+		Logger:            log,
+		ReconcileWorkers:  startupReconcileWorkers,
 	})
 	mgr.SetAgentReadiness(agentReadiness)
 	scmProvider := newMultiSCMProvider(cfg.GitLab, log)
@@ -297,7 +286,6 @@ func startSession(ctx context.Context, cfg config.Config, runtime runtimeselect.
 	reviewOpts := []reviewsvc.Option{
 		reviewsvc.WithLifecycleReducer(lcm),
 		reviewsvc.WithTelemetry(telemetry),
-		reviewsvc.WithCodexAccountOperationGate(codexOperationGate),
 	}
 	if scmProvider != nil {
 		reviewOpts = append(reviewOpts,

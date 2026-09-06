@@ -387,8 +387,8 @@ describe("shell workspace startup", () => {
 		await expect(
 			shellMocks.state.shellValue?.createProject?.({
 				path: "/one/",
-				workerAgent: "codex",
-				orchestratorAgent: "codex",
+				workerAgent: "pi",
+				orchestratorAgent: "pi",
 			}),
 		).resolves.toBeUndefined();
 
@@ -418,8 +418,8 @@ describe("shell workspace startup", () => {
 		await shellMocks.state.shellValue?.createProject?.({
 			path: "/repo/project",
 			defaultBranch: "main",
-			workerAgent: "codex",
-			orchestratorAgent: "codex",
+			workerAgent: "pi",
+			orchestratorAgent: "pi",
 		});
 
 		expect(apiClient.POST).toHaveBeenCalledWith("/api/v1/projects", {
@@ -428,8 +428,8 @@ describe("shell workspace startup", () => {
 				asWorkspace: undefined,
 				config: {
 					defaultBranch: "main",
-					worker: { agent: "codex" },
-					orchestrator: { agent: "codex" },
+					worker: { agent: "pi" },
+					orchestrator: { agent: "pi" },
 				},
 			},
 		});

@@ -94,11 +94,14 @@ type CreateProjectConfigInput = {
 	defaultBranch?: string;
 };
 
+// ADR 0005: new projects always run pi. A stale caller naming a legacy agent
+// is normalized here rather than persisted, so config never carries a value
+// the daemon would ignore at spawn.
 export function createProjectConfig(input: CreateProjectConfigInput): components["schemas"]["ProjectConfig"] {
 	return {
 		...(input.defaultBranch ? { defaultBranch: input.defaultBranch } : {}),
-		worker: { agent: input.workerAgent as components["schemas"]["RoleOverride"]["agent"] },
-		orchestrator: { agent: input.orchestratorAgent as components["schemas"]["RoleOverride"]["agent"] },
+		worker: { agent: "pi" },
+		orchestrator: { agent: "pi" },
 		...(input.trackerIntake ? { trackerIntake: input.trackerIntake } : {}),
 	};
 }

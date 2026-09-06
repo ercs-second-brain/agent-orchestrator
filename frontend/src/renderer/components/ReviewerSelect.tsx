@@ -3,12 +3,9 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Check } from "lucide-react";
 import type { components } from "../../api/schema";
 import { agentModelsQueryOptions, type AgentModelCatalog } from "../hooks/useAgentModelsQuery";
-import { agentLabel } from "../lib/agent-options";
-import { buildRankedAgentOptions, type RankedAgentOption } from "../lib/agent-select-options";
-import { KNOWN_REVIEWER_HARNESS_IDS } from "../lib/reviewer-harnesses";
+import { agentLabel } from "../lib/agent-label";
 import { cn } from "../lib/utils";
 import { AgentAvatar } from "./AgentAvatar";
-import { AgentSelectMenuItem } from "./settings/AgentSelectMenuItem";
 import {
 	OptionMenu,
 	OptionMenuContent,
@@ -19,23 +16,11 @@ import {
 	OptionMenuTrigger,
 } from "./ui/option-menu";
 
-const REVIEWER_AGENT_PRIORITY = ["claude-code", "codex", "cursor", "opencode", "muse", "aider"] as const;
-const REVIEWER_AGENT_PRIORITY_RANK = new Map<string, number>(
-	REVIEWER_AGENT_PRIORITY.map((agent, index) => [agent, index]),
-);
-
-const HOST_TRUSTED_REVIEWERS = new Set(["agy", "continue", "devin", "droid", "goose", "kimchi", "kimi", "qwen", "vibe"]);
-const USER_APPROVED_REVIEWERS = new Set(["auggie", "autohand", "cline", "crush", "grok"]);
 
 type ReviewerAgentConfig = components["schemas"]["AgentConfig"];
 
-export function reviewerTrustWarning(harness: string): string | null {
-	if (HOST_TRUSTED_REVIEWERS.has(harness)) {
-		return "Experimental host-trusted reviewer: this agent is not OS-isolated and may retain shell, plugin, editor, and network access.";
-	}
-	if (USER_APPROVED_REVIEWERS.has(harness)) {
-		return "Experimental user-approved reviewer: AO keeps the agent's native permission prompts enabled; review execution may pause for your approval.";
-	}
+export function reviewerTrustWarning(_harness: string): string | null {
+	// pi is the only supported reviewer harness; no experimental trust tiers remain.
 	return null;
 }
 
@@ -51,11 +36,10 @@ export function ReviewerSelect({
 	defaultHarness,
 	defaultOptionLabel,
 	defaultTriggerLabel,
+	agents: _agents,
 	showDefaultOption = true,
 	contentAlign = "start",
 	disabled = false,
-	agents,
-	excludedHarness,
 }: {
 	value: string;
 	onChange: (value: string) => void;
@@ -68,27 +52,19 @@ export function ReviewerSelect({
 	defaultHarness?: string;
 	defaultOptionLabel?: string;
 	defaultTriggerLabel?: string;
+	agents?: unknown;
 	showDefaultOption?: boolean;
 	contentAlign?: "start" | "end";
 	disabled?: boolean;
-	agents?: components["schemas"]["AgentReadinessSnapshot"][];
-	excludedHarness?: string;
 }) {
 	const queryClient = useQueryClient();
 	const [menuOpen, setMenuOpen] = useState(false);
 	// The daemon's readiness snapshot is the only source of reviewer candidates:
 	// against a remote daemon a client-local fallback would offer harnesses the
 	// daemon cannot run. Until the snapshot arrives, only the default row shows.
-	const options = buildRankedAgentOptions({
-		agents: agents?.filter((a) => KNOWN_REVIEWER_HARNESS_IDS.has(a.id)),
-		priorityRank: REVIEWER_AGENT_PRIORITY_RANK,
-		fallbackAgents: [],
-	});
-	const selectableOptions = options.filter((agent) => {
-		if (agent.id === excludedHarness) return false;
-		if (showDefaultOption && defaultHarness && agent.id === defaultHarness) return false;
-		return true;
-	});
+	// pi is the only supported reviewer harness; other stored values resolve to
+	// pi (store-and-ignore), so the menu offers exactly one entry.
+	const selectableOptions: { id: string; label: string; disabled: boolean; status: string; statusTone: "success" }[] = [];
 	const effectiveHarness = value || defaultHarness || "";
 	const menuProjectID = projectId ?? "";
 	const triggerCatalog = useQuery(agentModelsQueryOptions(effectiveHarness, menuProjectID));
@@ -178,7 +154,7 @@ function ReviewerHarnessOption({
 	persistHarness,
 	closeMenu,
 }: {
-	agent: Pick<RankedAgentOption, "id" | "label" | "status" | "statusTone" | "disabled">;
+	agent: { id: string; label: string; status: string; statusTone: "success"; disabled: boolean };
 	currentHarness: string;
 	currentModel: string;
 	currentMode: string;
@@ -224,14 +200,11 @@ function ReviewerHarnessOption({
 					className="reviews-agent-menu-item"
 					disabled={agent.disabled}
 				>
-					<AgentSelectMenuItem
-						agentId={resolvedHarness}
-						label={agent.label}
-						selected={isCurrentHarness}
-						status={agent.status}
-						statusTone={agent.statusTone}
-						disabled={agent.disabled}
-					/>
+					<span className="flex items-center gap-2">
+						<AgentAvatar provider={resolvedHarness} className="size-icon" />
+						{agent.label}
+						{isCurrentHarness ? <Check className="size-icon" /> : null}
+					</span>
 				</OptionMenuItem>
 			</>
 		);
@@ -250,14 +223,11 @@ function ReviewerHarnessOption({
 					}
 				}}
 			>
-				<AgentSelectMenuItem
-					agentId={resolvedHarness}
-					label={agent.label}
-					selected={isCurrentHarness}
-					status={agent.status}
-					statusTone={agent.statusTone}
-					disabled={agent.disabled}
-				/>
+				<span className="flex items-center gap-2">
+					<AgentAvatar provider={resolvedHarness} className="size-icon" />
+					{agent.label}
+					{isCurrentHarness ? <Check className="size-icon" /> : null}
+				</span>
 			</OptionMenuSubTrigger>
 			<OptionMenuSubContent className="w-[15rem]">
 				<OptionMenuItem

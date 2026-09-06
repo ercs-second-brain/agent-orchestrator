@@ -16,10 +16,10 @@ import (
 
 func TestWriteErrorSerializesWrappedReportingOwner(t *testing.T) {
 	err := fmt.Errorf("outer: %w", fmt.Errorf("middle: %w", ownership.Own(
-		apierr.Internal("AGENT_SWITCH_FAILED", "Agent switch failed"),
-		ownership.OwnerAgentSwitchSaga,
+		apierr.Internal("SESSION_CREATE_FAILED", "Session create failed"),
+		ownership.OwnerHTTP,
 	)))
-	req, captured := WithErrorCapture(httptest.NewRequest(http.MethodPost, "/api/v1/sessions/s1/switch-agent", nil))
+	req, captured := WithErrorCapture(httptest.NewRequest(http.MethodPost, "/api/v1/sessions", nil))
 	rec := httptest.NewRecorder()
 
 	WriteError(rec, req, err)
@@ -31,15 +31,15 @@ func TestWriteErrorSerializesWrappedReportingOwner(t *testing.T) {
 	if decodeErr := json.Unmarshal(rec.Body.Bytes(), &body); decodeErr != nil {
 		t.Fatalf("decode response: %v", decodeErr)
 	}
-	if body.ReportingOwner != ownership.OwnerAgentSwitchSaga {
-		t.Fatalf("reporting_owner = %q, want %q", body.ReportingOwner, ownership.OwnerAgentSwitchSaga)
+	if body.ReportingOwner != ownership.OwnerHTTP {
+		t.Fatalf("reporting_owner = %q, want %q", body.ReportingOwner, ownership.OwnerHTTP)
 	}
-	if body.Code != "AGENT_SWITCH_FAILED" || body.Message != "Agent switch failed" {
+	if body.Code != "SESSION_CREATE_FAILED" || body.Message != "Session create failed" {
 		t.Fatalf("body = %+v, want normal API error presentation", body)
 	}
 	gotCapture := captured()
-	if !errors.Is(gotCapture.Err, err) || gotCapture.ReportingOwner != ownership.OwnerAgentSwitchSaga {
-		t.Fatalf("captured = %+v, want raw error and saga owner", gotCapture)
+	if !errors.Is(gotCapture.Err, err) || gotCapture.ReportingOwner != ownership.OwnerHTTP {
+		t.Fatalf("captured = %+v, want raw error and owner", gotCapture)
 	}
 }
 

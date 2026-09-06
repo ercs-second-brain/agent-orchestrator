@@ -15,7 +15,7 @@ export function requirementDisplayLabel(requirement: SystemRequirement): string 
 const MISSING_DETAILS: Record<string, string> = {
 	git: "git was not found on PATH.",
 	tmux: "tmux was not found on PATH; it is required on macOS/Linux to start sessions.",
-	harness: "No agent CLI (Claude Code, Codex, etc.) was found on PATH.",
+	harness: "pi was not found on PATH.",
 	gh: "gh was not found on PATH. It lets agent sessions open pull requests and read issues, but AO runs fine without it.",
 };
 
