@@ -70,11 +70,6 @@ func NewRouterWithControl(cfg config.Config, log *slog.Logger, termMgr *terminal
 	return r
 }
 
-type applyAgentSwitchPolicyRequest struct {
-	ConsentGeneration string `json:"consentGeneration"`
-	EventsEnabled     bool   `json:"eventsEnabled"`
-}
-
 // mountHealth registers the liveness and readiness probes the Electron
 // supervisor polls before letting the renderer connect.
 func mountHealth(r chi.Router, cfg config.Config) {
