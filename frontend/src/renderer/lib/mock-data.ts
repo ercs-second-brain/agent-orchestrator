@@ -110,7 +110,7 @@ export const mockWorkspaces: WorkspaceSummary[] = [
 				workspaceId: "ao-demo",
 				workspaceName: "ao-demo",
 				title: "Review stacked terminal polish flow",
-				provider: "copilot",
+				provider: "pi",
 				branch: "demo/terminal-polish-stack",
 				status: "review_pending",
 				kanbanColumn: "needs_review",

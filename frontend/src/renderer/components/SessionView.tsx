@@ -27,10 +27,6 @@ import { ShellTopbar } from "./ShellTopbar";
 import { SessionTopbarHost } from "./SessionTopbarPortal";
 import { TopbarButton } from "./TopbarButton";
 import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip";
-import { Button } from "./ui/button";
-import { useCodexAccountActions } from "../hooks/useCodexAccountActions";
-import { useCodexAccountsQuery } from "../hooks/useCodexAccountsQuery";
-import { codexSwitchDisplay } from "../hooks/codex-accounts-state";
 import { useFileAnnotation } from "../hooks/useFileAnnotation";
 import { useResizable } from "../hooks/useResizable";
 import {
@@ -349,13 +345,6 @@ export function SessionView({ sessionId, projectId }: SessionViewProps) {
 		},
 		[sessionId],
 	);
-	const [handoffDialogOpen, setHandoffDialogOpen] = useState(false);
-	const handoffDialogContainerRef = useRef<HTMLDivElement | null>(null);
-	const [handoffDialogContainer, setHandoffDialogContainer] = useState<HTMLDivElement | null>(null);
-	const bindHandoffDialogContainer = useCallback((node: HTMLDivElement | null) => {
-		handoffDialogContainerRef.current = node;
-		setHandoffDialogContainer(node);
-	}, []);
 	const isNativeFullScreen = useWindowFullScreen();
 	const stopTerminalLiveResize = useCallback(() => {
 		if (terminalLiveResizeTimerRef.current !== null) {

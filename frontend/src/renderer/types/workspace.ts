@@ -119,7 +119,6 @@ export type WorkspaceSession = {
 	pinnedAt?: string;
 	/** Raw agent lifecycle activity from the daemon. */
 	activity?: SessionActivity;
-	activeAgentSwitch?: AgentSwitchSummary;
 	/** The session's git diff against its base, when known. */
 	changedFiles?: ChangedFile[];
 	/** Pre-filled commit subject for the Git rail, when known. */

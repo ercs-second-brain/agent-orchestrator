@@ -760,13 +760,11 @@ describe("terminal restore", () => {
 });
 
 describe("providerScrollsByKeyboard", () => {
-	// opencode, its fork kilocode, and grok use TUIs that scroll their own transcripts
-	// by keyboard and ignore SGR wheel reports, so they must opt into the
-	// PageUp/PageDown wheel routing (see XtermTerminal's paneScrollsByKeyboard).
-	it("is true for keyboard-scroll TUIs", () => {
-		expect(providerScrollsByKeyboard("opencode")).toBe(true);
-		expect(providerScrollsByKeyboard("kilocode")).toBe(true);
-		expect(providerScrollsByKeyboard("grok")).toBe(true);
+	// pi's TUI scrolls its own transcript by keyboard and ignores SGR wheel
+	// reports, so it opts into the PageUp/PageDown wheel routing (see
+	// XtermTerminal's paneScrollsByKeyboard). Legacy provider names answer false.
+	it("is true for the keyboard-scroll TUI", () => {
+		expect(providerScrollsByKeyboard("pi")).toBe(true);
 	});
 
 	it("is false for mouse-report/native-scroll providers", () => {

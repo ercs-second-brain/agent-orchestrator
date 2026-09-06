@@ -1,7 +1,6 @@
 import { StrictMode, type ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, fireEvent, render as rtlRender, screen, waitFor, within } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { SessionView } from "./SessionView";
 import { SessionTopbarProvider } from "./SessionTopbarPortal";
@@ -456,37 +455,6 @@ describe("SessionView", () => {
 		expect(
 			screen.queryByText("Session not found. It may have been cleaned up — pick another from the sidebar."),
 		).not.toBeInTheDocument();
-	});
-
-	it("offers recovery directly from a Codex session blocked by a failed account switch", async () => {
-		const session = workerSession("sess-1");
-		session.provider = "pi";
-		codexAccountsQueryState.data = {
-			currentSwitch: {
-				id: "switch-1",
-				sourceAccountId: "account-a",
-				targetAccountId: "account-b",
-				phase: "recovery_required",
-				canRecover: true,
-				sessions: [{
-					sessionId: "sess-1",
-					interfaceMode: "tui",
-					wasRunning: true,
-					stopState: "stopped",
-					restartState: "failed",
-				}],
-				createdAt: "2026-09-02T00:00:00Z",
-				updatedAt: "2026-09-02T00:01:00Z",
-			},
-		};
-		recoverCodexAccountSwitchMock.mockResolvedValue(undefined);
-
-		render(<SessionView sessionId="sess-1" />);
-
-		const retry = screen.getByRole("button", { name: "Retry recovery" });
-		expect(retry).toBeEnabled();
-		await userEvent.click(retry);
-		expect(recoverCodexAccountSwitchMock).toHaveBeenCalledWith("switch-1");
 	});
 
 	// Regression: shell terminals are an app-wide list, so without a per-session

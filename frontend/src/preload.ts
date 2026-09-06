@@ -21,10 +21,6 @@ import type { UpdateOutcome } from "./shared/update-telemetry";
 import type { UiSettings } from "./main/ui-settings";
 import type { UpdateCheckOptions } from "./main/auto-updater";
 import type { FeatureBuild } from "./main/feature-builds";
-import {
-	AGENT_SWITCH_VISIBILITY_IPC_CHANNEL,
-	type AgentSwitchVisibilitySignalBody,
-} from "./shared/agent-switch-observability";
 import { applyRemoteCspOrigins } from "./preload/desktop-remote-csp";
 import type { DesktopRemoteConfig } from "./shared/desktop-remote";
 
@@ -267,7 +263,6 @@ const api = {
 		capture: (input: RendererTelemetryCaptureInput) => {
 			if (!currentTelemetryPolicy) return Promise.resolve(false);
 			return ipcRenderer.invoke("telemetry:capture", { ...input, consentGeneration: currentTelemetryPolicy.consentGeneration }) as Promise<boolean>;
-		},
 		},
 	},
 	notifications: {
