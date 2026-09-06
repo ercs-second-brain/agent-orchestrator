@@ -242,15 +242,6 @@ func TestHooks_StopReportsIdle(t *testing.T) {
 	}
 }
 
-func mustJSONString(t *testing.T, value string) string {
-	t.Helper()
-	b, err := json.Marshal(value)
-	if err != nil {
-		t.Fatal(err)
-	}
-	return string(b)
-}
-
 func TestHooks_SessionStartReportsNativeSessionIDWithoutActivity(t *testing.T) {
 	t.Setenv("AO_SESSION_ID", "ao-7")
 	cfg := setConfigEnv(t)

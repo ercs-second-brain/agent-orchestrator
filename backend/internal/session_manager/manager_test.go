@@ -16,7 +16,6 @@ import (
 	"testing"
 	"time"
 
-	piagent "github.com/ercs-second-brain/agent-orchestrator/backend/internal/adapters/agent/pi"
 	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/adapters/workspace/scratch"
 	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/domain"
 	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/ports"
@@ -36,9 +35,6 @@ type fakeStore struct {
 	getProjectErr    error
 	getSessionErr    error
 	updateSessionErr error
-	// agentSwitchStore is wired only by agent-switch tests so fakeLCM can model
-	// Lifecycle Manager's atomic ownership-boundary commands.
-	agentSwitchStore any
 	// worktrees maps session ID to its saved worktree rows (shutdown-saved marker).
 	worktrees map[domain.SessionID][]domain.SessionWorktreeRecord
 	// sharedLog, when non-nil, receives an ordered call entry for each
@@ -8067,15 +8063,6 @@ func TestHarnessNudgeSafe(t *testing.T) {
 	if m4.harnessNudgeSafe("claude-code") {
 		t.Fatalf("unresolved harness reported as nudge-safe")
 	}
-}
-
-type piAgents struct{}
-
-func (piAgents) Agent(harness domain.AgentHarness) (ports.Agent, bool) {
-	if harness == domain.HarnessPi {
-		return piagent.New(), true
-	}
-	return nil, false
 }
 
 // blockAfterFirstReadStore wraps fakeStore and flips the session to

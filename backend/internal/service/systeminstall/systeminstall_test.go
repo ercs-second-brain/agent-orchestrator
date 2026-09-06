@@ -10,7 +10,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/domain"
 	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/ports"
 )
 
@@ -103,15 +102,6 @@ type harnessVerifierFunc func(context.Context, Target) (VerifyResult, error)
 
 func (f harnessVerifierFunc) Verify(ctx context.Context, target Target) (VerifyResult, error) {
 	return f(ctx, target)
-}
-
-type sessionListerStub struct {
-	sessions []domain.SessionRecord
-	err      error
-}
-
-func (s sessionListerStub) ListAllSessions(context.Context) ([]domain.SessionRecord, error) {
-	return s.sessions, s.err
 }
 
 type commandRunnerFunc func(context.Context, []string, io.Writer, io.Writer) error

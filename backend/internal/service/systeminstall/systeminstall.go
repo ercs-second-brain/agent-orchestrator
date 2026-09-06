@@ -36,10 +36,10 @@ type Target string
 
 // The exhaustive set of installable targets. No other value is ever accepted.
 const (
-	TargetTmux       Target = "tmux"
-	TargetGH         Target = "gh"
-	TargetClaude     Target = "claude"
-	TargetPi         Target = "pi"
+	TargetTmux   Target = "tmux"
+	TargetGH     Target = "gh"
+	TargetClaude Target = "claude"
+	TargetPi     Target = "pi"
 	// TargetCloudflared is the optional connector that makes a paired phone
 	// reachable from outside the local network.
 	TargetCloudflared Target = "cloudflared"
@@ -1190,7 +1190,6 @@ func versionAtLeast(got, minimum [3]int) bool {
 	return true
 }
 
-
 func (s *Service) planBrew(target Target, pkg string) Plan {
 	if !IsAgentTarget(target) {
 		return (requestPlanner{Service: s}).planBrew(target, pkg)
@@ -1202,23 +1201,8 @@ func (s *Service) planBrew(target Target, pkg string) Plan {
 	return planner.planBrew(target, pkg)
 }
 
-func (s *Service) planBrewCask(target Target, pkg string) Plan {
-	if !IsAgentTarget(target) {
-		return (requestPlanner{Service: s}).planBrewCask(target, pkg)
-	}
-	planner, err := s.newRequestPlanner(context.Background())
-	if err != nil {
-		return Plan{Target: target, Unsupported: true, Method: "homebrew", Reason: "Homebrew packages could not be inspected."}
-	}
-	return planner.planBrewCask(target, pkg)
-}
-
 func (p requestPlanner) planBrew(target Target, pkg string) Plan {
 	return p.planHomebrew(target, pkg, false)
-}
-
-func (p requestPlanner) planBrewCask(target Target, pkg string) Plan {
-	return p.planHomebrew(target, pkg, true)
 }
 
 func (p requestPlanner) planHomebrew(target Target, pkg string, cask bool) Plan {
@@ -1284,11 +1268,6 @@ func (s *Service) planWinget(target Target, id string) Plan {
 		return Plan{Target: target, Command: command, Method: "winget"}
 	}
 	return Plan{Target: target, Command: command}
-}
-
-func withDocs(plan Plan, docsURL string) Plan {
-	plan.DocsURL = docsURL
-	return plan
 }
 
 // linuxPackageManagers is probed in this fixed order; the first one found on

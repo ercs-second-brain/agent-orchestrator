@@ -49,6 +49,7 @@ func normalizeDefaultAgent(raw string) string {
 	}
 	return string(domain.HarnessPi)
 }
+
 // TelemetryConfig controls local telemetry behavior.
 type TelemetryConfig struct {
 	Events bool

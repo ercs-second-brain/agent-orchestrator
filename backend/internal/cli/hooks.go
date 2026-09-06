@@ -65,11 +65,6 @@ type setReviewActivityAPIRequest struct {
 // match its pre/post counterpart).
 const maxActivityMetaLen = 256
 
-const (
-	maxHookInteractionLen = 16 << 10
-	maxHookTranscriptPath = 4096
-)
-
 // activityMeta extracts the tool-use correlation facts from a native hook
 // payload. The field names are the shared hook vocabulary pi's
 // PreToolUse/PostToolUse/PostToolUseFailure and PermissionRequest payloads

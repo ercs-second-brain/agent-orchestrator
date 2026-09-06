@@ -30,11 +30,6 @@ const (
 	maxDisplayNameLen = 20
 	maxIdempotencyKey = 128
 
-	// Agent-authored handoffs are deliberately bounded. Deterministic AO
-	// context is stored separately and does not need to be repeated here.
-	maxAgentHandoffBodyBytes = 256 << 10
-	maxAgentHandoffBytes     = 64 << 10
-
 	// Attachment limits guard the daemon against oversized spawn bodies. Files
 	// are pasted/dropped into the task brief and inlined as base64 in the JSON
 	// body, so the caps are deliberately conservative.

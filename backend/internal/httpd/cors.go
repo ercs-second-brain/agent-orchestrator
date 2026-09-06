@@ -78,18 +78,6 @@ func corsMiddleware(allowedOrigins []string) func(http.Handler) http.Handler {
 	}
 }
 
-func isCodexAccountPath(path string) bool {
-	for _, prefix := range []string{
-		"/api/v1/agents/codex/accounts",
-		"/api/v1/agents/codex/account-switches",
-	} {
-		if path == prefix || strings.HasPrefix(path, prefix+"/") {
-			return true
-		}
-	}
-	return false
-}
-
 // isLoopbackOrigin reports whether a browser origin is content served from
 // this machine's loopback (the Vite dev server / preview server on whatever
 // port it picked). Such content can already reach the no-auth daemon directly,

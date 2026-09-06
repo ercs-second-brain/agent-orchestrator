@@ -118,17 +118,6 @@ func (s *Service) planAgent(target Target) Plan {
 	return plans[recommendedPlanIndex(plans)]
 }
 
-func (s *Service) officialByOS(target Target, unixURL, unixShell, windowsURL, docsURL string) Plan {
-	switch s.goos {
-	case "windows":
-		return withDocs(s.planPowerShellInstaller(target, windowsURL), docsURL)
-	case "darwin", "linux":
-		return withDocs(s.planShellInstaller(target, unixURL, unixShell), docsURL)
-	default:
-		return manualPlan(target, fmt.Sprintf("The official installer does not support %s.", s.goos), docsURL)
-	}
-}
-
 func (s *Service) planShellInstaller(target Target, url, shell string) Plan {
 	resolved, err := s.executables.LookPath(shell)
 	if err != nil {
@@ -155,8 +144,4 @@ func (s *Service) planPowerShellInstaller(target Target, url string) Plan {
 		}
 	}
 	return Plan{Target: target, Unsupported: true, Method: "official-installer", Reason: "PowerShell was not found on PATH."}
-}
-
-func manualPlan(target Target, reason, docsURL string) Plan {
-	return Plan{Target: target, Unsupported: true, Method: "manual", Reason: reason, DocsURL: docsURL}
 }

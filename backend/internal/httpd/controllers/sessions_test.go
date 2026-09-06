@@ -2,7 +2,6 @@ package controllers_test
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"io"
 	"log/slog"
@@ -47,7 +46,6 @@ type fakeSessionService struct {
 	staged               []ports.SpawnAttachment
 	stagedPaths          []string
 	stageErr             error
-	handoff              json.RawMessage
 	autoInjectCISession  domain.SessionID
 	autoInjectCIEnabled  bool
 }

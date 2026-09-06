@@ -560,23 +560,6 @@ func findDoctorCheck(t *testing.T, checks []doctorCheck, name string) doctorChec
 	return doctorCheck{}
 }
 
-func codexCanaryFake(t *testing.T, probeOutput string, probeErr error) func(context.Context, string, ...string) ([]byte, error) {
-	t.Helper()
-	return func(_ context.Context, name string, args ...string) ([]byte, error) {
-		switch {
-		case name == "/bin/git":
-			return []byte("git version 2.43.0\n"), nil
-		case name == "/bin/codex" && len(args) == 1 && args[0] == "--version":
-			return []byte("codex-cli 0.136.0\n"), nil
-		case name == "/bin/codex":
-			return []byte(probeOutput), probeErr
-		default:
-			t.Fatalf("unexpected command: %s %v", name, args)
-			return nil, nil
-		}
-	}
-}
-
 func TestDoctorHooksLogStates(t *testing.T) {
 	gitOnly := func(context.Context, string, ...string) ([]byte, error) {
 		return []byte("git version 2.43.0\n"), nil

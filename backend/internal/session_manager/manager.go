@@ -374,31 +374,6 @@ func (m *Manager) SetAgentReadiness(provider ports.AgentReadinessProvider) {
 	m.agentReadiness = provider
 }
 
-func (m *Manager) beginTerminalInputDrain(rec domain.SessionRecord) (lastInputAt time.Time, release func()) {
-	if domain.NormalizeSessionMode(rec.Mode) != domain.SessionModeTUI {
-		return time.Time{}, nil
-	}
-	handle := runtimeHandle(rec.Metadata)
-	if handle.ID == "" {
-		return time.Time{}, nil
-	}
-	m.terminalInputGateMu.Lock()
-	gate := m.terminalInputGate
-	m.terminalInputGateMu.Unlock()
-	if gate == nil {
-		return time.Time{}, nil
-	}
-	return gate.BeginInputDrain(handle.ID)
-}
-
-// beginShellTerminalTeardown starts the shell-terminal gate for id ahead of
-// releasing its worktree. release==nil, err==nil means no closer is wired
-// (nothing to gate; proceed exactly as before this mechanism existed).
-// err!=nil means some scoped shell terminal could not be confirmed closed —
-// the caller MUST NOT touch the worktree, and release is nil (the gate
-// already released itself). On success release is non-nil and tied to this
-// specific acquisition; the caller MUST call it exactly once, typically via
-// defer, once its own worktree work finishes.
 func (m *Manager) beginShellTerminalTeardown(ctx context.Context, id domain.SessionID) (release func(), err error) {
 	m.shellTerminalsMu.Lock()
 	closer := m.shellTerminals
@@ -2983,13 +2958,6 @@ func (m *Manager) confirmActive(ctx context.Context, guard *sessionguard.Guard, 
 
 type confirmationStopCheck func(context.Context) (bool, error)
 
-// confirmActiveUnderMutation is the switch-safe form of confirmActive. Agent
-// switching deliberately closes the ordinary input lease, so a catch-up Enter
-// must bypass that gate while retaining stricter activity checks: only an idle
-// or waiting-input composer may receive it. Active and blocked targets are
-// suppressed at the write boundary so the retry cannot steer a running turn or
-// answer a permission dialog. stop is checked before waiting and immediately
-// before every Enter so a completed target acknowledgement always wins.
 func (m *Manager) confirmActiveUnderMutation(ctx context.Context, guard *sessionguard.Guard, id domain.SessionID, stop confirmationStopCheck) {
 	m.confirmActiveWithNudge(ctx, id, stop, func(nudgeCtx context.Context) (sessionguard.Outcome, error) {
 		return guard.CoordinationUnderMutation(nudgeCtx, id, "", m.harnessNudgeSafe, nil)
@@ -4177,20 +4145,7 @@ func (m *Manager) validateRuntimePrerequisites() error {
 }
 
 func (m *Manager) superviseAgentProcess(agent ports.Agent, id domain.SessionID, env map[string]string, argv []string) ([]string, string, error) {
-	// Switching-capable providers always use the exact-generation
-	// supervisor, even when their native hooks also report exit. That gives a
-	// later semantic handoff a safe foreground-process proof and ensures an exit
-	// races into the non-interpreting tmux sink rather than a shell.
-	_, switchingCapable := agent.(ports.AgentContinuationCapabilityProvider)
-	return m.superviseAgentProcessMode(agent, id, env, argv, switchingCapable)
-}
-
-// superviseAgentProcessForSwitch always installs AO's generation-bearing
-// wrapper. Native hooks still report activity, while the wrapper gives crash
-// recovery a process-level proof that a surviving workload belongs to the
-// target generation rather than the provider that was stopped.
-func (m *Manager) superviseAgentProcessForSwitch(agent ports.Agent, id domain.SessionID, env map[string]string, argv []string) ([]string, string, error) {
-	return m.superviseAgentProcessMode(agent, id, env, argv, true)
+	return m.superviseAgentProcessMode(agent, id, env, argv, false)
 }
 
 func (m *Manager) superviseAgentProcessMode(agent ports.Agent, id domain.SessionID, env map[string]string, argv []string, force bool) ([]string, string, error) {

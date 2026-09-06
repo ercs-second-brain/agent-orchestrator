@@ -38,6 +38,7 @@ type commandSpec struct {
 }
 
 var ansiPattern = regexp.MustCompile(`\x1b\[[0-9;]*[[:alpha:]]`)
+
 type commandSpecMap = map[string]commandSpec
 
 var commandSpecs = commandSpecMap{
@@ -182,6 +183,8 @@ func modelDiscoveryError(runCtx context.Context, agentID string, commandErr erro
 	return fmt.Errorf("%s model discovery: %w", agentID, commandErr)
 }
 
+// BinaryVersion returns the binary's reported version string, or "" when the
+// binary cannot be resolved or probed.
 func BinaryVersion(ctx context.Context, binary string) string {
 	if ctx.Err() != nil || strings.TrimSpace(binary) == "" {
 		return ""

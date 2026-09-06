@@ -455,7 +455,6 @@ func Run() error {
 		}
 		return err
 	}
-	var usageDone <-chan struct{}
 
 	// Late-bind: the LAN listener shares the exact loopback router instance so
 	// the LAN surface and loopback surface never drift apart.
@@ -523,9 +522,6 @@ func Run() error {
 	installStopCancel()
 	if startupReconcileDone != nil {
 		<-startupReconcileDone
-	}
-	if usageDone != nil {
-		<-usageDone
 	}
 	lcStack.Stop()
 	// Tear the tailnet proxy down before the listener it fronts. `tailscale

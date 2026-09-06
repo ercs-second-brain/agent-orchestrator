@@ -10,16 +10,15 @@ import (
 )
 
 type installCapabilitiesStub struct {
-	prefix            string
-	prefixErr         error
-	nodeVersion       string
-	npmVersion        string
-	homebrewPrefix    string
-	homebrewErr       error
-	homebrewInstalled bool
-	writable          bool
-	calls             *int
-	probe             func(context.Context) error
+	prefix         string
+	prefixErr      error
+	nodeVersion    string
+	npmVersion     string
+	homebrewPrefix string
+	homebrewErr    error
+	writable       bool
+	calls          *int
+	probe          func(context.Context) error
 }
 
 func (s installCapabilitiesStub) Probe(ctx context.Context) (ports.InstallCapabilities, error) {
