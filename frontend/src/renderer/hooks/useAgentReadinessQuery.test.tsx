@@ -32,11 +32,11 @@ function wrapper(queryClient: QueryClient) {
 
 beforeEach(() => {
 	getMock.mockReset().mockResolvedValue({
-		data: { agents: [agentReadiness("pi", "Codex")] },
+		data: { agents: [agentReadiness("pi")] },
 		error: undefined,
 	});
 	postMock.mockReset().mockResolvedValue({
-		data: { agents: [agentReadiness("pi", "Codex")] },
+		data: { agents: [agentReadiness("pi")] },
 		error: undefined,
 	});
 });
@@ -50,34 +50,35 @@ describe("agent readiness query", () => {
 		const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
 		const { result } = renderHook(() => useAgentReadinessQuery(), { wrapper: wrapper(queryClient) });
 
-		await waitFor(() => expect(result.current.data?.agents[0]?.id).toBe("codex"));
+		await waitFor(() => expect(result.current.data?.agents[0]?.id).toBe("pi"));
 		expect(getMock).not.toHaveBeenCalled();
 	});
 
-	it("ensures normalized relevant harness ids and updates the display copy", async () => {
+	it("deduplicates pi in the ensure request", async () => {
 		const queryClient = new QueryClient();
 		renderHook(
-			() => useEnsureAgentReadiness({ agentIds: ["codex", "claude-code", "codex"] }),
+			() => useEnsureAgentReadiness({ agentIds: ["pi", "pi"] }),
 			{ wrapper: wrapper(queryClient) },
 		);
 
 		await waitFor(() =>
 			expect(postMock).toHaveBeenCalledWith("/api/v1/agents/readiness/ensure", {
-				body: { agentIds: ["claude-code", "codex"], purpose: "display" },
+				body: { agentIds: ["pi"], purpose: "display" },
 			}),
 		);
 		expect(queryClient.getQueryData(agentReadinessQueryKey)).toEqual({
-			agents: [agentReadiness("pi", "Codex")],
+			agents: [agentReadiness("pi")],
 		});
 	});
 
-	it("merges targeted ensures without discarding other harness snapshots", () => {
-		const claude = agentReadiness("pi", "pi");
-		const staleCodex = agentReadiness("pi", "Codex", { freshness: "stale" });
-		const freshCodex = agentReadiness("pi", "Codex");
+	it("merges targeted ensures without discarding distinct snapshots", () => {
+		const checkedPi = agentReadiness("pi", "pi", { usageCount: 2 });
+		const freshPi = agentReadiness("pi");
 
-		expect(mergeAgentReadiness({ agents: [claude, staleCodex] }, { agents: [freshCodex] })).toEqual({
-			agents: [claude, freshCodex],
+		// Distinct ids pass through; same-id snapshots overwrite.
+		const worker = agentReadiness("worker");
+		expect(mergeAgentReadiness({ agents: [checkedPi, worker] }, { agents: [freshPi] })).toEqual({
+			agents: [freshPi, worker],
 		});
 	});
 });

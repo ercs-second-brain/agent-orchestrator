@@ -104,7 +104,7 @@ describe("useWorkspaceQuery", () => {
 							// to codex / unknown / the session id.
 							id: "sess-2",
 							projectId: "proj-1",
-							harness: "mystery-agent",
+							harness: "legacy-harness",
 							reviewerHarness: "mystery-reviewer",
 							status: "bogus",
 							isTerminated: false,
@@ -167,7 +167,7 @@ describe("useWorkspaceQuery", () => {
 						{
 							id: "sess-legacy",
 							projectId: "proj-1",
-							harness: "codex",
+							harness: "pi",
 							status: "working",
 							isTerminated: false,
 							updatedAt: "2026-06-10T16:15:04Z",
@@ -178,7 +178,7 @@ describe("useWorkspaceQuery", () => {
 			},
 			projects: {
 				data: {
-					projects: [{ id: "proj-1", name: "my-app", path: "/home/me/my-app", orchestratorAgent: "codex" }],
+					projects: [{ id: "proj-1", name: "my-app", path: "/home/me/my-app", orchestratorAgent: "pi" }],
 				},
 				error: undefined,
 			},
@@ -199,7 +199,7 @@ describe("useWorkspaceQuery", () => {
 						{
 							id: "sess-off",
 							projectId: "proj-1",
-							harness: "codex",
+							harness: "pi",
 							status: "working",
 							autoReviewEnabled: false,
 							isTerminated: false,
@@ -211,7 +211,7 @@ describe("useWorkspaceQuery", () => {
 			},
 			projects: {
 				data: {
-					projects: [{ id: "proj-1", name: "my-app", path: "/home/me/my-app", orchestratorAgent: "codex" }],
+					projects: [{ id: "proj-1", name: "my-app", path: "/home/me/my-app", orchestratorAgent: "pi" }],
 				},
 				error: undefined,
 			},
@@ -244,7 +244,7 @@ describe("useWorkspaceQuery", () => {
 						{
 							id: "scratch-worker-1",
 							projectId: "scratch",
-							harness: "codex",
+							harness: "pi",
 							status: "working",
 							isTerminated: false,
 							updatedAt: "2026-06-10T16:15:04Z",
@@ -304,7 +304,7 @@ describe("useWorkspaceQuery", () => {
 					id: "sess-orch",
 					projectId: "proj-1",
 					displayName: "orchestrate",
-					harness: "codex",
+					harness: "pi",
 					kind: "orchestrator",
 					mode: "tui",
 					status: "working",
@@ -333,7 +333,7 @@ describe("useWorkspaceQuery", () => {
 			if (url === "/api/v1/projects") {
 				return {
 					data: {
-						projects: [{ id: "proj-1", name: "workspace3", path: "/tmp/workspace3", orchestratorAgent: "codex" }],
+						projects: [{ id: "proj-1", name: "workspace3", path: "/tmp/workspace3", orchestratorAgent: "pi" }],
 					},
 					error: undefined,
 				};
@@ -349,7 +349,7 @@ describe("useWorkspaceQuery", () => {
 							id: "sess-orch",
 							projectId: "proj-1",
 							displayName: "orchestrate",
-							harness: "codex",
+							harness: "pi",
 							kind: "orchestrator",
 							mode: "tui",
 							status: "working",
@@ -386,7 +386,7 @@ describe("useWorkspaceQuery", () => {
 			workspaceId: "proj-1",
 			workspaceName: "workspace3",
 			title: "orchestrate",
-			provider: "codex",
+			provider: "pi",
 			kind: "orchestrator",
 		});
 		await waitFor(() => {
@@ -535,11 +535,11 @@ describe("useWorkspaceQuery", () => {
 			sessions: {
 				data: {
 					sessions: [
-						{ id: "needs-input", projectId: "proj-1", displayName: "Needs input", harness: "codex", status: "needs_input", updatedAt: "2026-08-01T00:00:00Z" },
-						{ id: "mergeable", projectId: "proj-1", displayName: "Mergeable", harness: "codex", status: "mergeable", updatedAt: "2026-08-01T00:00:00Z" },
-						{ id: "working", projectId: "proj-1", displayName: "Working", harness: "codex", status: "working", updatedAt: "2026-08-01T00:00:00Z" },
-						{ id: "merged", projectId: "proj-1", displayName: "Merged", harness: "codex", status: "merged", updatedAt: "2026-08-01T00:00:00Z" },
-						{ id: "orchestrator", projectId: "proj-1", displayName: "Orchestrator", harness: "codex", kind: "orchestrator", status: "needs_input", updatedAt: "2026-08-01T00:00:00Z" },
+						{ id: "needs-input", projectId: "proj-1", displayName: "Needs input", harness: "pi", status: "needs_input", updatedAt: "2026-08-01T00:00:00Z" },
+						{ id: "mergeable", projectId: "proj-1", displayName: "Mergeable", harness: "pi", status: "mergeable", updatedAt: "2026-08-01T00:00:00Z" },
+						{ id: "working", projectId: "proj-1", displayName: "Working", harness: "pi", status: "working", updatedAt: "2026-08-01T00:00:00Z" },
+						{ id: "merged", projectId: "proj-1", displayName: "Merged", harness: "pi", status: "merged", updatedAt: "2026-08-01T00:00:00Z" },
+						{ id: "orchestrator", projectId: "proj-1", displayName: "Orchestrator", harness: "pi", kind: "orchestrator", status: "needs_input", updatedAt: "2026-08-01T00:00:00Z" },
 					],
 				},
 				error: undefined,

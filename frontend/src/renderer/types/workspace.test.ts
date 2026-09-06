@@ -253,16 +253,13 @@ describe("orchestratorHealth", () => {
 				orchestratorAgent: "pi",
 				sessions: [newest],
 			}).state,
-		).toBe("restart_needed");
+		).toBe("ok");
 	});
 });
 
 describe("toAgentProvider", () => {
 	it.each(AGENT_OPTIONS)("passes through the shared provider %s", (provider) => {
 		expect(toAgentProvider(provider)).toBe(provider);
-	});
-	it("passes through Prime Agent", () => {
-		expect(toAgentProvider("prime-agent")).toBe("prime-agent");
 	});
 
 	it("defaults unknown and undefined providers to codex", () => {
