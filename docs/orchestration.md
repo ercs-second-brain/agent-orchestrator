@@ -3,9 +3,9 @@
 Operational practices for directing AO worker sessions: how workers execute
 tasks, and how an orchestrator recovers a stalled session. This runbook
 codifies what has proven to work during the cleanup program; it is deliberately
-scoped to **worker execution discipline** and the **stall playbook**.
-Decomposition, wave scheduling, parallelization, and merge policy are
-intentionally **not** codified yet (see
+scoped to **worker execution discipline**, the **stall playbook**, and context
+exhaustion. Decomposition, wave scheduling, parallelization, and merge policy
+are intentionally **not** codified yet (see
 [#51](https://github.com/ercs-second-brain/agent-orchestrator/issues/51)).
 
 Orchestrator sessions should load
@@ -108,3 +108,76 @@ provably dead.
 
 The salvaged-WIP pattern exists because checkpoints are cheap: a session that
 committed per chunk loses minutes of work at worst, not hours.
+
+## Context exhaustion
+
+A related but distinct failure mode from the inactivity stall: an **exhausted
+context**. The worker stays active and productive right up to the moment it
+dies — no 45-minute silence, no stalled transcript. Its context window simply
+fills, it starts to loop, and then the session dies with its accumulated
+knowledge gone. Because the stall playbook's detection never fires, context
+death needs its own detection and playbook.
+
+Evidence: during the cleanup program, an N2 deletion worker (~447 files, the
+largest deletion of the program) ran to ~500k tokens, entered a loop, and died
+holding 40 files of uncommitted work. Recovery required manual salvage plus a
+continuation session re-briefed from inventory. Native context visibility and
+auto-handoff are tracked in
+[#64](https://github.com/ercs-second-brain/agent-orchestrator/issues/64); the
+worker-facing policy text it becomes part of is
+[#60](https://github.com/ercs-second-brain/agent-orchestrator/issues/60).
+Until #64 ships, the thresholds and detection below are interim and
+orchestrator-enforced.
+
+### Thresholds
+
+Interim thresholds, enforced by the orchestrator until #64 ships native
+support:
+
+- **~250k tokens of live context** — send the worker a structured
+  **PREPARE-HANDOFF** directive (below).
+- **~300k tokens** — **force-salvage**: kill the session and respawn a
+  continuation briefed from the handoff report.
+
+### Detection (interim)
+
+Read the tail usage event from the session's pi JSONL: `input + cacheRead` of
+the last assistant event is the live context size. The product feature — an
+`ao session context` command and a dashboard context column — is
+[#64](https://github.com/ercs-second-brain/agent-orchestrator/issues/64).
+
+### PREPARE-HANDOFF directive
+
+Send the worker this exact text:
+
+> FIRST write a handoff report covering (a) exact position across task
+> layers, (b) PR CI state per check with diagnosis, (c) design decisions the
+> next session cannot infer, (d) non-obvious judgment calls, (e)
+> grep-gate/verification status, (f) prioritized remaining-work list with
+> file pointers, (g) half-done WIP and its intended end state. THEN finish
+> only the current atomic unit (complete or document the broken state — never
+> start new scope). THEN commit everything and push. Reply HANDOFF COMPLETE.
+> Imperfect committed state with a written report beats a perfect tree with no
+> report.
+
+The report comes FIRST, before any further work — that ordering is the
+directive's whole point.
+
+### FORCE-SALVAGE procedure
+
+If the worker dies or does not reach HANDOFF COMPLETE by ~300k tokens:
+
+1. **Preserve refs.** Salvage-commit the worktree diff (the salvaged-WIP
+   pattern from the stall playbook), then rebase it onto the branch's remote
+   state. If the dying session left a stuck rebase in the worktree, remove the
+   worktree's `rebase-merge` directory first.
+2. **Push** to the PR branch.
+3. **Kill** the session.
+4. **Respawn** a continuation briefed from the handoff report, the PR state,
+   and the original task — with a tight budget and the worker execution
+   discipline restated as lived experience.
+
+### Worker-facing note
+
+If your orchestrator sends you a prepare-handoff directive, the handoff
+report comes FIRST, before any further work.
