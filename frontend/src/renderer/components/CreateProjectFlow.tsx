@@ -286,16 +286,7 @@ export function CreateProjectFlow({
 		selectSource(sourceSignal.source);
 	}, [sourceSignal]);
 
-		const selectedPathRef = useRef<string | null>(selectedPath);
-	selectedPathRef.current = selectedPath;
-	useEffect(() => {
-		// With a single supported harness there is no agent choice to collect:
-		// submit as soon as a path has been chosen.
-		if (!selectedPath || isCreating) return;
-		void createProject({ workerAgent: "pi", orchestratorAgent: "pi" });
-	}, [selectedPath, isCreating]);
-
-const createProject = async (selection: CreateProjectAgentSelection) => {
+	const createProject = async (selection: CreateProjectAgentSelection) => {
 		if (!selectedPath) return;
 		setError(null);
 		setIsCreating(true);
@@ -320,13 +311,11 @@ const createProject = async (selection: CreateProjectAgentSelection) => {
 				return;
 			}
 			if (selectedKind === "single_repo" && repositorySetup) {
-				setIsCreating(false);
 				setIsInitializing(true);
 				await onInitializeProject(selectedPath);
 				setRepositorySetup(null);
 				setRepositorySetupWarning(null);
 				setIsInitializing(false);
-				setIsCreating(true);
 			}
 			const defaultBranch =
 				selectedKind === "single_repo" ? await aoBridge.app.getRepositoryBranch(selectedPath) : undefined;
@@ -344,7 +333,19 @@ const createProject = async (selection: CreateProjectAgentSelection) => {
 				setRepositorySetup(code);
 			}
 			setError(message);
-			if (hasModePicker && !cloneSelection && !createSelection) {
+			if (cloneSelection || createSelection) {
+				// Clone/create submitted from their dialogs: reopen the dialog with the
+				// error visible so the user can retry instead of staring at a blank
+				// backdrop (there is no agent sheet to fall back to since ADR 0005).
+				if (cloneSelection) {
+					setCloneSelection(null);
+					setCloneDialogOpen(true);
+				} else {
+					setCreateSelection(null);
+					setCreateDialogOpen(true);
+				}
+				setSelectedPath(null);
+			} else if (hasModePicker) {
 				if (shouldScanCreateFailure(message)) {
 					try {
 						const scan = await aoBridge.app.scanImportFolder({
@@ -366,6 +367,20 @@ const createProject = async (selection: CreateProjectAgentSelection) => {
 			setIsInitializing(false);
 		}
 	};
+
+	// ADR 0005: pi is the only supported harness, so there is no agent choice to
+	// collect — submit as soon as a path has been chosen. The submit lock keeps
+	// the isCreating/isInitializing handoffs inside createProject from retrig-
+	// gering this effect mid-flight; it resets only once the attempt settles.
+	const submitLockRef = useRef(false);
+	useEffect(() => {
+		if (!selectedPath || submitLockRef.current) return;
+		submitLockRef.current = true;
+		void createProject({ workerAgent: "pi", orchestratorAgent: "pi" }).finally(() => {
+			submitLockRef.current = false;
+		});
+		// eslint-disable-next-line react-hooks/exhaustive-deps -- createProject closes over the batch that set selectedPath
+	}, [selectedPath]);
 
 	const reopenSourcePicker = () => {
 		setProjectImportStep(null);
