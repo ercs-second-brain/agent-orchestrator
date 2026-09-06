@@ -206,11 +206,7 @@ function reportApiError(
 	requestId?: string,
 	reportingOwner?: ReportingOwner,
 ): void {
-	// Treat an omitted owner as HTTP-owned for dedupe purposes. Saga-owned
-	// responses need their own bucket so suppressing one cannot hide a later
-	// generic HTTP failure from Sentry.
-	const ownerBucket = reportingOwner === "agent_switch_saga" ? "agent_switch_saga" : "http";
-	const key = `${operation}|${category}|${status ?? ""}|${ownerBucket}`;
+	const key = `${operation}|${category}|${status ?? ""}|${reportingOwner ?? "http"}`;
 	const now = Date.now();
 	const last = lastApiErrorAt.get(key);
 	if (last !== undefined && now - last < API_ERROR_DEDUPE_MS) return;
@@ -219,9 +215,7 @@ function reportApiError(
 	// is what drives the fine-grained severity/owner classification; `requestId`
 	// (when present) is tagged so a client event pivots to the daemon's own
 	// capture of the same request, which carries the matching request_id.
-	if (reportingOwner !== "agent_switch_saga") {
-		captureApiErrorToSentry(operation, category, status, code, requestId);
-	}
+	captureApiErrorToSentry(operation, category, status, code, requestId);
 }
 
 async function runtimeFetch(input: Request): Promise<Response> {

@@ -282,48 +282,6 @@ describe("api error telemetry", () => {
 		expect(sentryCaptureMock).toHaveBeenCalledTimes(1);
 	});
 
-	it("does not send saga-owned API failures to generic Sentry capture", async () => {
-		vi.spyOn(globalThis, "fetch").mockResolvedValue(
-			new Response(
-				JSON.stringify({
-					error: "internal",
-					code: "AGENT_SWITCH_FAILED",
-					message: "Agent switch failed",
-					reporting_owner: "agent_switch_saga",
-				}),
-				{ status: 500, headers: { "Content-Type": "application/json" } },
-			),
-		);
-		setApiBaseUrl("http://127.0.0.1:3037");
-
-		const { error } = await apiClient.GET("/api/v1/agents/installers");
-
-		expect(sentryCaptureMock).not.toHaveBeenCalled();
-		expect(apiErrorMessage(error)).toBe("Agent switch failed (AGENT_SWITCH_FAILED)");
-	});
-
-	it("suppresses saga-owned 4xx responses without changing presentation", async () => {
-		vi.spyOn(globalThis, "fetch").mockResolvedValue(
-			new Response(
-				JSON.stringify({
-					error: "conflict",
-					code: "AGENT_SWITCH_DELIVERY_UNCONFIRMED",
-					message: "The target agent accepted an unconfirmed continuation",
-					reporting_owner: "agent_switch_saga",
-				}),
-				{ status: 409, headers: { "Content-Type": "application/json" } },
-			),
-		);
-		setApiBaseUrl("http://127.0.0.1:3037");
-
-		const { error } = await apiClient.GET("/api/v1/agents/installers");
-
-		expect(sentryCaptureMock).not.toHaveBeenCalled();
-		expect(apiErrorMessage(error)).toBe(
-			"The target agent accepted an unconfirmed continuation (AGENT_SWITCH_DELIVERY_UNCONFIRMED)",
-		);
-	});
-
 	it("does not trust an unknown reporting owner", async () => {
 		vi.spyOn(globalThis, "fetch").mockResolvedValue(
 			new Response(
@@ -333,28 +291,6 @@ describe("api error telemetry", () => {
 		);
 		setApiBaseUrl("http://127.0.0.1:3037");
 
-		await apiClient.GET("/api/v1/agents/installers");
-
-		expect(sentryCaptureMock).toHaveBeenCalledTimes(1);
-	});
-
-	it("does not let a saga-owned response dedupe a later HTTP-owned failure", async () => {
-		vi.spyOn(globalThis, "fetch")
-			.mockResolvedValueOnce(
-				new Response(JSON.stringify({ reporting_owner: "agent_switch_saga" }), {
-					status: 500,
-					headers: { "Content-Type": "application/json" },
-				}),
-			)
-			.mockResolvedValueOnce(
-				new Response(JSON.stringify({ reporting_owner: "http" }), {
-					status: 500,
-					headers: { "Content-Type": "application/json" },
-				}),
-			);
-		setApiBaseUrl("http://127.0.0.1:3037");
-
-		await apiClient.GET("/api/v1/agents/installers");
 		await apiClient.GET("/api/v1/agents/installers");
 
 		expect(sentryCaptureMock).toHaveBeenCalledTimes(1);
