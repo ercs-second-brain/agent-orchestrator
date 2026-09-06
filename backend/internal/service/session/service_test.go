@@ -556,11 +556,17 @@ func TestSessionSetReviewerHarnessPersistsPerSession(t *testing.T) {
 	}
 }
 
-func TestSessionSetReviewerHarnessRejectsUnknownHarness(t *testing.T) {
+func TestSessionSetReviewerHarnessStoresLegacyValueUnchanged(t *testing.T) {
+	// ADR 0005 store-and-ignore: a legacy reviewer harness name is accepted and
+	// stored verbatim; it resolves to pi when a review launches.
 	st := newFakeStore()
 	st.sessions["mer-1"] = domain.SessionRecord{ID: "mer-1"}
-	if _, err := (&Service{store: st}).SetReviewerHarness(context.Background(), "mer-1", "unknown", domain.AgentConfig{}); err == nil {
-		t.Fatal("expected invalid harness error")
+	sess, err := (&Service{store: st}).SetReviewerHarness(context.Background(), "mer-1", "legacy", domain.AgentConfig{})
+	if err != nil {
+		t.Fatalf("SetReviewerHarness: %v", err)
+	}
+	if sess.ReviewerHarness != "legacy" {
+		t.Fatalf("reviewer harness = %q, want the stored legacy value", sess.ReviewerHarness)
 	}
 }
 

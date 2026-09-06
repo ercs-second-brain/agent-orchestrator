@@ -1934,7 +1934,9 @@ func TestTriggerRerunsChangesRequestedCurrentHead(t *testing.T) {
 	}
 }
 
-func TestTriggerUsesConfiguredReviewerHarness(t *testing.T) {
+func TestTriggerResolvesConfiguredReviewerHarnessToPi(t *testing.T) {
+	// ADR 0005 store-and-ignore: a legacy configured reviewer harness is
+	// preserved in storage but resolves to pi when a review launches.
 	store := &fakeStore{}
 	projects := fakeProjects{cfg: domain.ProjectConfig{Reviewers: []domain.ReviewerConfig{{Harness: domain.ReviewerHarness("greptile")}}}}
 	launcher := &fakeLauncher{handle: "review-mer-1"}
@@ -1944,8 +1946,8 @@ func TestTriggerUsesConfiguredReviewerHarness(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Trigger: %v", err)
 	}
-	if res.Run.Harness != domain.ReviewerHarness("greptile") || launcher.gotSpec.Harness != domain.ReviewerHarness("greptile") {
-		t.Fatalf("harness not used: run=%+v spec=%+v", res.Run, launcher.gotSpec)
+	if res.Run.Harness != domain.ReviewerPi || launcher.gotSpec.Harness != domain.ReviewerPi {
+		t.Fatalf("legacy reviewer not normalized: run=%+v spec=%+v", res.Run, launcher.gotSpec)
 	}
 }
 

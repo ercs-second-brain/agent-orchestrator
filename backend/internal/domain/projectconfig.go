@@ -95,11 +95,11 @@ type ReviewerConfig struct {
 const FallbackReviewerHarness = ReviewerPi
 
 // ResolveReviewerHarness picks the reviewer harness for a worker. A configured
-// reviewer wins. With pi as the single supported harness (ADR 0005), the
-// fallback is always pi.
+// reviewer wins; stored non-pi values resolve to pi (store-and-ignore, ADR
+// 0005). The fallback is always pi.
 func (c ProjectConfig) ResolveReviewerHarness(worker AgentHarness) ReviewerHarness {
 	if len(c.Reviewers) > 0 {
-		return c.Reviewers[0].Harness
+		return c.Reviewers[0].Harness.Normalize()
 	}
 	return FallbackReviewerHarness
 }
@@ -164,7 +164,9 @@ func (c ProjectConfig) IsZero() bool {
 }
 
 // Validate rejects values outside the typed vocabulary so a bad config is
-// refused when it is set (CLI/API) rather than surfacing at spawn.
+// refused when it is set (CLI/API) rather than surfacing at spawn. Harness
+// fields are the exception (ADR 0005 store-and-ignore): non-pi values are
+// preserved in storage but resolve to pi, so they are accepted here.
 func (c ProjectConfig) Validate() error {
 	if err := c.AgentConfig.Validate(); err != nil {
 		return err
@@ -173,9 +175,6 @@ func (c ProjectConfig) Validate() error {
 		return err
 	}
 	for role, ro := range map[string]RoleOverride{"worker": c.Worker, "orchestrator": c.Orchestrator} {
-		if ro.Harness != "" && !ro.Harness.IsKnown() {
-			return fmt.Errorf("%s.agent: unknown harness %q", role, ro.Harness)
-		}
 		if err := ro.AgentConfig.Validate(); err != nil {
 			return fmt.Errorf("%s.%w", role, err)
 		}
@@ -189,9 +188,6 @@ func (c ProjectConfig) Validate() error {
 		return fmt.Errorf("agentRulesFile %q: %w", c.AgentRulesFile, err)
 	}
 	for i, rv := range c.Reviewers {
-		if !rv.Harness.IsKnown() {
-			return fmt.Errorf("reviewers[%d].harness: unknown harness %q", i, rv.Harness)
-		}
 		if err := rv.AgentConfig.Validate(); err != nil {
 			return fmt.Errorf("reviewers[%d].%w", i, err)
 		}

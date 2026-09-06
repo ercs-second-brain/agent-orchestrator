@@ -25,3 +25,13 @@ func (h ReviewerHarness) IsKnown() bool {
 	}
 	return false
 }
+
+// Normalize resolves a stored reviewer harness value under the ADR 0005
+// store-and-ignore rule: pi is the only supported reviewer, so any other
+// stored value resolves to pi.
+func (h ReviewerHarness) Normalize() ReviewerHarness {
+	if h == "" {
+		return h
+	}
+	return ReviewerPi
+}

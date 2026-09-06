@@ -203,9 +203,7 @@ func (e *Engine) TriggerWithSource(ctx stdctx.Context, workerID domain.SessionID
 	if workerID == "" {
 		return TriggerResult{}, fmt.Errorf("%w: worker session id is required", ErrInvalid)
 	}
-	if override != "" && !override.IsKnown() {
-		return TriggerResult{}, fmt.Errorf("%w: unknown reviewer harness %q", ErrInvalid, override)
-	}
+	override = override.Normalize()
 	if source != domain.ReviewTriggerManual && source != domain.ReviewTriggerAuto {
 		return TriggerResult{}, fmt.Errorf("%w: unknown review trigger source %q", ErrInvalid, source)
 	}
@@ -508,9 +506,7 @@ func (e *Engine) SwitchReviewer(
 	if workerID == "" {
 		return SessionReviews{}, fmt.Errorf("%w: worker session id is required", ErrInvalid)
 	}
-	if harness != "" && !harness.IsKnown() {
-		return SessionReviews{}, fmt.Errorf("%w: unknown reviewer harness %q", ErrInvalid, harness)
-	}
+	harness = harness.Normalize()
 	if err := config.Validate(); err != nil {
 		return SessionReviews{}, fmt.Errorf("%w: reviewer config: %w", ErrInvalid, err)
 	}
@@ -1151,7 +1147,7 @@ func (e *Engine) projectReviewerSelection(
 		}
 	}
 	if len(cfg.Reviewers) > 0 {
-		return cfg.Reviewers[0].Harness, cfg.Reviewers[0].AgentConfig, nil
+		return cfg.Reviewers[0].Harness.Normalize(), cfg.Reviewers[0].AgentConfig, nil
 	}
 	return cfg.ResolveReviewerHarness(worker.Harness), domain.AgentConfig{}, nil
 }
