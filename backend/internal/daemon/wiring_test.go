@@ -301,6 +301,13 @@ func TestWiring_StartSessionSpawnsScratchWithoutGitRepo(t *testing.T) {
 	writeFakeExecutable(t, filepath.Join(binDir, "claude.cmd"))
 	writeFakeExecutable(t, filepath.Join(binDir, "tmux"))
 	writeFakeExecutable(t, filepath.Join(binDir, "tmux.cmd"))
+	// pi's hooks installer probes `pi --version`; the stub must report a
+	// version >= the settled minimum for the fake to count as installed.
+	for _, name := range []string{"pi", "pi.cmd"} {
+		if err := os.WriteFile(filepath.Join(binDir, name), []byte("#!/bin/sh\necho pi 1.0.0\n"), 0o755); err != nil {
+			t.Fatalf("write fake pi %s: %v", name, err)
+		}
+	}
 	t.Setenv("PATH", binDir+string(os.PathListSeparator)+os.Getenv("PATH"))
 
 	homeDir := t.TempDir()

@@ -2958,12 +2958,6 @@ func (m *Manager) confirmActive(ctx context.Context, guard *sessionguard.Guard, 
 
 type confirmationStopCheck func(context.Context) (bool, error)
 
-func (m *Manager) confirmActiveUnderMutation(ctx context.Context, guard *sessionguard.Guard, id domain.SessionID, stop confirmationStopCheck) {
-	m.confirmActiveWithNudge(ctx, id, stop, func(nudgeCtx context.Context) (sessionguard.Outcome, error) {
-		return guard.CoordinationUnderMutation(nudgeCtx, id, "", m.harnessNudgeSafe, nil)
-	})
-}
-
 func (m *Manager) confirmActiveWithNudge(ctx context.Context, id domain.SessionID, stop confirmationStopCheck, nudge func(context.Context) (sessionguard.Outcome, error)) {
 	for attempt := 1; ; attempt++ {
 		if m.confirmationStopRequested(ctx, id, attempt, stop) {

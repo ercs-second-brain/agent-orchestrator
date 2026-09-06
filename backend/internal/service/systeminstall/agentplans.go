@@ -128,20 +128,3 @@ func (s *Service) planShellInstaller(target Target, url, shell string) Plan {
 		Script: &ports.InstallScriptCommand{URL: url, Interpreter: []string{resolved}},
 	}
 }
-
-func (s *Service) planPowerShellInstaller(target Target, url string) Plan {
-	for _, shell := range []string{"pwsh.exe", "powershell.exe", "pwsh", "powershell"} {
-		resolved, err := s.executables.LookPath(shell)
-		if err != nil {
-			continue
-		}
-		return Plan{
-			Target: target, Method: "official-installer",
-			Script: &ports.InstallScriptCommand{
-				URL:         url,
-				Interpreter: []string{resolved, "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-File"},
-			},
-		}
-	}
-	return Plan{Target: target, Unsupported: true, Method: "official-installer", Reason: "PowerShell was not found on PATH."}
-}
