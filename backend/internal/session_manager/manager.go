@@ -592,7 +592,7 @@ func (m *Manager) Spawn(ctx context.Context, cfg ports.SpawnConfig) (domain.Sess
 	}
 	// A per-project role override picks the harness when the spawn names none,
 	// so a project can default workers to one agent and orchestrators to another.
-	cfg.Harness = effectiveHarness(cfg.Harness, cfg.Kind, project.Config)
+	cfg.Harness = effectiveHarness(cfg.Harness, cfg.Kind, project.Config).Normalize()
 	if cfg.Harness == "" {
 		return domain.SessionRecord{}, 0, 0, fmt.Errorf("spawn: %w: configure project %s.agent or pass --harness", ErrMissingHarness, roleConfigName(cfg.Kind))
 	}

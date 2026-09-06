@@ -240,6 +240,9 @@ func (s *Service) spawn(ctx context.Context, cfg ports.SpawnConfig) (domain.Sess
 	if err != nil {
 		return domain.Session{}, 0, 0, err
 	}
+	// ADR 0005 store-and-ignore: a spawn naming a legacy harness launches pi;
+	// the stored value keeps its meaning only in historical rows.
+	cfg.Harness = cfg.Harness.Normalize()
 	if s.agentReadiness != nil && cfg.Harness != "" {
 		readiness, err := s.agentReadiness.EnsureAgentReadiness(ctx, string(cfg.Harness), domain.AgentReadinessPurposeLaunch)
 		if err != nil {
@@ -719,9 +722,6 @@ func (s *Service) Unpin(ctx context.Context, id domain.SessionID) (domain.Sessio
 // SetReviewerHarness persists the reviewer selected for this session. Empty
 // clears the preference and restores the project-level fallback.
 func (s *Service) SetReviewerHarness(ctx context.Context, id domain.SessionID, harness domain.ReviewerHarness, config domain.AgentConfig) (domain.Session, error) {
-	if harness != "" && !harness.IsKnown() {
-		return domain.Session{}, apierr.Invalid("UNKNOWN_REVIEWER_HARNESS", "Unknown reviewer harness", nil)
-	}
 	if err := config.Validate(); err != nil {
 		return domain.Session{}, apierr.Invalid("INVALID_REVIEWER_CONFIG", "Invalid reviewer config", map[string]any{"detail": err.Error()})
 	}

@@ -27,3 +27,16 @@ func (h AgentHarness) IsKnown() bool {
 	}
 	return false
 }
+
+// Normalize resolves a stored harness value under the ADR 0005
+// store-and-ignore rule: pi is the only harness that can launch, so any other
+// non-empty value (e.g. a legacy "claude-code" in project config or a spawn
+// request) resolves to pi while the stored value is preserved unchanged.
+// HarnessFake passes through for test wiring.
+func (h AgentHarness) Normalize() AgentHarness {
+	if h == HarnessPi || h == HarnessFake || h == "" {
+		// Empty stays empty: it means "no override; resolve from config".
+		return h
+	}
+	return HarnessPi
+}
