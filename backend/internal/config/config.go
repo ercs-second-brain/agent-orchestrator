@@ -10,6 +10,8 @@ import (
 	"fmt"
 	"net"
 	"os"
+
+	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/domain"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -37,6 +39,16 @@ const (
 	DefaultAgent = "pi"
 )
 
+// normalizeDefaultAgent implements the ADR 0005 store-and-ignore rule for the
+// AO_AGENT compatibility surface: any non-pi value (e.g. a legacy
+// "claude-code" in the environment) resolves to pi instead of failing boot.
+func normalizeDefaultAgent(raw string) string {
+	if raw == string(domain.HarnessFake) {
+		// Fake stays usable for test wiring only.
+		return raw
+	}
+	return string(domain.HarnessPi)
+}
 // TelemetryConfig controls local telemetry behavior.
 type TelemetryConfig struct {
 	Events bool
@@ -110,8 +122,9 @@ type Config struct {
 	// AO_DATA_DIR is explicitly set, that override is also the state root so an
 	// isolated daemon never leaks account state into the default home.
 	StateDir string
-	// Agent is the compatibility agent adapter id selected by AO_AGENT;
-	// startSession fails fast if no adapter with this id is registered.
+	// Agent is the compatibility agent id selected by AO_AGENT. Legacy non-pi
+	// values are stored but ignored (they resolve to pi; see
+	// normalizeDefaultAgent), so boot never fails on an old value.
 	Agent string
 	// AppRunID identifies one desktop-app launch. The Electron supervisor mints
 	// it and passes it down (AO_APP_RUN_ID), holding it constant across daemon
@@ -153,7 +166,8 @@ func (c Config) Addr() string {
 //	AO_SHUTDOWN_TIMEOUT  shutdown deadline   (Go duration > 0, default 10s)
 //	AO_RUN_FILE          running.json path   (default ~/.ao/running.json)
 //	AO_DATA_DIR          durable state dir   (default ~/.ao/data)
-//	AO_AGENT             compatibility agent id (default claude-code)
+//	AO_AGENT             compatibility agent id; legacy non-pi values are stored
+//	                     but ignored and resolve to pi (default pi)
 //	AO_APP_RUN_ID        desktop-app launch id, set by the Electron supervisor
 //	                     (default: a fresh id minted per daemon boot)
 //	AO_ALLOWED_ORIGINS   CORS origins, comma-separated (default DefaultAllowedOrigins)
@@ -202,7 +216,10 @@ func Load() (Config, error) {
 	}
 
 	if raw := os.Getenv("AO_AGENT"); raw != "" {
-		cfg.Agent = raw
+		// Store-and-ignore (ADR 0005): a legacy value like "claude-code" is
+		// preserved for visibility but resolves to pi, the single supported
+		// harness. Boot never fails on a stored value.
+		cfg.Agent = normalizeDefaultAgent(raw)
 	}
 
 	// A missing AO_APP_RUN_ID means nothing is supervising this daemon, so this

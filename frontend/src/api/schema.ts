@@ -1630,7 +1630,7 @@ export interface components {
             prs: components["schemas"]["SessionPRFacts"][];
             reviewerConfig?: components["schemas"]["AgentConfig"];
             /** @enum {string} */
-            reviewerHarness?: "claude-code" | "codex" | "copilot" | "cursor" | "kilocode" | "opencode" | "kiro" | "pi" | "qwen" | "agy" | "continue" | "goose" | "vibe" | "devin" | "droid" | "kimi" | "kimchi" | "muse" | "amp" | "aider" | "grok" | "crush" | "auggie" | "cline" | "autohand";
+            reviewerHarness?: "pi";
             /** @enum {string} */
             scmStatus?: "pr_open" | "draft" | "ci_failed" | "review_pending" | "changes_requested" | "approved" | "mergeable" | "merged";
             /** @enum {string} */
@@ -1664,7 +1664,7 @@ export interface components {
         };
         DelegateTaskRequest: {
             /** @enum {string} */
-            agent?: "claude-code" | "codex" | "aider" | "opencode" | "grok" | "droid" | "amp" | "agy" | "crush" | "cursor" | "qwen" | "copilot" | "goose" | "auggie" | "continue" | "devin" | "cline" | "kimi" | "muse" | "kiro" | "kilocode" | "vibe" | "pi" | "kimchi" | "omp" | "prime-agent" | "autohand" | "fake";
+            agent?: "pi" | "fake";
             /** @enum {string} */
             approvalMode?: "default" | "accept-edits" | "auto" | "bypass-permissions";
             attachments?: components["schemas"]["AttachmentInput"][];
@@ -2285,8 +2285,6 @@ export interface components {
             toolUseId?: string;
             /** @description Read-only provider-native transcript path exposed by the hook. */
             transcriptPath?: string;
-            /** @description Provider transcript metadata used by the local usage pipeline. */
-            usage?: components["schemas"]["UsageHookMetadata"];
         };
         SetActivityResponse: {
             ok: boolean;
@@ -2343,7 +2341,7 @@ export interface components {
         SetSessionReviewerRequest: {
             agentConfig?: components["schemas"]["AgentConfig"];
             /** @enum {string} */
-            harness?: "claude-code" | "codex" | "copilot" | "cursor" | "kilocode" | "opencode" | "kiro" | "pi" | "qwen" | "agy" | "continue" | "goose" | "vibe" | "devin" | "droid" | "kimi" | "kimchi" | "muse" | "amp" | "aider" | "grok" | "crush" | "auggie" | "cline" | "autohand";
+            harness?: "pi";
         };
         ShellTerminalEnvelope: {
             shellTerminal: components["schemas"]["ShellTerminalResponse"];
@@ -2371,7 +2369,7 @@ export interface components {
             branch?: string;
             displayName?: string;
             /** @enum {string} */
-            harness?: "claude-code" | "codex" | "aider" | "opencode" | "grok" | "droid" | "amp" | "agy" | "crush" | "cursor" | "qwen" | "copilot" | "goose" | "auggie" | "continue" | "devin" | "cline" | "kimi" | "muse" | "kiro" | "kilocode" | "vibe" | "pi" | "kimchi" | "omp" | "prime-agent" | "autohand";
+            harness?: "pi";
             issueId?: string;
             /** @enum {string} */
             kind?: "worker" | "orchestrator";
@@ -2464,7 +2462,7 @@ export interface components {
         TriggerReviewRequest: {
             agentConfig?: components["schemas"]["AgentConfig"];
             /** @enum {string} */
-            harness?: "claude-code" | "codex" | "copilot" | "cursor" | "kilocode" | "opencode" | "kiro" | "pi" | "qwen" | "agy" | "continue" | "goose" | "vibe" | "devin" | "droid" | "kimi" | "kimchi" | "muse" | "amp" | "aider" | "grok" | "crush" | "auggie" | "cline" | "autohand";
+            harness?: "pi";
         };
         TriggerReviewResponse: {
             /** @description True when a new review pass was started; false when an existing run for the same commit was reused. */
@@ -2489,14 +2487,6 @@ export interface components {
             harness: string;
             models: components["schemas"]["UsageModelResponse"][];
             totals: components["schemas"]["UsageTotalsResponse"];
-        };
-        UsageHookMetadata: {
-            /** @enum {string} */
-            harness: "claude-code" | "codex";
-            modelId?: string;
-            subagentId?: string;
-            subagentTranscriptPath?: string;
-            transcriptPath?: string;
         };
         UsageModelResponse: {
             modelId: string;
