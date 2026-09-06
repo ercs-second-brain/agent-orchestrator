@@ -4,15 +4,15 @@ package contract
 type AgentCapability string
 
 // Agent capabilities understood by AO clients.
+// ADR 0005: pi is the only supported harness — a terminal-first TUI with no
+// chat or browser surfaces, so those capabilities no longer exist.
 const (
-	CapabilityInterfaceChat  AgentCapability = "interface.chat"
-	CapabilityInterfaceTUI   AgentCapability = "interface.tui"
-	CapabilityModelCatalog   AgentCapability = "model.catalog"
-	CapabilityCustomModel    AgentCapability = "model.custom"
-	CapabilityAttachments    AgentCapability = "attachments"
-	CapabilityBrowserPreview AgentCapability = "browser.preview"
-	CapabilityReviewExecute  AgentCapability = "review.execute"
-	CapabilityResume         AgentCapability = "session.resume"
+	CapabilityInterfaceTUI  AgentCapability = "interface.tui"
+	CapabilityModelCatalog  AgentCapability = "model.catalog"
+	CapabilityCustomModel   AgentCapability = "model.custom"
+	CapabilityAttachments   AgentCapability = "attachments"
+	CapabilityReviewExecute AgentCapability = "review.execute"
+	CapabilityResume        AgentCapability = "session.resume"
 )
 
 // AgentInstallationState is the host's normalized installation result.

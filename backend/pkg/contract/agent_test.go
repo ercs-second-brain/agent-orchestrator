@@ -13,12 +13,10 @@ import (
 )
 
 var agentCapabilities = []contract.AgentCapability{
-	contract.CapabilityInterfaceChat,
 	contract.CapabilityInterfaceTUI,
 	contract.CapabilityModelCatalog,
 	contract.CapabilityCustomModel,
 	contract.CapabilityAttachments,
-	contract.CapabilityBrowserPreview,
 	contract.CapabilityReviewExecute,
 	contract.CapabilityResume,
 }
@@ -26,7 +24,7 @@ var agentCapabilities = []contract.AgentCapability{
 func TestHasAgentCapability(t *testing.T) {
 	profile := contract.AgentProfile{
 		Capabilities: []contract.AgentCapability{
-			contract.CapabilityInterfaceChat,
+			contract.CapabilityInterfaceTUI,
 			contract.CapabilityResume,
 		},
 	}
@@ -43,7 +41,7 @@ func TestAgentProfileJSONKeepsPolicyInAvailability(t *testing.T) {
 	profile := contract.AgentProfile{
 		ID:           "runtime-agent",
 		Label:        "Runtime Agent",
-		Capabilities: []contract.AgentCapability{contract.CapabilityInterfaceChat},
+		Capabilities: []contract.AgentCapability{contract.CapabilityInterfaceTUI},
 		Availability: contract.AgentAvailability{
 			Available:          false,
 			Installation:       contract.AgentInstallationInstalled,
