@@ -41,21 +41,12 @@ const (
 // native payload when present. All four are optional: an old daemon decodes
 // the body leniently and simply ignores them.
 type setActivityAPIRequest struct {
-	State          string             `json:"state,omitempty"`
-	Event          string             `json:"event,omitempty"`
-	ToolName       string             `json:"toolName,omitempty"`
-	ToolUseID      string             `json:"toolUseId,omitempty"`
-	AgentSessionID string             `json:"agentSessionId,omitempty"`
-	LaunchID       string             `json:"launchId,omitempty"`
-	Usage          *usageHookMetadata `json:"usage,omitempty"`
-}
-
-type usageHookMetadata struct {
-	Harness                string `json:"harness"`
-	TranscriptPath         string `json:"transcriptPath,omitempty"`
-	ModelID                string `json:"modelId,omitempty"`
-	SubagentID             string `json:"subagentId,omitempty"`
-	SubagentTranscriptPath string `json:"subagentTranscriptPath,omitempty"`
+	State          string `json:"state,omitempty"`
+	Event          string `json:"event,omitempty"`
+	ToolName       string `json:"toolName,omitempty"`
+	ToolUseID      string `json:"toolUseId,omitempty"`
+	AgentSessionID string `json:"agentSessionId,omitempty"`
+	LaunchID       string `json:"launchId,omitempty"`
 }
 
 // setReviewActivityAPIRequest mirrors POST /api/v1/reviews/{id}/activity.
@@ -80,10 +71,10 @@ const (
 )
 
 // activityMeta extracts the tool-use correlation facts from a native hook
-// payload. The field names are shared vocabulary across agent CLIs that emit
-// them (claude-code's PreToolUse/PostToolUse/PostToolUseFailure and
-// PermissionRequest payloads); adapters whose payloads lack them yield empty
-// strings and the signal degrades to today's state-only form.
+// payload. The field names are the shared hook vocabulary pi's
+// PreToolUse/PostToolUse/PostToolUseFailure and PermissionRequest payloads
+// emit; a payload lacking them yields empty strings and the signal degrades to
+// its state-only form.
 func activityMeta(payload []byte) (toolName, toolUseID string) {
 	var p struct {
 		ToolName  string `json:"tool_name"`
@@ -146,16 +137,6 @@ func hookLaunchID(payload []byte) string {
 	return id
 }
 
-// hookUsageMetadata extracts provider-native usage metadata. It deliberately
-// decodes separately from conversation facts because hook producers may emit
-// a malformed field in one projection while the other remains useful.
-func hookUsageMetadata(agent string, payload []byte) *usageHookMetadata {
-	// Transcript-usage metadata was a Claude Code/Codex hook capability; no
-	// shipped harness emits it since the single-agent consolidation (ADR 0005).
-	_ = agent
-	return nil
-}
-
 func newHooksCommand(ctx *commandContext) *cobra.Command {
 	return &cobra.Command{
 		Use:    "hooks <agent> <event>",
@@ -195,8 +176,7 @@ func (c *commandContext) runHook(ctx context.Context, agent, event string) error
 	if activitydispatch.SupportsHarness(domain.AgentHarness(agent)) {
 		agentSessionID = hookAgentSessionID(payload)
 	}
-	usage := hookUsageMetadata(agent, payload)
-	if !hasActivity && agentSessionID == "" && usage == nil {
+	if !hasActivity && agentSessionID == "" {
 		// Unknown agent, or an event carrying neither activity nor resumable
 		// session metadata: report nothing.
 		return nil
@@ -215,7 +195,6 @@ func (c *commandContext) runHook(ctx context.Context, agent, event string) error
 		ToolUseID:      toolUseID,
 		AgentSessionID: agentSessionID,
 		LaunchID:       launchID,
-		Usage:          usage,
 	}
 	if hasActivity {
 		req.State = string(state)

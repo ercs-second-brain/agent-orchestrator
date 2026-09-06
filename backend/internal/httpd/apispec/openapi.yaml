@@ -4399,31 +4399,7 @@ components:
           $ref: '#/components/schemas/AgentConfig'
         reviewerHarness:
           enum:
-          - claude-code
-          - codex
-          - copilot
-          - cursor
-          - kilocode
-          - opencode
-          - kiro
           - pi
-          - qwen
-          - agy
-          - continue
-          - goose
-          - vibe
-          - devin
-          - droid
-          - kimi
-          - kimchi
-          - muse
-          - amp
-          - aider
-          - grok
-          - crush
-          - auggie
-          - cline
-          - autohand
           type: string
         scmStatus:
           enum:
@@ -4543,33 +4519,7 @@ components:
       properties:
         agent:
           enum:
-          - claude-code
-          - codex
-          - aider
-          - opencode
-          - grok
-          - droid
-          - amp
-          - agy
-          - crush
-          - cursor
-          - qwen
-          - copilot
-          - goose
-          - auggie
-          - continue
-          - devin
-          - cline
-          - kimi
-          - muse
-          - kiro
-          - kilocode
-          - vibe
           - pi
-          - kimchi
-          - omp
-          - prime-agent
-          - autohand
           - fake
           type: string
         approvalMode:
@@ -6210,9 +6160,6 @@ components:
           description: Read-only provider-native transcript path exposed by the hook.
           maxLength: 4096
           type: string
-        usage:
-          $ref: '#/components/schemas/UsageHookMetadata'
-          description: Provider transcript metadata used by the local usage pipeline.
       type: object
     SetActivityResponse:
       properties:
@@ -6341,31 +6288,7 @@ components:
           $ref: '#/components/schemas/AgentConfig'
         harness:
           enum:
-          - claude-code
-          - codex
-          - copilot
-          - cursor
-          - kilocode
-          - opencode
-          - kiro
           - pi
-          - qwen
-          - agy
-          - continue
-          - goose
-          - vibe
-          - devin
-          - droid
-          - kimi
-          - kimchi
-          - muse
-          - amp
-          - aider
-          - grok
-          - crush
-          - auggie
-          - cline
-          - autohand
           type: string
       type: object
     ShellTerminalEnvelope:
@@ -6430,33 +6353,7 @@ components:
           type: string
         harness:
           enum:
-          - claude-code
-          - codex
-          - aider
-          - opencode
-          - grok
-          - droid
-          - amp
-          - agy
-          - crush
-          - cursor
-          - qwen
-          - copilot
-          - goose
-          - auggie
-          - continue
-          - devin
-          - cline
-          - kimi
-          - muse
-          - kiro
-          - kilocode
-          - vibe
           - pi
-          - kimchi
-          - omp
-          - prime-agent
-          - autohand
           type: string
         issueId:
           type: string
@@ -6654,31 +6551,7 @@ components:
           $ref: '#/components/schemas/AgentConfig'
         harness:
           enum:
-          - claude-code
-          - codex
-          - copilot
-          - cursor
-          - kilocode
-          - opencode
-          - kiro
           - pi
-          - qwen
-          - agy
-          - continue
-          - goose
-          - vibe
-          - devin
-          - droid
-          - kimi
-          - kimchi
-          - muse
-          - amp
-          - aider
-          - grok
-          - crush
-          - auggie
-          - cline
-          - autohand
           type: string
       type: object
     TriggerReviewResponse:
@@ -6747,24 +6620,6 @@ components:
       - harness
       - totals
       - models
-      type: object
-    UsageHookMetadata:
-      properties:
-        harness:
-          enum:
-          - claude-code
-          - codex
-          type: string
-        modelId:
-          type: string
-        subagentId:
-          type: string
-        subagentTranscriptPath:
-          type: string
-        transcriptPath:
-          type: string
-      required:
-      - harness
       type: object
     UsageModelResponse:
       properties:

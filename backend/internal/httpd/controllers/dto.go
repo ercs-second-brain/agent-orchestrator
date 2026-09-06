@@ -251,7 +251,7 @@ type SpawnSessionRequest struct {
 	IssueID         domain.IssueID         `json:"issueId,omitempty"`
 	TrackerProvider domain.TrackerProvider `json:"trackerProvider,omitempty" enum:"github,gitlab"`
 	Kind            domain.SessionKind     `json:"kind,omitempty" enum:"worker,orchestrator"`
-	Harness         domain.AgentHarness    `json:"harness,omitempty" enum:"claude-code,codex,aider,opencode,grok,droid,amp,agy,crush,cursor,qwen,copilot,goose,auggie,continue,devin,cline,kimi,muse,kiro,kilocode,vibe,pi,kimchi,omp,prime-agent,autohand"`
+	Harness         domain.AgentHarness    `json:"harness,omitempty" enum:"pi"`
 	Branch          string                 `json:"branch,omitempty"`
 	// Mode picks the conversation controller: chat talks to the agent over a
 	// structured connection, tui opens the agent's native terminal interface.
@@ -422,7 +422,7 @@ type RenameSessionRequest struct {
 // SetSessionReviewerRequest sets the durable reviewer preference for a session.
 // Empty clears the preference and falls back to project configuration.
 type SetSessionReviewerRequest struct {
-	Harness     domain.ReviewerHarness `json:"harness,omitempty" enum:"claude-code,codex,copilot,cursor,kilocode,opencode,kiro,pi,qwen,agy,continue,goose,vibe,devin,droid,kimi,kimchi,muse,amp,aider,grok,crush,auggie,cline,autohand"`
+	Harness     domain.ReviewerHarness `json:"harness,omitempty" enum:"pi"`
 	AgentConfig domain.AgentConfig     `json:"agentConfig,omitempty"`
 }
 
@@ -692,7 +692,7 @@ type SendSessionMessageResponse struct {
 type DelegateTaskRequest struct {
 	ProjectID domain.ProjectID    `json:"projectId"`
 	Brief     string              `json:"brief" maxLength:"4096"`
-	Agent     domain.AgentHarness `json:"agent,omitempty" enum:"claude-code,codex,aider,opencode,grok,droid,amp,agy,crush,cursor,qwen,copilot,goose,auggie,continue,devin,cline,kimi,muse,kiro,kilocode,vibe,pi,kimchi,omp,prime-agent,autohand,fake"`
+	Agent     domain.AgentHarness `json:"agent,omitempty" enum:"pi,fake"`
 	Model     string              `json:"model,omitempty" maxLength:"256"`
 	// ApprovalMode is an optional per-session override. The UI uses the explicit
 	// bypass value only after the user accepts an approval-less Chat fallback.
@@ -946,18 +946,6 @@ type SetActivityRequest struct {
 	LatestAssistantUpdate string             `json:"latestAssistantUpdate,omitempty" maxLength:"16384" description:"Latest assistant update exposed by the provider hook."`
 	TranscriptPath        string             `json:"transcriptPath,omitempty" maxLength:"4096" description:"Read-only provider-native transcript path exposed by the hook."`
 	LaunchID              string             `json:"launchId,omitempty" description:"AO process generation that produced the signal."`
-	Usage                 *UsageHookMetadata `json:"usage,omitempty" description:"Provider transcript metadata used by the local usage pipeline."`
-}
-
-// UsageHookMetadata is the transcript metadata carried by supported Claude
-// Code and Codex hooks. It contains paths and identifiers only, never prompt or
-// response content.
-type UsageHookMetadata struct {
-	Harness                domain.AgentHarness `json:"harness" enum:"claude-code,codex"`
-	TranscriptPath         string              `json:"transcriptPath,omitempty"`
-	ModelID                string              `json:"modelId,omitempty"`
-	SubagentID             string              `json:"subagentId,omitempty"`
-	SubagentTranscriptPath string              `json:"subagentTranscriptPath,omitempty"`
 }
 
 // SetActivityResponse is the body of POST /api/v1/sessions/{sessionId}/activity.
@@ -2236,7 +2224,7 @@ type UpdateSessionInterfaceRequest struct {
 // it for this pass only, without editing project config, so one session's choice
 // cannot change what another session in the project runs.
 type TriggerReviewRequest struct {
-	Harness     domain.ReviewerHarness `json:"harness,omitempty" enum:"claude-code,codex,copilot,cursor,kilocode,opencode,kiro,pi,qwen,agy,continue,goose,vibe,devin,droid,kimi,kimchi,muse,amp,aider,grok,crush,auggie,cline,autohand"`
+	Harness     domain.ReviewerHarness `json:"harness,omitempty" enum:"pi"`
 	AgentConfig domain.AgentConfig     `json:"agentConfig,omitempty"`
 }
 

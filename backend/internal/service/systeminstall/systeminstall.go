@@ -39,46 +39,16 @@ const (
 	TargetTmux       Target = "tmux"
 	TargetGH         Target = "gh"
 	TargetClaude     Target = "claude"
-	TargetClaudeCode Target = "claude-code"
-	TargetCodex      Target = "codex"
-	TargetCursor     Target = "cursor"
-	TargetOpencode   Target = "opencode"
-	TargetAider      Target = "aider"
-	TargetCopilot    Target = "copilot"
-	TargetGrok       Target = "grok"
-	TargetKimi       Target = "kimi"
 	TargetPi         Target = "pi"
-	TargetAmp        Target = "amp"
-	TargetAuggie     Target = "auggie"
-	TargetDroid      Target = "droid"
-	TargetCrush      Target = "crush"
-	TargetCline      Target = "cline"
-	TargetGoose      Target = "goose"
-	TargetQwen       Target = "qwen"
-	TargetContinue   Target = "continue"
-	TargetDevin      Target = "devin"
-	TargetKiro       Target = "kiro"
-	TargetKilocode   Target = "kilocode"
-	TargetVibe       Target = "vibe"
-	TargetMuse       Target = "muse"
-	TargetAgy        Target = "agy"
-	TargetAutohand   Target = "autohand"
-	TargetKimchi     Target = "kimchi"
-	TargetPrimeAgent Target = "prime-agent"
-	TargetOMP        Target = "omp"
 	// TargetCloudflared is the optional connector that makes a paired phone
 	// reachable from outside the local network.
 	TargetCloudflared Target = "cloudflared"
 )
 
-// agentTargets is the stable settings-page order.
+// agentTargets is the stable settings-page order. Since ADR 0005 pi is the
+// only user-facing harness install target.
 var agentTargets = []Target{
-	TargetClaudeCode, TargetCodex, TargetCursor, TargetOpencode, TargetAider,
-	TargetCopilot, TargetGrok, TargetKimi, TargetPi, TargetAmp, TargetAuggie,
-	TargetDroid, TargetCrush, TargetCline, TargetGoose, TargetQwen,
-	TargetContinue, TargetDevin, TargetKiro, TargetKilocode, TargetVibe,
-	TargetMuse, TargetAgy, TargetAutohand, TargetKimchi, TargetPrimeAgent,
-	TargetOMP,
+	TargetPi,
 }
 
 var agentTargetSet = func() map[Target]bool {
@@ -90,10 +60,8 @@ var agentTargetSet = func() map[Target]bool {
 }()
 
 // systemTargetSet is the stable contract of the legacy /system/install route.
-// Agent-only targets use /agents/{agent}/install instead.
 var systemTargetSet = map[Target]bool{
 	TargetTmux: true, TargetGH: true, TargetClaude: true, TargetCloudflared: true,
-	TargetCodex: true, TargetOpencode: true, TargetCopilot: true,
 }
 
 // knownTargets is the exhaustive allowlist backing Valid.
@@ -1051,12 +1019,6 @@ func (s *Service) planFor(target Target) Plan {
 		return s.planGH()
 	case TargetClaude:
 		return s.planNPM(TargetClaude, "@anthropic-ai/claude-code")
-	case TargetCodex:
-		return s.planNPM(TargetCodex, "@openai/codex")
-	case TargetCopilot:
-		return s.planNPM(TargetCopilot, "@github/copilot")
-	case TargetOpencode:
-		return s.planOpencode()
 	case TargetCloudflared:
 		return s.planCloudflared()
 	default:
@@ -1185,10 +1147,6 @@ func (p requestPlanner) planNPM(target Target, pkg string) Plan {
 
 func minimumNodeVersionForTarget(target Target) [3]int {
 	switch target {
-	case TargetAuggie, TargetDroid:
-		return [3]int{20, 0, 0}
-	case TargetClaudeCode, TargetQwen, TargetAutohand:
-		return [3]int{22, 0, 0}
 	case TargetPi:
 		return [3]int{22, 19, 0}
 	default:
@@ -1232,15 +1190,6 @@ func versionAtLeast(got, minimum [3]int) bool {
 	return true
 }
 
-func (s *Service) planOpencode() Plan {
-	if s.goos == "windows" {
-		return s.planWinget(TargetOpencode, "SST.opencode")
-	}
-	return Plan{
-		Target: TargetOpencode, Unsupported: true, Method: "manual",
-		Reason: "AO does not automatically execute opencode's mutable remote installer script.",
-	}
-}
 
 func (s *Service) planBrew(target Target, pkg string) Plan {
 	if !IsAgentTarget(target) {
