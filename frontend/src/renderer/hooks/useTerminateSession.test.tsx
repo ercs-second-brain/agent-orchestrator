@@ -22,7 +22,7 @@ const session = {
 	id: "sess-1",
 	kanbanColumn: "building",
 	kind: "worker",
-	provider: "codex",
+	provider: "pi",
 	prs: [],
 	status: "working",
 	terminalHandleId: "sess-1-terminal",

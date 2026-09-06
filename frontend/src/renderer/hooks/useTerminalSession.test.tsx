@@ -13,7 +13,7 @@ const session: WorkspaceSession = {
 	workspaceId: "ws-1",
 	workspaceName: "demo",
 	title: "fix the tests",
-	provider: "claude-code",
+	provider: "pi",
 	branch: "main",
 	status: "working",
 	updatedAt: "now",

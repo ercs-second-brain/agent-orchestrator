@@ -110,7 +110,7 @@ const worker = {
 	workspaceId: "proj-1",
 	workspaceName: "my-app",
 	title: "do the thing",
-	provider: "claude-code",
+	provider: "pi",
 	kind: "worker",
 	branch: "ao/sess-1",
 	status: "working",
@@ -661,7 +661,7 @@ describe("TerminalCacheProvider", () => {
 	it("does not retain reviewer terminals in the worker cache", async () => {
 		const reviewer = {
 			handleId: "stable-reviewer-handle",
-			harness: "codex",
+			harness: "pi",
 			kind: "reviewer",
 			sessionId: sessionA.id,
 		} satisfies TerminalTarget;

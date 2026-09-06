@@ -52,9 +52,14 @@ func TestBuild_InstallJobTargetRemainsAnEnum(t *testing.T) {
 		t.Fatalf("parse generated OpenAPI: %v", err)
 	}
 	targets := doc.Components.Schemas["InstallJob"].Properties["target"].Enum
-	for _, target := range []string{"tmux", "cloudflared", "cursor", "prime-agent"} {
+	for _, target := range []string{"tmux", "cloudflared", "pi"} {
 		if !slices.Contains(targets, target) {
 			t.Fatalf("InstallJob.target enum = %v, missing %q", targets, target)
+		}
+	}
+	for _, removed := range []string{"cursor", "prime-agent", "codex"} {
+		if slices.Contains(targets, removed) {
+			t.Fatalf("InstallJob.target enum = %v, legacy target %q must be gone", targets, removed)
 		}
 	}
 }

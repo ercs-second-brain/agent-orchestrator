@@ -97,7 +97,7 @@ const session = (
   workspaceId: "ws-1",
   workspaceName: "my-app",
   title: "do the thing",
-  provider: "claude-code",
+  provider: "pi",
   kind: "worker",
   branch: "feat/ns",
   status: "review_pending",
@@ -218,7 +218,7 @@ function commonGetsResponder(
             path: "/repo",
             repo: "my-app",
             defaultBranch: "main",
-            config: { reviewers: [{ harness: "codex" }] },
+            config: { reviewers: [{ harness: "pi" }] },
           },
         },
       };
@@ -239,7 +239,7 @@ const approvedReview = {
   id: "run-1",
   reviewId: "review-1",
   sessionId: "sess-1",
-  harness: "codex",
+  harness: "pi",
   status: "complete",
   verdict: "approved",
   body: "Looks good.",
@@ -777,7 +777,7 @@ describe("SessionInspector usage", () => {
 						totals,
 						harnesses: harnesses ?? [
 							{
-								harness: "codex",
+								harness: "pi",
 								totals,
 								models: [
 									{ modelId: "gpt-5.5", totals },
@@ -827,8 +827,8 @@ describe("SessionInspector usage", () => {
 	it("shows icon disclosures without repeated metrics when multiple agents contributed", async () => {
 		useUiStore.getState().setDeveloperMode(true);
 		mockUsage(canonicalTotals, [
-			{ harness: "codex", totals: canonicalTotals, models: [{ modelId: "gpt-5.5", totals: canonicalTotals }] },
-			{ harness: "claude-code", totals: canonicalTotals, models: [{ modelId: "claude-haiku-4-5-20251001", totals: canonicalTotals }] },
+			{ harness: "pi", totals: canonicalTotals, models: [{ modelId: "gpt-5.5", totals: canonicalTotals }] },
+			{ harness: "pi", totals: canonicalTotals, models: [{ modelId: "claude-haiku-4-5-20251001", totals: canonicalTotals }] },
 		]);
 
 		renderWithQuery(<SessionInspector session={session([])} />);
@@ -1032,28 +1032,6 @@ describe("SessionInspector Activity section", () => {
         })}
       />,
     );
-    expect(
-      screen.queryByRole("button", { name: "Resume agent" }),
-    ).not.toBeInTheDocument();
-  });
-
-  it("does not offer agent resume while an agent switch owns the exited source", () => {
-    renderWithQuery(
-      <SessionInspector
-        session={session([], {
-          status: "exited",
-          activity: { state: "exited", lastActivityAt: "2026-06-15T10:00:00Z" },
-          activeAgentSwitch: {
-            id: "switch-1",
-            fromHarness: "claude-code",
-            targetHarness: "codex",
-            state: "source_stopped",
-            agentHandoffStatus: "received",
-          },
-        })}
-      />,
-    );
-
     expect(
       screen.queryByRole("button", { name: "Resume agent" }),
     ).not.toBeInTheDocument();
@@ -1606,7 +1584,7 @@ describe("SessionInspector summary reviews", () => {
     );
     expect(onOpenReviewerTerminal).toHaveBeenCalledWith({
       handleId: "reviewer-pane",
-      harness: "codex",
+      harness: "pi",
     });
   });
 
@@ -1636,14 +1614,14 @@ describe("SessionInspector summary reviews", () => {
 
     renderWithQuery(
       <SessionInspector
-        session={sessionWithProvider([pr(3, "open")], "codex")}
+        session={sessionWithProvider([pr(3, "open")], "pi")}
       />,
     );
     await openReviewsSection();
 
     expect(
       await screen.findByRole("button", { name: /Select reviewer agent/ }),
-    ).toHaveTextContent("Codex");
+    ).toHaveTextContent("pi");
     expect(screen.queryByText("reviewer")).not.toBeInTheDocument();
   });
 
@@ -1686,7 +1664,7 @@ describe("SessionInspector summary reviews", () => {
 
     renderWithQuery(
       <SessionInspector
-        session={sessionWithProvider([pr(3, "open")], "claude-code")}
+        session={sessionWithProvider([pr(3, "open")], "pi")}
       />,
     );
     await openReviewsSection();
@@ -1695,7 +1673,6 @@ describe("SessionInspector summary reviews", () => {
       name: /Select reviewer agent/,
     });
     expect(trigger).toHaveTextContent("pi");
-    expect(trigger).not.toHaveTextContent("claude-code");
   });
 
   // A remote daemon (Connect Mobile / LAN mode) runs agents on the server, not
@@ -1795,7 +1772,7 @@ describe("SessionInspector summary reviews", () => {
               path: "/repo",
               repo: "my-app",
               defaultBranch: "main",
-              config: { reviewers: [{ harness: "codex" }] },
+              config: { reviewers: [{ harness: "pi" }] },
             },
           },
         };
@@ -1885,7 +1862,7 @@ describe("SessionInspector summary reviews", () => {
               path: "/repo",
               repo: "my-app",
               defaultBranch: "main",
-              config: { reviewers: [{ harness: "codex" }] },
+              config: { reviewers: [{ harness: "pi" }] },
             },
           },
         };
@@ -1960,7 +1937,7 @@ describe("SessionInspector summary reviews", () => {
       latestRun: {
         ...approvedReview,
         id: "run-live",
-        harness: "codex",
+        harness: "pi",
         status: "running",
         verdict: "",
       },
@@ -1991,7 +1968,7 @@ describe("SessionInspector summary reviews", () => {
 
     expect(
       screen.getByRole("button", { name: /Select reviewer agent/ }),
-    ).toHaveTextContent("Codex");
+    ).toHaveTextContent("pi");
     expect(screen.queryByText("Reviewable change 3")).not.toBeInTheDocument();
     expect(await screen.findByText("Reviewable change 4")).toBeInTheDocument();
     expect(
@@ -2774,7 +2751,7 @@ describe("SessionInspector summary reviews", () => {
       if (path === "/api/v1/agents/{agent}/models" && options?.params?.path?.agent === "codex") {
         return {
           data: {
-            agentId: "codex",
+            agentId: "pi",
             selectionMode: "catalog",
             models: [
               { id: "gpt-5", label: "GPT-5", isDefault: true },
@@ -2799,7 +2776,7 @@ describe("SessionInspector summary reviews", () => {
     renderWithQuery(
       <SessionInspector
         session={session([pr(3, "open")], {
-          reviewerHarness: "codex",
+          reviewerHarness: "pi",
           reviewerConfig: { model: "gpt-5", permissions: "bypass-permissions" },
         })}
       />,
@@ -2830,7 +2807,7 @@ describe("SessionInspector summary reviews", () => {
       if (path === "/api/v1/agents/{agent}/models" && options?.params?.path?.agent === "codex") {
         return {
           data: {
-            agentId: "codex",
+            agentId: "pi",
             selectionMode: "catalog",
             models: [
               { id: "gpt-5", label: "GPT-5", isDefault: true },
@@ -2855,8 +2832,8 @@ describe("SessionInspector summary reviews", () => {
     renderWithQuery(
       <SessionInspector
         session={session([pr(3, "open")], {
-          provider: "codex",
-          reviewerHarness: "codex",
+          provider: "pi",
+          reviewerHarness: "pi",
           reviewerConfig: { permissions: "bypass-permissions" },
         })}
       />,
@@ -3038,7 +3015,7 @@ describe("SessionInspector summary reviews", () => {
       if (path === "/api/v1/agents/{agent}/models" && options?.params?.path?.agent === "codex") {
         return {
           data: {
-            agentId: "codex",
+            agentId: "pi",
             selectionMode: "catalog",
             models: [
               { id: "gpt-5", label: "GPT-5", isDefault: true },
@@ -3093,8 +3070,8 @@ describe("SessionInspector summary reviews", () => {
     renderWithQuery(
       <SessionInspector
         session={session([pr(3, "open")], {
-          provider: "codex",
-          reviewerHarness: "codex",
+          provider: "pi",
+          reviewerHarness: "pi",
           reviewerConfig: { permissions: "bypass-permissions" },
         })}
       />,
@@ -3129,7 +3106,7 @@ describe("SessionInspector summary reviews", () => {
 
     renderWithQuery(
       <SessionInspector
-        session={sessionWithProvider([pr(3, "open")], "codex")}
+        session={sessionWithProvider([pr(3, "open")], "pi")}
       />,
     );
     await openReviewsSection();
@@ -3176,7 +3153,7 @@ describe("SessionInspector summary reviews", () => {
       latestRun: {
         ...approvedReview,
         id: "run-done",
-        harness: "claude-code",
+        harness: "pi",
         status: "complete",
       },
     };
@@ -3185,7 +3162,7 @@ describe("SessionInspector summary reviews", () => {
       latestRun: {
         ...approvedReview,
         id: "run-live",
-        harness: "codex",
+        harness: "pi",
         status: "running",
         verdict: "",
         createdAt: "2026-01-02T00:00:00Z",
@@ -3212,7 +3189,7 @@ describe("SessionInspector summary reviews", () => {
       latestRun: {
         ...approvedReview,
         id: "run-codex",
-        harness: "codex",
+        harness: "pi",
         verdict: "changes_requested",
         body: "codex asked for tests.",
         createdAt: "2026-01-03T00:00:00Z",
@@ -3231,7 +3208,7 @@ describe("SessionInspector summary reviews", () => {
               {
                 ...approvedReview,
                 id: "run-claude",
-                harness: "claude-code",
+                harness: "pi",
                 verdict: "approved",
                 body: "claude-code found nothing blocking.",
                 createdAt: "2026-01-01T00:00:00Z",
@@ -3283,7 +3260,7 @@ describe("SessionInspector summary reviews", () => {
       latestRun: {
         ...approvedReview,
         id: "run-live",
-        harness: "codex",
+        harness: "pi",
         status: "running",
         verdict: "",
       },
@@ -3431,7 +3408,7 @@ describe("SessionInspector summary reviews", () => {
 
     expect(
       await screen.findByRole("button", { name: /Select reviewer agent/ }),
-    ).toHaveTextContent("Codex");
+    ).toHaveTextContent("pi");
     expect(screen.queryByText("reviewer")).not.toBeInTheDocument();
     expect(screen.queryByText("sess-1")).not.toBeInTheDocument();
     expect(screen.queryByText("review session")).not.toBeInTheDocument();

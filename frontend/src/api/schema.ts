@@ -1785,7 +1785,7 @@ export interface components {
              * @description Fixed install target this job ran (or is running) for.
              * @enum {string}
              */
-            target: "tmux" | "gh" | "claude" | "claude-code" | "codex" | "cursor" | "opencode" | "aider" | "copilot" | "grok" | "kimi" | "pi" | "amp" | "auggie" | "droid" | "crush" | "cline" | "goose" | "qwen" | "continue" | "devin" | "kiro" | "kilocode" | "vibe" | "muse" | "agy" | "autohand" | "kimchi" | "prime-agent" | "omp" | "cloudflared";
+            target: "tmux" | "gh" | "claude" | "pi" | "cloudflared";
             /** Format: date-time */
             updatedAt?: null | string;
         };
@@ -7136,8 +7136,8 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @description Install target identifier: tmux, gh, claude, codex, opencode, copilot, or cloudflared. */
-                target: "tmux" | "gh" | "claude" | "codex" | "opencode" | "copilot" | "cloudflared";
+                /** @description Install target identifier: tmux, gh, claude, or cloudflared. */
+                target: "tmux" | "gh" | "claude" | "cloudflared";
             };
             cookie?: never;
         };
@@ -7186,8 +7186,8 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @description Install target identifier: tmux, gh, claude, codex, opencode, copilot, or cloudflared. */
-                target: "tmux" | "gh" | "claude" | "codex" | "opencode" | "copilot" | "cloudflared";
+                /** @description Install target identifier: tmux, gh, claude, or cloudflared. */
+                target: "tmux" | "gh" | "claude" | "cloudflared";
             };
             cookie?: never;
         };
