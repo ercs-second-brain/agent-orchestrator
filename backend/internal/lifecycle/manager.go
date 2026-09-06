@@ -333,8 +333,7 @@ func (m *Manager) CancelLaunch(id domain.SessionID, launchID string) {
 // ReleaseLaunch publishes that the caller has durably committed the prepared
 // generation. Hooks waiting behind PrepareLaunch may now re-read the session
 // row and pass normal generation fencing. Unlike MarkSpawned, this does not
-// rewrite session ownership; agent switching commits that ownership together
-// with its saga state in the AgentSwitchStore transaction.
+// rewrite session ownership.
 func (m *Manager) ReleaseLaunch(id domain.SessionID, launchID string) {
 	m.mu.Lock()
 	defer m.mu.Unlock()

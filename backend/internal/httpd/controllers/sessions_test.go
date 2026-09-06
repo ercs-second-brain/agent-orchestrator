@@ -477,28 +477,6 @@ func TestSessionsAPI_ListWorkspaceTree(t *testing.T) {
 	}
 }
 
-func assertAgentSwitchResponseRedacted(t *testing.T, body []byte) {
-	t.Helper()
-	privateFields := []string{
-		"idempotencyKey",
-		"requestFingerprint",
-		"targetNativeSessionRef",
-		"agentHandoffPath",
-		"agentHandoffHash",
-		"finalHandoffPath",
-		"finalHandoffHash",
-		"sourceGenerationId",
-		"targetGenerationId",
-		"targetRuntimeHandleId",
-		"targetAcknowledgedAt",
-	}
-	for _, field := range privateFields {
-		if strings.Contains(string(body), `"`+field+`"`) {
-			t.Errorf("public agent-switch response leaked %s: %s", field, body)
-		}
-	}
-}
-
 func (f *fakeSessionService) InvalidateWorkspaceCache(_ domain.SessionID) {}
 
 func TestSessionsRoutes_DefaultToStubsWithoutService(t *testing.T) {
