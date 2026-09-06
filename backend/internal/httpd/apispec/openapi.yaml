@@ -3589,21 +3589,16 @@ paths:
     get:
       operationId: getSystemInstallStatus
       parameters:
-      - description: 'Install target identifier: tmux, gh, claude, codex, opencode,
-          copilot, or cloudflared.'
+      - description: 'Install target identifier: tmux, gh, claude, or cloudflared.'
         in: path
         name: target
         required: true
         schema:
-          description: 'Install target identifier: tmux, gh, claude, codex, opencode,
-            copilot, or cloudflared.'
+          description: 'Install target identifier: tmux, gh, claude, or cloudflared.'
           enum:
           - tmux
           - gh
           - claude
-          - codex
-          - opencode
-          - copilot
           - cloudflared
           type: string
       responses:
@@ -3637,21 +3632,16 @@ paths:
     post:
       operationId: startSystemInstall
       parameters:
-      - description: 'Install target identifier: tmux, gh, claude, codex, opencode,
-          copilot, or cloudflared.'
+      - description: 'Install target identifier: tmux, gh, claude, or cloudflared.'
         in: path
         name: target
         required: true
         schema:
-          description: 'Install target identifier: tmux, gh, claude, codex, opencode,
-            copilot, or cloudflared.'
+          description: 'Install target identifier: tmux, gh, claude, or cloudflared.'
           enum:
           - tmux
           - gh
           - claude
-          - codex
-          - opencode
-          - copilot
           - cloudflared
           type: string
       responses:
@@ -4831,33 +4821,7 @@ components:
           - tmux
           - gh
           - claude
-          - claude-code
-          - codex
-          - cursor
-          - opencode
-          - aider
-          - copilot
-          - grok
-          - kimi
           - pi
-          - amp
-          - auggie
-          - droid
-          - crush
-          - cline
-          - goose
-          - qwen
-          - continue
-          - devin
-          - kiro
-          - kilocode
-          - vibe
-          - muse
-          - agy
-          - autohand
-          - kimchi
-          - prime-agent
-          - omp
           - cloudflared
           type: string
         updatedAt:

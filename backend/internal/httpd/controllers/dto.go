@@ -1316,7 +1316,7 @@ type SystemRequirementsResponse = systemcheck.Report
 
 // InstallTargetParam is the {target} path parameter for /system/install routes.
 type InstallTargetParam struct {
-	Target string `path:"target" enum:"tmux,gh,claude,codex,opencode,copilot,cloudflared" description:"Install target identifier: tmux, gh, claude, codex, opencode, copilot, or cloudflared."`
+	Target string `path:"target" enum:"tmux,gh,claude,cloudflared" description:"Install target identifier: tmux, gh, claude, or cloudflared."`
 }
 
 // StartInstallResponse is the body of POST /api/v1/system/install/{target} (202).

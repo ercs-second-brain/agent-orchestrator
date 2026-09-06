@@ -59,7 +59,7 @@ const { workspaces, workspaceQueryState, shellTerminalsState } = vi.hoisted(() =
 		workspaceId: "proj-1",
 		workspaceName: "my-app",
 		title: "do the thing",
-		provider: "claude-code",
+		provider: "pi",
 		kind: "worker",
 		branch: "ao/sess-1",
 		status: "working",
@@ -454,7 +454,7 @@ describe("SessionView", () => {
 			delete session.previewRevision;
 			delete session.isTerminated;
 			session.status = "working";
-			session.provider = "claude-code";
+			session.provider = "pi";
 			delete session.mode;
 			session.prs = [];
 		}
@@ -545,7 +545,7 @@ describe("SessionView", () => {
 
 	it("offers recovery directly from a Codex session blocked by a failed account switch", async () => {
 		const session = workerSession("sess-1");
-		session.provider = "codex";
+		session.provider = "pi";
 		codexAccountsQueryState.data = {
 			currentSwitch: {
 				id: "switch-1",
@@ -830,7 +830,7 @@ describe("SessionView", () => {
 			},
 		];
 		reviewGetMock.mockResolvedValueOnce({
-			data: { reviewerHandleId: "review-sess-1", reviewerHarness: "codex", reviews: [] },
+			data: { reviewerHandleId: "review-sess-1", reviewerHarness: "pi", reviews: [] },
 			error: undefined,
 		});
 		const view = render(<SessionView sessionId="sess-1" />);
@@ -939,13 +939,13 @@ describe("SessionView", () => {
 			},
 		];
 		reviewGetMock.mockResolvedValueOnce({
-			data: { reviewerHandleId: "review-sess-1", reviewerHarness: "codex", reviews: [], runs: [] },
+			data: { reviewerHandleId: "review-sess-1", reviewerHarness: "pi", reviews: [], runs: [] },
 			error: undefined,
 		});
 
 		render(<SessionView sessionId="sess-1" />);
 
-		await waitFor(() => expect(screen.getByTestId("reviewer-harness")).toHaveTextContent("codex"));
+		await waitFor(() => expect(screen.getByTestId("reviewer-harness")).toHaveTextContent("pi"));
 	});
 
 	it("keeps the reviewer terminal reachable from the session pane", async () => {
@@ -961,7 +961,7 @@ describe("SessionView", () => {
 			updatedAt: "2026-06-15T00:00:00Z",
 		}];
 		reviewGetMock.mockResolvedValueOnce({
-			data: { reviewerHandleId: "review-sess-1", reviewerHarness: "codex", reviews: [], runs: [] },
+			data: { reviewerHandleId: "review-sess-1", reviewerHarness: "pi", reviews: [], runs: [] },
 			error: undefined,
 		});
 
@@ -989,7 +989,7 @@ describe("SessionView", () => {
 			},
 		];
 		reviewGetMock.mockResolvedValueOnce({
-			data: { reviewerHandleId: "review-sess-1", reviewerHarness: "codex", reviews: [] },
+			data: { reviewerHandleId: "review-sess-1", reviewerHarness: "pi", reviews: [] },
 			error: undefined,
 		});
 
@@ -1021,7 +1021,7 @@ describe("SessionView", () => {
 				},
 			];
 			reviewGetMock.mockResolvedValueOnce({
-				data: { reviewerHandleId: "review-sess-1", reviewerHarness: "codex", reviews: [] },
+				data: { reviewerHandleId: "review-sess-1", reviewerHarness: "pi", reviews: [] },
 				error: undefined,
 			});
 

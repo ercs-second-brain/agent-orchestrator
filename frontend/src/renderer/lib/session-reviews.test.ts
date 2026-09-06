@@ -14,7 +14,7 @@ function session(overrides: Partial<WorkspaceSession> = {}): WorkspaceSession {
 		workspaceId: "proj-1",
 		workspaceName: "app",
 		title: "review work",
-		provider: "codex",
+		provider: "pi",
 		kind: "worker",
 		branch: "feature/review-work",
 		status: "pr_open",

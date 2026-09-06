@@ -1,4 +1,3 @@
-import { RadioGroup } from "radix-ui";
 import { Check, Copy, XCircle } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { components } from "../../api/schema";
@@ -18,24 +17,8 @@ import {
 } from "./ui/dialog";
 
 type InstallJob = components["schemas"]["InstallJob"];
-type InstallTarget = "tmux" | "gh" | "claude" | "codex" | "opencode" | "copilot";
-type AgentInstallTarget = Exclude<InstallTarget, "tmux" | "gh">;
-
-// Labels are the CLIs' own product names — same treatment as
-// "Agent Orchestrator" itself. Descriptions are ordinary UI copy.
-const AGENT_INSTALL_OPTIONS: Array<{ target: AgentInstallTarget; label: string }> = [
-	{ target: "claude", label: "Claude Code" },
-	{ target: "codex", label: "Codex" },
-	{ target: "opencode", label: "opencode" },
-	{ target: "copilot", label: "Copilot CLI" },
-];
-
-const AGENT_INSTALL_DESCRIPTIONS: Record<AgentInstallTarget, string> = {
-	claude: "Anthropic Claude Code CLI",
-	codex: "OpenAI command-line agent",
-	opencode: "Open-source terminal agent",
-	copilot: "GitHub Copilot CLI",
-};
+type SystemInstallTarget = "tmux" | "gh" | "claude" | "cloudflared";
+type AgentInstallTarget = "pi";
 
 const POLL_INTERVAL_MS = 1_000;
 
@@ -48,14 +31,14 @@ export function isActiveInstallJob(job: InstallJob | undefined): boolean {
  *  gate only ever needs one, and serializing keeps the UI unambiguous about
  *  which command is running. */
 function useInstallRunner(onSucceeded: () => void) {
-	const [target, setTarget] = useState<InstallTarget | null>(null);
+	const [target, setTarget] = useState<SystemInstallTarget | null>(null);
 	const [job, setJob] = useState<InstallJob | undefined>(undefined);
-	const [previews, setPreviews] = useState<Partial<Record<InstallTarget, InstallJob>>>({});
-	const [inspectedTargets, setInspectedTargets] = useState<Partial<Record<InstallTarget, boolean>>>({});
+	const [previews, setPreviews] = useState<Partial<Record<SystemInstallTarget, InstallJob>>>({});
+	const [inspectedTargets, setInspectedTargets] = useState<Partial<Record<SystemInstallTarget, boolean>>>({});
 	const [isStarting, setIsStarting] = useState(false);
 	const [startError, setStartError] = useState<string | undefined>(undefined);
 	const pollRef = useRef<number | null>(null);
-	const inspectedRef = useRef(new Set<InstallTarget>());
+	const inspectedRef = useRef(new Set<SystemInstallTarget>());
 	const onSucceededRef = useRef(onSucceeded);
 	onSucceededRef.current = onSucceeded;
 
@@ -67,7 +50,7 @@ function useInstallRunner(onSucceeded: () => void) {
 	};
 	useEffect(() => stopPolling, []);
 
-	const poll = (polledTarget: InstallTarget) => {
+	const poll = (polledTarget: SystemInstallTarget) => {
 		stopPolling();
 		pollRef.current = window.setInterval(() => {
 			void (async () => {
@@ -86,7 +69,7 @@ function useInstallRunner(onSucceeded: () => void) {
 	// GET doubles as a safe install-plan preview. In particular, Linux returns
 	// Unsupported plus the exact sudo command, so the renderer can show manual
 	// instructions without first POSTing a job that is guaranteed to fail.
-	const inspect = useCallback(async (nextTarget: InstallTarget) => {
+	const inspect = useCallback(async (nextTarget: SystemInstallTarget) => {
 		if (inspectedRef.current.has(nextTarget)) return;
 		inspectedRef.current.add(nextTarget);
 		try {
@@ -103,7 +86,7 @@ function useInstallRunner(onSucceeded: () => void) {
 		}
 	}, []);
 
-	const start = async (nextTarget: InstallTarget) => {
+	const start = async (nextTarget: SystemInstallTarget) => {
 		stopPolling();
 		setTarget(nextTarget);
 		setJob(undefined);
@@ -125,8 +108,8 @@ function useInstallRunner(onSucceeded: () => void) {
 	};
 
 	const running = isStarting || isActiveInstallJob(job);
-	const jobFor = (nextTarget: InstallTarget) => (target === nextTarget ? job : previews[nextTarget]);
-	const inspectionFinished = (nextTarget: InstallTarget) => inspectedTargets[nextTarget] === true;
+	const jobFor = (nextTarget: SystemInstallTarget) => (target === nextTarget ? job : previews[nextTarget]);
+	const inspectionFinished = (nextTarget: SystemInstallTarget) => inspectedTargets[nextTarget] === true;
 	return { target, startError, running, start, inspect, jobFor, inspectionFinished };
 }
 
@@ -137,10 +120,20 @@ export function InstallDependencyDialog({
 	requirements: SystemRequirement[];
 	onRefetchRequirements: () => Promise<unknown> | void;
 }) {
-	const [selectedAgent, setSelectedAgent] = useState<AgentInstallTarget | null>(null);
 	const [ghDismissed, setGhDismissed] = useState(false);
 	const [isCheckingAgain, setIsCheckingAgain] = useState(false);
 	const install = useInstallRunner(() => void onRefetchRequirements());
+	const [agentJob, setAgentJob] = useState<InstallJob | undefined>(undefined);
+	const [agentPreview, setAgentPreview] = useState<InstallJob | undefined>(undefined);
+	const [agentError, setAgentError] = useState<string | undefined>(undefined);
+	const [agentStarting, setAgentStarting] = useState(false);
+	const [agentInspected, setAgentInspected] = useState(false);
+	const agentPollRef = useRef<number | null>(null);
+	const inspectedAgentsRef = useRef(new Set<AgentInstallTarget>());
+
+	useEffect(() => () => {
+		if (agentPollRef.current !== null) window.clearInterval(agentPollRef.current);
+	}, []);
 
 	const byId = new Map(requirements.map((requirement) => [requirement.id, requirement]));
 	const git = byId.get("git");
@@ -160,9 +153,58 @@ export function InstallDependencyDialog({
 		if (ghAdvisory) void install.inspect("gh");
 	}, [ghAdvisory, install.inspect]);
 
+	const inspectAgent = useCallback(async (agent: AgentInstallTarget) => {
+		if (inspectedAgentsRef.current.has(agent)) return;
+		inspectedAgentsRef.current.add(agent);
+		try {
+			const { data, error } = await apiClient.GET("/api/v1/agents/{agent}/install", {
+				params: { path: { agent } },
+			});
+			if (error || !data) return;
+			setAgentPreview(data);
+		} catch {
+			// The requirements gate remains usable if plan inspection fails.
+		} finally {
+			setAgentInspected(true);
+		}
+	}, []);
+
+	const startAgent = async (agent: AgentInstallTarget) => {
+		setAgentJob(undefined);
+		setAgentError(undefined);
+		setAgentStarting(true);
+		try {
+			const { data, error } = await apiClient.POST("/api/v1/agents/{agent}/install", {
+				params: { path: { agent } },
+				body: {},
+			});
+			if (error || !data) throw new Error(apiErrorMessage(error, "Could not start the install."));
+			setAgentJob(data);
+			if (isActiveInstallJob(data)) {
+				agentPollRef.current = window.setInterval(() => {
+					void (async () => {
+						const { data: next, error: nextError } = await apiClient.GET("/api/v1/agents/{agent}/install", {
+							params: { path: { agent } },
+						});
+						if (nextError || !next) return;
+						setAgentJob(next);
+						if (isActiveInstallJob(next)) return;
+						window.clearInterval(agentPollRef.current!);
+						agentPollRef.current = null;
+						if (next.status === "succeeded") void onRefetchRequirements();
+					})();
+				}, POLL_INTERVAL_MS);
+			} else if (data.status === "succeeded") void onRefetchRequirements();
+		} catch (err) {
+			setAgentError(err instanceof Error ? err.message : "Could not start the install.");
+		} finally {
+			setAgentStarting(false);
+		}
+	};
+
 	useEffect(() => {
-		if (selectedAgent) void install.inspect(selectedAgent);
-	}, [install.inspect, selectedAgent]);
+		if (harnessBlocking) void inspectAgent("pi");
+	}, [harnessBlocking]);
 
 	const checkAgain = async () => {
 		setIsCheckingAgain(true);
@@ -212,46 +254,14 @@ export function InstallDependencyDialog({
 
 					{harnessBlocking && harness ? (
 						<IssueSection label={requirementDisplayLabel(harness)} detail={requirementDetailText(harness)}>
-							<RadioGroup.Root
-								aria-label={"Choose a coding agent to install"}
-								className="mt-2 flex flex-col gap-1.5"
-								value={selectedAgent ?? ""}
-								onValueChange={(value) => setSelectedAgent(value as AgentInstallTarget)}
-							>
-								{AGENT_INSTALL_OPTIONS.map((option) => (
-									<RadioGroup.Item
-										key={option.target}
-										value={option.target}
-										disabled={install.running}
-										className="group flex items-start gap-2.5 rounded-md border border-border px-3 py-2 text-left transition-colors hover:bg-interactive-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60 disabled:cursor-not-allowed disabled:opacity-50 data-[state=checked]:border-accent data-[state=checked]:bg-accent-weak"
-									>
-										<span
-											aria-hidden="true"
-											className="mt-0.5 grid size-icon-sm shrink-0 place-items-center rounded-full border border-border-strong group-data-[state=checked]:border-accent"
-										>
-											<RadioGroup.Indicator className="size-1.5 rounded-full bg-accent" />
-										</span>
-										<span className="min-w-0">
-											<span className="block text-control font-medium text-settings-title">{option.label}</span>
-											<span className="block text-caption text-settings-muted">
-												{AGENT_INSTALL_DESCRIPTIONS[option.target]}
-											</span>
-										</span>
-									</RadioGroup.Item>
-								))}
-							</RadioGroup.Root>
-							<div className="mt-2">
-								<InstallAction
-									primaryLabel={"Install selected"}
-									disabled={
-										!selectedAgent || (install.running && install.target !== selectedAgent)
-									}
-									job={selectedAgent ? install.jobFor(selectedAgent) : undefined}
-									planChecked={selectedAgent ? install.inspectionFinished(selectedAgent) : true}
-									error={selectedAgent && install.target === selectedAgent ? install.startError : undefined}
-									onInstall={() => selectedAgent && void install.start(selectedAgent)}
-								/>
-							</div>
+							<InstallAction
+								primaryLabel={"Install pi"}
+								disabled={agentStarting || (isActiveInstallJob(agentJob) && agentJob?.target !== "pi")}
+								job={agentJob ?? agentPreview}
+								planChecked={agentInspected}
+								error={agentError}
+								onInstall={() => void startAgent("pi")}
+							/>
 						</IssueSection>
 					) : null}
 
