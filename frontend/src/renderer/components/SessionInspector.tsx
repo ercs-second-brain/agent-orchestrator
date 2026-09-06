@@ -854,14 +854,9 @@ function usageProcessedTokens(totals: SessionUsage["totals"]): number | null {
 }
 
 function formatHarnessName(harness: string): string {
-	const knownNames: Record<string, string> = {
-		"claude-code": "Claude",
-		claude: "Claude",
-		codex: "Codex",
-		glm: "GLM",
-		kimi: "Kimi",
-	};
-	if (knownNames[harness]) return knownNames[harness];
+	// pi is the single supported harness; legacy harness names in historical
+	// usage rows degrade to a readable split, not a brand name.
+	if (harness === "pi") return "pi";
 	return harness
 		.split(/[-_]/)
 		.filter(Boolean)
@@ -927,7 +922,7 @@ function ResumeAgentControl({ session }: { session: WorkspaceSession }) {
 		},
 	});
 
-	if (session.isTerminated === true || session.activity?.state !== "exited" || session.activeAgentSwitch) return null;
+	if (session.isTerminated === true || session.activity?.state !== "exited") return null;
 
 	const error = resume.error instanceof Error ? resume.error.message : null;
 	return (
@@ -1332,18 +1327,12 @@ function scmTimelineStates(session: WorkspaceSession): ScmTimelineState[] {
 type ReviewerHarness = NonNullable<components["schemas"]["TriggerReviewRequest"]["harness"]>;
 type AgentCatalog = components["schemas"]["AgentReadinessResponse"];
 
-const WORKER_DEFAULT_REVIEWERS: Partial<Record<WorkspaceSession["provider"], ReviewerHarness>> = {
-	"claude-code": "claude-code",
-	codex: "codex",
-	opencode: "opencode",
-	muse: "muse",
-	kimchi: "kimchi",
-};
-
-function resolveDefaultReviewerHarness(config: ProjectConfig | undefined, workerHarness: WorkspaceSession["provider"]): ReviewerHarness {
+// ADR 0005: pi is the single supported harness, so the configured reviewer is
+// the only source; legacy worker harness names cannot contribute a default.
+function resolveDefaultReviewerHarness(config: ProjectConfig | undefined): ReviewerHarness {
 	const configuredHarness = config?.reviewers?.[0]?.harness;
 	if (configuredHarness) return configuredHarness as ReviewerHarness;
-	return WORKER_DEFAULT_REVIEWERS[workerHarness] ?? "claude-code";
+	return "pi";
 }
 
 function ReviewsSection({
@@ -1388,7 +1377,7 @@ function ReviewsSection({
 	// The reviewer preference belongs to the worker session, not this component
 	// or the whole project. Keep local state responsive while the daemon persists
 	// it, and resync when the inspector moves to another session.
-	const currentDefaultReviewerHarness = resolveDefaultReviewerHarness(projectConfigQuery.data, session.provider);
+	const currentDefaultReviewerHarness = resolveDefaultReviewerHarness(projectConfigQuery.data);
 	const [reviewerOverride, setReviewerOverride] = useState<ReviewerHarness | "">(
 		session.reviewerHarness ?? "",
 	);
@@ -1987,9 +1976,9 @@ function projectConfig(project: components["schemas"]["ProjectOrDegraded"] | und
 
 function mockProjectConfig(): ProjectConfig {
 	return {
-		worker: { agent: "codex" },
-		orchestrator: { agent: "codex" },
-		reviewers: [{ harness: "codex" }],
+		worker: { agent: "pi" },
+		orchestrator: { agent: "pi" },
+		reviewers: [{ harness: "pi" }],
 	};
 }
 
@@ -2068,8 +2057,7 @@ function ReviewPanel({
 	}
 
 	const openReviewStates = openReviewStatesFor(session, reviewStates);
-	// Whichever PR happens to come first is not the reviewer to name. With one PR
-	// reviewed earlier by claude-code and another running under codex, taking the
+	// Whichever PR happens to come first is not the reviewer to name: taking the
 	// first run reported the wrong agent as the one working. Prefer the run
 	// actually in flight, then the newest recorded one.
 	const runningRun = openReviewStates.find((review) => review.status === "running")?.latestRun;
@@ -2078,7 +2066,7 @@ function ReviewPanel({
 		.filter((run): run is NonNullable<typeof run> => Boolean(run))
 		.sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0];
 	const latest = runningRun ?? newestRun;
-	const resolvedDefaultHarness = resolveDefaultReviewerHarness(config, session.provider);
+	const resolvedDefaultHarness = resolveDefaultReviewerHarness(config);
 	const effectiveReviewerHarness = reviewerOverride || resolvedDefaultHarness;
 	const activeReviewerHarness = latest?.harness || effectiveReviewerHarness;
 	const autoReviewFailure =
