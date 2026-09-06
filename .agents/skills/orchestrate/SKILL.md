@@ -49,6 +49,11 @@ the escalation ladder in order:
 
 Governing rule: work is never hostage to a dead process.
 
+Context exhaustion (worker active and productive until its context fills —
+distinct from an inactivity stall) has its own detection thresholds and
+handoff/salvage playbook in the runbook's "Context exhaustion" section;
+follow it when a worker's live context approaches ~250k tokens.
+
 ## Merge gates
 
 Before merging a worker's PR, require **all** of:
