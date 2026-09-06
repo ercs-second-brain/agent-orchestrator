@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 
 // The multi-harness picker UX this suite covered is gone with ADR 0005 (pi is
 // the single supported harness). The agents section now renders a fixed pi
