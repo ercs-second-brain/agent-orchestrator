@@ -1,0 +1,301 @@
+Successfully wrote to backend/internal/adapters/agent/modelcatalog/catalog.go
+
+
+--- Auto-read (hashline anchors) ---
+kEh│// Package modelcatalog normalizes the model-list surface exposed by pi, the
+AwP│// single supported harness (ADR 0005).
+LSw│package modelcatalog
+AuN│
+vTf│import (
+geB│	"context"
+DwG│	"crypto/sha256"
+h5H│	"errors"
+P6v│	"fmt"
+pNX│	"os"
+JK7│	"os/exec"
+DLm│	"path/filepath"
+9m8│	"regexp"
+oVP│	"sort"
+AoI│	"strconv"
+5iH│	"strings"
+0an│	"time"
+1bo│
+mk4│	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/ports"
+Z4z│	aoprocess "github.com/ercs-second-brain/agent-orchestrator/backend/internal/process"
+kvp│)
+lwq│
+By7│const (
+q3s│	// Model-list commands may initialize provider registries or refresh remote
+Cmq│	// metadata before printing their catalog, so keep one consistent, bounded
+DOZ│	// allowance.
+Hqv│	commandTimeout = 20 * time.Second
+Irw│
+ZlZ│	// Some CLIs leave descendants holding stdout/stderr open after the parent is
+RZt│	// canceled. Bound that pipe-drain wait so a timed-out discovery request does
+WaK│	// not linger well beyond commandTimeout.
+GI9│	commandTerminationWait = 2 * time.Second
+HKA│)
+ILB│
+ARN│type commandSpec struct {
+71I│	args   []string
+Ful│	parser func([]byte) ([]ports.AgentModelInfo, error)
+AU6│}
+BV7│
+Zlx│var ansiPattern = regexpMustANSIPattern()
+amy│
+wRQ│func regexpMustANSIPattern() *regexpType { return newANSIPattern() }
+xSR│
+4hb│type commandSpecMap = map[string]commandSpec
+5ic│
+Ofj│var commandSpecs = commandSpecMap{
+1n7│	"pi": {args: []string{"--list-models"}, parser: parsePiModels},
+2o8│}
+3p9│
+tvN│// Base returns the picker behavior AO can provide without executing a CLI.
+6aF│func Base(agentID string) ports.AgentModelCatalog {
+Awd│	now := time.Now().UTC()
+JwQ│	entryMode := customModelEntryMode(agentID)
+3hW│	if hasDiscoverySource(agentID) {
+8Lj│		return ports.AgentModelCatalog{
+ZCN│			AgentID:          agentID,
+EMD│			SelectionMode:    ports.ModelSelectionCatalog,
+4fO│			Models:           []ports.AgentModelInfo{},
+M1P│			CustomModelEntry: entryMode,
+VPc│			AllowCustom:      entryMode == ports.CustomModelEntryDirect,
+EDJ│			Source:           "cli",
+bGm│			FetchedAt:        now,
+cHn│		}
+dIo│	}
+sSA│	return Manual(agentID)
+tTB│}
+uUC│
+gyo│// Manual returns the capability-aware fallback used when discovery fails before
+kLv│// AO has a successful cache.
+Bpp│func Manual(agentID string) ports.AgentModelCatalog {
+Cqq│	entryMode := customModelEntryMode(agentID)
+qg1│	selectionMode := ports.ModelSelectionCatalog
+6g2│	if entryMode == ports.CustomModelEntryDirect {
+FyS│		selectionMode = ports.ModelSelectionText
+GzT│	}
+H0U│	return ports.AgentModelCatalog{
+I1V│		AgentID:          agentID,
+dMW│		SelectionMode:    selectionMode,
+eNX│		Models:           []ports.AgentModelInfo{},
+fOY│		CustomModelEntry: entryMode,
+gPZ│		AllowCustom:      entryMode == ports.CustomModelEntryDirect,
+2vE│		Source:           "manual",
+wZm│		FetchedAt:        time.Now().UTC(),
+xan│	}
+ybo│}
+zcp│
+umj│// customModelEntryMode is stable adapter capability policy. Model names and
+DQv│// availability remain agent-owned and are never listed here.
+DCU│func customModelEntryMode(agentID string) ports.CustomModelEntryMode {
+SRx│	if agentID == "pi" {
+XPl│		return ports.CustomModelEntryConfigured
+YQm│	}
+y0J│	return ports.CustomModelEntryNone
+z1K│}
+02L│
+xnE│// Discoverer implements the model-discovery port for production daemon wiring.
+095│type Discoverer struct{}
+2A6│
+6O4│// Discover uses pi's own `--list-models` surface.
+QR1│func (d Discoverer) Discover(ctx context.Context, request ports.AgentModelDiscoveryRequest) (ports.AgentModelCatalog, error) {
+Nc2│	return Discover(ctx, request.AgentID, request.Binary, request.WorkingDir, request.Env)
+Od3│}
+Pe4│
+c8S│// CatalogFingerprint returns a stable fingerprint of the discovery inputs: the
+vxB│// installed agent binary. Folding configuration in is what lets a settings edit
+Lua│// invalidate a cached catalog, since the binary alone does not change when
+k1T│// settings do. pi's catalog depends on the binary alone today.
+JH9│func (Discoverer) CatalogFingerprint(ctx context.Context, request ports.AgentModelDiscoveryRequest) string {
+ajI│	return CatalogFingerprint(ctx, request.AgentID, request.Binary, request.WorkingDir, request.Env)
+bkJ│}
+clK│
+fIP│// Manual returns the manual-entry fallback catalog for an agent.
+0Xi│func (Discoverer) Manual(agentID string) ports.AgentModelCatalog { return Manual(agentID) }
+1Yj│
+xgY│// Discover executes model catalog discovery for an agent binary.
+dfa│func Discover(ctx context.Context, agentID, binary, workingDir string, env map[string]string) (ports.AgentModelCatalog, error) {
+CIG│	base := Base(agentID)
+s1V│	spec, ok := commandSpecs[agentID]
+zaE│	if !ok {
+Bnu│		return base, nil
+Cov│	}
+T01│	if strings.TrimSpace(binary) == "" {
+u9s│		return base, errors.New("agent binary is not installed")
+wAt│	}
+CQt│	runCtx, cancel := context.WithTimeout(ctx, commandTimeout)
+QxI│	defer cancel()
+5fl│	cmd := modelCommand(runCtx, binary, spec.args, workingDir, env)
+f8U│	output, err := cmd.CombinedOutput()
+bkW│	if err != nil {
+uOt│		return base, modelDiscoveryError(runCtx, agentID, err)
+vPu│	}
+ChC│	models, err := spec.parser(output)
+DiD│	if err != nil {
+jSN│		return base, fmt.Errorf("%s model discovery: %w", agentID, err)
+kTO│	}
+siG│	models = normalize(models)
+NdM│	if len(models) == 0 {
+ksf│		return base, fmt.Errorf("%s model discovery returned no models", agentID)
+ltg│	}
+Eqf│	base.Models = models
+iYF│	base.Source = "cli"
+A5B│	base.FetchedAt = time.Now().UTC()
+B6C│	return base, nil
+C7D│}
+D8E│
+SCS│func hasDiscoverySource(agentID string) bool {
+4MN│	_, hasCommand := commandSpecs[agentID]
+N8u│	return hasCommand
+O9v│}
+QAw│
+Evb│func modelCommand(ctx context.Context, binary string, args []string, workingDir string, env map[string]string) *exec.Cmd {
+BlC│	cmd := aoprocess.CommandContext(ctx, binary, args...) //nolint:gosec // binary is adapter-resolved, args are static
+D7q│	cmd.WaitDelay = commandTerminationWait
+R7P│	if strings.TrimSpace(workingDir) != "" {
+C3V│		cmd.Dir = workingDir
+D4W│	}
+72E│	cmd.Env = mergedEnvironment(os.Environ(), env)
+xW0│	return cmd
+yX1│}
+zY2│
+KLO│func mergedEnvironment(base []string, overrides map[string]string) []string {
+vj5│	if len(overrides) == 0 {
+Bqv│		return base
+Crw│	}
+tGu│	filtered := make([]string, 0, len(base)+len(overrides))
+KYL│	for _, item := range base {
+jF2│		key, _, found := strings.Cut(item, "=")
+oyx│		if _, overridden := overrides[key]; !overridden {
+wfx│			filtered = append(filtered, item)
+xgy│		}
+yhz│	}
+4eu│	for key, value := range overrides {
+Um9│		filtered = append(filtered, key+"="+value)
+VoA│	}
+lmX│	return filtered
+mnY│}
+noZ│
+W0s│func modelDiscoveryError(runCtx context.Context, agentID string, commandErr error) error {
+Snl│	if errors.Is(runCtx.Err(), context.DeadlineExceeded) {
+QUV│		return fmt.Errorf("%s model discovery timed out after %s", agentID, commandTimeout)
+RVW│	}
+qZp│	if errors.Is(runCtx.Err(), context.Canceled) {
+HLY│		return fmt.Errorf("%s model discovery canceled: %w", agentID, context.Canceled)
+IMZ│	}
+MME│	return fmt.Errorf("%s model discovery: %w", agentID, commandErr)
+NNF│}
+OOG│
+EZt│func BinaryVersion(ctx context.Context, binary string) string {
+3vW│	if ctx.Err() != nil || strings.TrimSpace(binary) == "" {
+vUL│		return ""
+wVM│	}
+WO3│	resolved, err := exec.LookPath(binary)
+XP4│	if err != nil {
+YQ5│		return ""
+ZR6│	}
+c7s│	if evaluated, evalErr := filepath.EvalSymlinks(resolved); evalErr == nil {
+IIf│		resolved = evaluated
+JJg│	}
+s8k│	info, err := os.Stat(resolved)
+nMw│	if err != nil || !info.Mode().IsRegular() {
+oNx│		return ""
+pOy│	}
+uHP│	hash := sha256.New()
+Ivo│	_, _ = hash.Write([]byte(resolved))
+sAP│	_, _ = hash.Write([]byte{0})
+CSA│	_, _ = hash.Write([]byte(strconv.FormatInt(info.Size(), 10)))
+DTB│	_, _ = hash.Write([]byte{0})
+Ybb│	_, _ = hash.Write([]byte(strconv.FormatInt(info.ModTime().UnixNano(), 10)))
+m60│	return fmt.Sprintf("%x", hash.Sum(nil)[:8])
+n71│}
+o82│
+Dw8│// CatalogFingerprint hashes the discovery inputs: the resolved executable. A
+zIq│// cached catalog stays valid only while this is unchanged.
+fBs│func CatalogFingerprint(ctx context.Context, agentID, binary, _, _ map[string]string) string {
+TEn│	// The signature keeps the shared port shape; pi's catalog depends on the
+5jE│	// executable alone, so the working directory and environment are ignored.
+S1B│	_ = agentID
+NIA│	return BinaryVersion(ctx, binary)
+OJB│}
+PKC│
+iqB│func parsePiModels(output []byte) ([]ports.AgentModelInfo, error) {
+v6G│	output = []byte(ansiPattern.ReplaceAllString(string(output), ""))
+n9Y│	var models []ports.AgentModelInfo
+EBX│	for _, line := range strings.Split(string(output), "\n") {
+m3W│		fields := strings.Fields(line)
+Qtd│		if len(fields) < 2 || strings.EqualFold(fields[0], "provider") {
+k7o│			continue
+l8p│		}
+nIh│		provider := strings.TrimSpace(fields[0])
+xO9│		modelID := strings.TrimSpace(fields[1])
+QEW│		if !looksLikeModelID(provider) || !looksLikeModelID(modelID) {
+RFX│			continue
+SGY│		}
+pQ9│		id := provider + "/" + modelID
+xJ6│		models = append(models, ports.AgentModelInfo{ID: id, Label: modelID, Provider: provider})
+yK7│	}
+4Qp│	return normalize(models), nil
+5Rq│}
+6Sr│
+Cnw│func looksLikeModelID(value string) bool {
+Bg2│	value = strings.Trim(value, "`\"'[](),:")
+A4w│	if value == "" {
+FlL│		return false
+GmM│	}
+22V│	for _, r := range value {
+Tmf│		switch {
+iCq│		case r >= 'a' && r <= 'z':
+phf│		case r >= 'A' && r <= 'Z':
+e9U│		case r >= '0' && r <= '9':
+ler│		case strings.ContainsRune("./:_-@+", r):
+bt1│		default:
+cu2│			return false
+dv3│		}
+ew4│	}
+RVB│	switch strings.ToLower(value) {
+Qum│	case "model", "models", "provider":
+Rvn│		return false
+Swo│	default:
+D0M│		return true
+E1N│	}
+F2O│}
+G3P│
+dh3│func normalize(models []ports.AgentModelInfo) []ports.AgentModelInfo {
+sGx│	byID := make(map[string]ports.AgentModelInfo, len(models))
+yFt│	for _, item := range models {
+iqf│		item.ID = strings.TrimSpace(item.ID)
+BM3│		if item.ID == "" {
+CN4│			continue
+DO5│		}
+R8h│		if strings.TrimSpace(item.Label) == "" {
+qAh│			item.Label = item.ID
+rBi│		}
+KwO│		if previous, ok := byID[item.ID]; ok {
+ohu│			if previous.Label == previous.ID && item.Label != item.ID {
+Jic│				previous.Label = item.Label
+Kjd│			}
+Fj0│			if previous.Provider == "" {
+CnO│				previous.Provider = item.Provider
+DoP│			}
+ARP│			previous.IsDefault = previous.IsDefault || item.IsDefault
+bPM│			byID[ID(previous.ID)] = previous
+cQN│			continue
+dRO│		}
+oD6│		byID[ID(item.ID)] = item
+pE7│	}
+2j9│	out := make([]ports.AgentModelInfo, 0, len(byID))
+PVu│	for _, item := range byID {
+GEY│		out = append(out, item)
+HFZ│	}
+lhv│	sort.Slice(out, func(i, j int) bool {
+HfA│		if out[i].IsDefault != out[j].IsDefault {
+xoV│			return out[i].IsDefault
+ypW│		}
+BhB│		return strings.ToLower(out[i].Label) < strings.ToLower(out[j].Label)
+4Gd│	})
+m1Y│	return out
+n2Z│}

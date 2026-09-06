@@ -1,0 +1,262 @@
+ZEu│import { RadioGroup } from "radix-ui";
+hVy│import { Check, Copy, XCircle } from "lucide-react";
+ytM│import { useCallback, useEffect, useRef, useState } from "react";
+rXK│import type { components } from "../../api/schema";
+mui│import { apiClient, apiErrorMessage } from "../lib/api-client";
+GRv│import { aoBridge } from "../lib/bridge";
+JXB│import { cn } from "../lib/utils";
+ji6│import { requirementDetailText, requirementDisplayLabel, type SystemRequirement } from "./SystemRequirementsChecklist";
+4aC│import {
+7sY│	Dialog,
+eRE│	DialogContent,
+5xl│	DialogDescription,
+T0O│	DialogTitle,
+QHN│	settingsDialogBodyClass,
+yXI│	settingsDialogContentClass,
+4AV│	settingsDialogFooterClass,
+Hdw│	settingsDialogHeaderClass,
+Goa│} from "./ui/dialog";
+AuN│
+jvh│type InstallJob = components["schemas"]["InstallJob"];
+Ddg│type SystemInstallTarget = "tmux" | "gh" | "claude" | "cloudflared";
+hT7│type AgentInstallTarget = Extract<InstallTarget, "pi">;
+iU8│
+YH0│// Since ADR 0005 pi is the single supported harness: the legacy multi-agent
+CAq│// picker collapses to one entry. The daemon still owns the install plan; this
+5BT│// section is the fallback for when provisioning or PATH cannot resolve pi.
+WKS│const AGENT_INSTALL_OPTIONS: Array<{ target: AgentInstallTarget; label: string }> = [
+ulU│	{ target: "pi", label: "pi" },
+Bvp│];
+Cwq│
+2NP│const AGENT_INSTALL_DESCRIPTIONS: Record<AgentInstallTarget, string> = {
+fr6│	pi: "The pi coding-agent CLI",
+aeu│};
+bfv│
+zpj│const POLL_INTERVAL_MS = 1_000;
+0qk│
+jVO│export function isActiveInstallJob(job: InstallJob | undefined): boolean {
+AhF│	return job?.status === "running" || job?.status === "installing" || job?.status === "verifying";
+AU6│}
+BV7│
+IpB│/** Sequential single-target install job runner: POST to start, GET on an
+eQa│ *  interval while running. One target is ever in flight at a time — this
+DEw│ *  gate only ever needs one, and serializing keeps the UI unambiguous about
+GLm│ *  which command is running. */
+Fmx│function useInstallRunner(onSucceeded: () => void) {
+b5g│	const [target, setTarget] = useState<SystemInstallTarget | null>(null);
+769│	const [job, setJob] = useState<InstallJob | undefined>(undefined);
+rOS│	const [previews, setPreviews] = useState<Partial<Record<SystemInstallTarget, InstallJob>>>({});
+7KZ│	const [inspectedTargets, setInspectedTargets] = useState<Partial<Record<SystemInstallTarget, boolean>>>({});
+rqc│	const [isStarting, setIsStarting] = useState(false);
+j0p│	const [startError, setStartError] = useState<string | undefined>(undefined);
+KHE│	const pollRef = useRef<number | null>(null);
+MjM│	const inspectedRef = useRef(new Set<SystemInstallTarget>());
+tNK│	const onSucceededRef = useRef(onSucceeded);
+MP6│	onSucceededRef.current = onSucceeded;
+NQ7│
+t1l│	const stopPolling = () => {
+3pd│		if (pollRef.current !== null) {
+tIJ│			window.clearInterval(pollRef.current);
+zCh│			pollRef.current = null;
+0Di│		}
+1Ej│	};
+v4Y│	useEffect(() => stopPolling, []);
+w5Z│
+uff│	const poll = (polledTarget: SystemInstallTarget) => {
+pBC│		stopPolling();
+oBB│		pollRef.current = window.setInterval(() => {
+YD6│			void (async () => {
+TU9│				const { data, error } = await apiClient.GET("/api/v1/system/install/{target}", {
+aKA│					params: { path: { target: polledTarget } },
+Cqh│				});
+qau│				if (error || !data) return; // transient — try again next tick
+bSU│				setJob(data);
+Xo7│				if (isActiveInstallJob(data)) return;
+Yp8│				stopPolling();
+ANu│				if (data.status === "succeeded") onSucceededRef.current();
+7oQ│			})();
+2ST│		}, POLL_INTERVAL_MS);
+3TU│	};
+4UV│
+AGt│	// GET doubles as a safe install-plan preview. In particular, Linux returns
+ZnL│	// Unsupported plus the exact sudo command, so the renderer can show manual
+4Vc│	// instructions without first POSTing a job that is guaranteed to fail.
+odU│	const inspect = useCallback(async (nextTarget: SystemInstallTarget) => {
+U3C│		if (inspectedRef.current.has(nextTarget)) return;
+pn8│		inspectedRef.current.add(nextTarget);
+OAC│		try {
+PBD│			const { data, error } = await apiClient.GET("/api/v1/system/install/{target}", {
+fhM│				params: { path: { target: nextTarget } },
+giN│			});
+hH0│			if (error || !data) return;
+R4t│			setPreviews((current) => ({ ...current, [nextTarget]: data }));
+DYJ│		} catch {
+dWl│			// The requirements gate remains usable if plan inspection fails. The
+mem│			// POST action will still surface its own concrete error when selected.
+A2i│		} finally {
+z6Y│			setInspectedTargets((current) => ({ ...current, [nextTarget]: true }));
+07Z│		}
+08l│	}, []);
+19m│
+5so│	const start = async (nextTarget: SystemInstallTarget) => {
+6tp│		stopPolling();
+AMG│		setTarget(nextTarget);
+Edk│		setJob(undefined);
+k4c│		setStartError(undefined);
+CJ1│		setIsStarting(true);
+DK2│		try {
+DFr│			const { data, error } = await apiClient.POST("/api/v1/system/install/{target}", {
+EGs│				params: { path: { target: nextTarget } },
+FHt│			});
+MZL│			if (error || !data) throw new Error(apiErrorMessage(error, "Could not start the install."));
+NaM│			setJob(data);
+jhA│			if (isActiveInstallJob(data)) poll(nextTarget);
+JI8│			else if (data.status === "succeeded") onSucceededRef.current();
+662│		} catch (err) {
+EnY│			setStartError(err instanceof Error ? err.message : "Could not start the install.");
+FoZ│		} finally {
+19T│			setIsStarting(false);
+3AU│		}
+4BV│	};
+5CW│
+Vqd│	const running = isStarting || isActiveInstallJob(job);
+yts│	const jobFor = (nextTarget: SystemInstallTarget) => (target === nextTarget ? job : previews[nextTarget]);
+uVh│	const inspectionFinished = (nextTarget: SystemInstallTarget) => inspectedTargets[nextTarget] === true;
+lQs│	return { target, startError, running, start, inspect, jobFor, inspectionFinished };
+mRt│}
+nSu│
+eyg│export function InstallDependencyDialog({
+TZX│	requirements,
+sWw│	onRefetchRequirements,
+qNu│}: {
+olC│	requirements: SystemRequirement[];
+kcG│	onRefetchRequirements: () => Promise<unknown> | void;
+tZL│}) {
+uYq│	const [ghDismissed, setGhDismissed] = useState(false);
+NLA│	const [isCheckingAgain, setIsCheckingAgain] = useState(false);
+re8│	const install = useInstallRunner(() => void onRefetchRequirements());
+zaC│	const [agentJob, setAgentJob] = useState<InstallJob | undefined>(undefined);
+vxr│	const [agentPreview, setAgentPreview] = useState<InstallJob | undefined>(undefined);
+AWr│	const [agentError, setAgentError] = useState<string | undefined>(undefined);
+3Sp│	const [agentStarting, setAgentStarting] = useState(false);
+gIq│	const agentTargetRef = useRef<AgentInstallTarget>("pi");
+Nq5│	const inspectedAgentsRef = useRef(new Set<AgentInstallTarget>());
+DRs│	void agentTargetRef;
+ESt│
+eUU│	const byId = new Map(requirements.map((requirement) => [requirement.id, requirement]));
+kLV│	const git = byId.get("git");
+TpM│	const tmux = byId.get("tmux");
+hC1│	const harness = byId.get("harness");
+cbH│	const gh = byId.get("gh");
+Eqn│	const gitBlocking = Boolean(git && git.required && !git.satisfied);
+Vqg│	const tmuxBlocking = Boolean(tmux && tmux.required && !tmux.satisfied);
+Kf2│	const harnessBlocking = Boolean(harness && harness.required && !harness.satisfied);
+34U│	const ghAdvisory = Boolean(gh && !gh.satisfied);
+45V│
+fSw│	useEffect(() => {
+Lcl│		if (tmuxBlocking) void install.inspect("tmux");
+dod│	}, [install.inspect, tmuxBlocking]);
+epe│
+fqf│	useEffect(() => {
+EMp│		if (ghAdvisory) void install.inspect("gh");
+VuS│	}, [ghAdvisory, install.inspect]);
+WvT│
+rDS│	const inspectAgent = useCallback(async (agent: AgentInstallTarget) => {
+rmo│		if (inspectedAgentsRef.current.has(agent)) return;
+yrp│		inspectedAgentsRef.current.add(agent);
+zsq│		try {
+vF1│			const { data, error } = await apiClient.GET("/api/v1/agents/{agent}/install", {
+EVJ│				params: { path: { agent } },
+FWK│			});
+GXL│			if (error || !data) return;
+jpJ│			setAgentPreview(data);
+kqK│		} catch {
+ppY│			// The requirements gate remains usable if plan inspection fails.
+qqZ│		}
+rra│	}, []);
+ssb│
+pMb│	const startAgent = async (agent: AgentInstallTarget) => {
+hg4│		setAgentTarget(agent);
+dJD│		setAgentJob(undefined);
+Put│		setAgentError(undefined);
+EVd│		setAgentStarting(true);
+FWe│		try {
+8nV│			const { data, error } = await apiClient.POST("/api/v1/agents/{agent}/install", {
+9oW│				params: { path: { agent } },
+PDz│				body: {},
+QE0│			});
+RF1│			if (error || !data) throw new Error(apiErrorMessage(error, "Could not start the install."));
+7AZ│			setAgentJob(data);
+qrG│			if (isActiveInstallJob(data)) {
+rsH│				pollRef.current = window.setInterval(() => {
+stI│					void (async () => {
+Fj3│						const { data: next, error: nextError } = await apiClient.GET("/api/v1/agents/{agent}/install", {
+Gk4│							params: { path: { agent } },
+Hl5│						});
+pkv│						if (nextError || !next) return;
+ING│						setAgentJob(next);
+8fB│						if (isActiveInstallJob(next)) return;
+B4y│						window.clearInterval(pollRef.current!);
+C5z│						pollRef.current = null;
+D6h│						if (next.status === "succeeded") void onSucceededRef.current();
+E7i│					})();
+F8j│				}, POLL_INTERVAL_MS);
+Iws│			} else if (data.status === "succeeded") void onSucceededRef.current();
+Jxt│		} catch (err) {
+2uw│			setAgentError(err instanceof Error ? err.message : "Could not start the install.");
+3vx│		} finally {
+vJt│			setAgentStarting(false);
+wKu│		}
+xLv│	};
+yMw│
+zNx│	useEffect(() => {
+6vl│		if (harnessBlocking) void inspectAgent("pi");
+SbD│	}, [harnessBlocking]);
+TcE│
+8Br│	const checkAgain = async () => {
+ATi│		setIsCheckingAgain(true);
+BUj│		try {
+RiL│			await onRefetchRequirements();
+SjM│		} finally {
+ame│			setIsCheckingAgain(false);
+bnf│		}
+cog│	};
+dph│
+jxT│	const title = harnessBlocking ? "No coding agent found" : "Missing dependency";
+kyU│
+RSr│	return (
+V6o│		<Dialog open onOpenChange={() => {}}>
+ZGv│			<DialogContent
+GoE│				showCloseButton={false}
+kXC│				className={settingsDialogContentClass}
+YpP│				onEscapeKeyDown={(event) => event.preventDefault()}
+ENI│				onPointerDownOutside={(event) => event.preventDefault()}
+RGY│			>
+E3z│				<div className={settingsDialogHeaderClass}>
+Aw8│					<DialogTitle className="settings-dialog-title">{title}</DialogTitle>
+IEZ│					<DialogDescription asChild>
+E7f│						<div className="text-control leading-4 text-settings-muted">{"Agent Orchestrator needs a few things on this machine before it can run sessions. Install what's missing below, or quit and finish setup yourself."}</div>
+Nb9│					</DialogDescription>
+Ntb│				</div>
+Ouc│
+56N│				<div className={cn(settingsDialogBodyClass, "gap-5")}>
+e2H│					{gitBlocking && git ? (
+lOz│						<IssueSection label={requirementDisplayLabel(git)} detail={requirementDetailText(git)}>
+AOS│							<p className="text-caption leading-snug text-settings-muted">{"Install git from git-scm.com, then restart Agent Orchestrator."}</p>
+8yf│						</IssueSection>
+34P│					) : null}
+45Q│
+GfU│					{tmuxBlocking && tmux ? (
+GFX│						<IssueSection label={requirementDisplayLabel(tmux)} detail={requirementDetailText(tmux)}>
+uDQ│							<InstallAction
+FiY│								primaryLabel={"Install tmux"}
+X01│								disabled={install.running && install.target !== "tmux"}
+3DN│								job={install.jobFor("tmux")}
+iQa│								planChecked={install.inspectionFinished("tmux")}
+5LQ│								error={install.target === "tmux" ? install.startError : undefined}
+VM1│								onInstall={() => void install.start("tmux")}
+g8W│							/>
+h9X│						</IssueSection>
+jAY│					) : null}
+
+[Showing lines 1-260 of 480. Use offset=261 to continue.]

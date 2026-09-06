@@ -1,0 +1,184 @@
+ ❯ src/renderer/components/CreateProjectFlow.test.tsx (20 tests | 6 failed) 9822ms
+ ❯ src/renderer/components/TaskComposer.test.tsx (28 tests | 10 failed) 8705ms
+ ❯ src/renderer/components/SessionView.test.tsx (68 tests | 1 failed) 2920ms
+ ❯ src/renderer/components/SessionsBoard.test.tsx (42 tests | 1 failed) 2619ms
+ ❯ src/renderer/components/Sidebar.test.tsx (95 tests | 18 failed) 28800ms
+ ❯ src/renderer/test/shell-new-session-shortcut.test.tsx (30 tests | 1 failed) 2085ms
+ ❯ src/renderer/components/ShellTopbar.test.tsx (36 tests | 1 failed) 1982ms
+ ❯ src/renderer/hooks/useAgentReadinessQuery.test.tsx (4 tests | 2 failed) 1048ms
+ ❯ src/renderer/hooks/useWorkspaceQuery.test.tsx (13 tests | 2 failed) 704ms
+ ❯ src/renderer/hooks/useAgentAuth.test.tsx (3 tests | 1 failed) 91ms
+ ❯ src/renderer/lib/api-client.test.ts (29 tests | 3 failed) 49ms
+ ❯ src/renderer/__tests__/_shell-create-project-config.test.tsx (2 tests | 1 failed) 17ms
+ ❯ src/renderer/components/SessionInspector.test.tsx (105 tests | 15 failed) 39439ms
+ ❯ src/renderer/__tests__/_shell-create-project-config.test.tsx:11:5
+ ❯ src/renderer/hooks/useAgentAuth.test.tsx:43:26
+ ❯ src/renderer/hooks/useAgentReadinessQuery.test.tsx:53:66
+ ❯ runWithExpensiveErrorDiagnosticsDisabled node_modules/@testing-library/dom/dist/config.js:47:12
+ ❯ checkCallback node_modules/@testing-library/dom/dist/wait-for.js:124:77
+ ❯ Timeout.checkRealTimersCallback node_modules/@testing-library/dom/dist/wait-for.js:118:16
+ ❯ src/renderer/hooks/useAgentReadinessQuery.test.tsx:79:91
+ ❯ src/renderer/hooks/useWorkspaceQuery.test.tsx:169:51
+ ❯ src/renderer/hooks/useWorkspaceQuery.test.tsx:545:31
+ ❯ waitForWrapper node_modules/@testing-library/dom/dist/wait-for.js:163:27
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:86:33
+ ❯ src/renderer/components/CreateProjectFlow.test.tsx:189:30
+ ❯ waitForWrapper node_modules/@testing-library/dom/dist/wait-for.js:163:27
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:86:33
+ ❯ src/renderer/components/CreateProjectFlow.test.tsx:226:30
+ ❯ waitForWrapper node_modules/@testing-library/dom/dist/wait-for.js:163:27
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:86:33
+ ❯ src/renderer/components/CreateProjectFlow.test.tsx:476:30
+ ❯ waitForWrapper node_modules/@testing-library/dom/dist/wait-for.js:163:27
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:86:33
+ ❯ src/renderer/components/CreateProjectFlow.test.tsx:496:33
+ ❯ waitForWrapper node_modules/@testing-library/dom/dist/wait-for.js:163:27
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:86:33
+ ❯ src/renderer/components/CreateProjectFlow.test.tsx:561:24
+ ❯ waitForWrapper node_modules/@testing-library/dom/dist/wait-for.js:163:27
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:86:33
+ ❯ src/renderer/components/CreateProjectFlow.test.tsx:656:33
+ ❯ src/renderer/components/SessionInspector.test.tsx:1687:7
+ ❯ src/renderer/components/SessionInspector.test.tsx:1738:21
+ ❯ src/renderer/components/SessionInspector.test.tsx:1808:21
+ ❯ waitForWrapper node_modules/@testing-library/dom/dist/wait-for.js:163:27
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:86:33
+ ❯ src/renderer/components/SessionInspector.test.tsx:2013:18
+ ❯ src/renderer/components/SessionInspector.test.tsx:2035:7
+ ❯ Object.getElementError node_modules/@testing-library/dom/dist/config.js:37:19
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:76:38
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:52:17
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:95:19
+ ❯ src/renderer/components/SessionInspector.test.tsx:2392:18
+ ❯ waitForWrapper node_modules/@testing-library/dom/dist/wait-for.js:163:27
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:86:33
+ ❯ src/renderer/components/SessionInspector.test.tsx:2791:20
+ ❯ waitForWrapper node_modules/@testing-library/dom/dist/wait-for.js:163:27
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:86:33
+ ❯ src/renderer/components/SessionInspector.test.tsx:2957:40
+ ❯ waitForWrapper node_modules/@testing-library/dom/dist/wait-for.js:163:27
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:86:33
+ ❯ src/renderer/components/SessionInspector.test.tsx:3019:40
+ ❯ waitForWrapper node_modules/@testing-library/dom/dist/wait-for.js:163:27
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:86:33
+ ❯ src/renderer/components/SessionInspector.test.tsx:3065:40
+ ❯ Object.getElementError node_modules/@testing-library/dom/dist/config.js:37:19
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:76:38
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:52:17
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:95:19
+ ❯ src/renderer/components/SessionInspector.test.tsx:3186:14
+ ❯ waitForWrapper node_modules/@testing-library/dom/dist/wait-for.js:163:27
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:86:33
+ ❯ src/renderer/components/SessionInspector.test.tsx:3245:20
+ ❯ Object.getElementError node_modules/@testing-library/dom/dist/config.js:37:19
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:76:38
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:52:17
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:95:19
+ ❯ src/renderer/components/SessionInspector.test.tsx:3314:14
+ ❯ Object.getElementError node_modules/@testing-library/dom/dist/config.js:37:19
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:76:38
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:52:17
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:95:19
+ ❯ src/renderer/components/SessionInspector.test.tsx:3341:19
+ ❯ src/renderer/components/SessionInspector.test.tsx:3477:7
+ ❯ Object.getElementError node_modules/@testing-library/dom/dist/config.js:37:19
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:76:38
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:52:17
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:95:19
+ ❯ src/renderer/components/SessionView.test.tsx:571:24
+ ❯ Object.getElementError node_modules/@testing-library/dom/dist/config.js:37:19
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:76:38
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:52:17
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:95:19
+ ❯ src/renderer/components/SessionsBoard.test.tsx:497:31
+ ❯ Object.getElementError node_modules/@testing-library/dom/dist/config.js:37:19
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:76:38
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:52:17
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:95:19
+ ❯ src/renderer/components/ShellTopbar.test.tsx:344:23
+ ❯ waitForWrapper node_modules/@testing-library/dom/dist/wait-for.js:163:27
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:86:33
+ ❯ src/renderer/components/Sidebar.test.tsx:846:31
+ ❯ waitForWrapper node_modules/@testing-library/dom/dist/wait-for.js:163:27
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:86:33
+ ❯ src/renderer/components/Sidebar.test.tsx:879:23
+ ❯ waitForWrapper node_modules/@testing-library/dom/dist/wait-for.js:163:27
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:86:33
+ ❯ src/renderer/components/Sidebar.test.tsx:911:33
+ ❯ waitForWrapper node_modules/@testing-library/dom/dist/wait-for.js:163:27
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:86:33
+ ❯ src/renderer/components/Sidebar.test.tsx:954:23
+ ❯ waitForWrapper node_modules/@testing-library/dom/dist/wait-for.js:163:27
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:86:33
+ ❯ src/renderer/components/Sidebar.test.tsx:988:16
+ ❯ waitForWrapper node_modules/@testing-library/dom/dist/wait-for.js:163:27
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:86:33
+ ❯ src/renderer/components/Sidebar.test.tsx:1049:23
+ ❯ waitForWrapper node_modules/@testing-library/dom/dist/wait-for.js:163:27
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:86:33
+ ❯ src/renderer/components/Sidebar.test.tsx:1096:23
+ ❯ waitForWrapper node_modules/@testing-library/dom/dist/wait-for.js:163:27
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:86:33
+ ❯ src/renderer/components/Sidebar.test.tsx:1132:23
+ ❯ waitForWrapper node_modules/@testing-library/dom/dist/wait-for.js:163:27
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:86:33
+ ❯ src/renderer/components/Sidebar.test.tsx:1174:16
+ ❯ Object.getElementError node_modules/@testing-library/dom/dist/config.js:37:19
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:76:38
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:52:17
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:95:19
+ ❯ src/renderer/components/Sidebar.test.tsx:1236:17
+ ❯ waitForWrapper node_modules/@testing-library/dom/dist/wait-for.js:163:27
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:86:33
+ ❯ src/renderer/components/Sidebar.test.tsx:1267:16
+ ❯ waitForWrapper node_modules/@testing-library/dom/dist/wait-for.js:163:27
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:86:33
+ ❯ src/renderer/components/Sidebar.test.tsx:1319:16
+ ❯ waitForWrapper node_modules/@testing-library/dom/dist/wait-for.js:163:27
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:86:33
+ ❯ src/renderer/components/Sidebar.test.tsx:1371:16
+ ❯ waitForWrapper node_modules/@testing-library/dom/dist/wait-for.js:163:27
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:86:33
+ ❯ src/renderer/components/Sidebar.test.tsx:1394:16
+ ❯ waitForWrapper node_modules/@testing-library/dom/dist/wait-for.js:163:27
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:86:33
+ ❯ src/renderer/components/Sidebar.test.tsx:1423:16
+ ❯ waitForWrapper node_modules/@testing-library/dom/dist/wait-for.js:163:27
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:86:33
+ ❯ src/renderer/components/Sidebar.test.tsx:1472:16
+ ❯ waitForWrapper node_modules/@testing-library/dom/dist/wait-for.js:163:27
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:86:33
+ ❯ src/renderer/components/Sidebar.test.tsx:1509:16
+ ❯ src/renderer/components/Sidebar.test.tsx:1966:15
+ ❯ src/renderer/components/TaskComposer.test.tsx:123:30
+ ❯ runWithExpensiveErrorDiagnosticsDisabled node_modules/@testing-library/dom/dist/config.js:47:12
+ ❯ checkCallback node_modules/@testing-library/dom/dist/wait-for.js:124:77
+ ❯ Timeout.checkRealTimersCallback node_modules/@testing-library/dom/dist/wait-for.js:118:16
+ ❯ Proxy.waitForWrapper node_modules/@testing-library/dom/dist/wait-for.js:163:27
+ ❯ src/renderer/components/TaskComposer.test.tsx:157:9
+ ❯ Proxy.waitForWrapper node_modules/@testing-library/dom/dist/wait-for.js:163:27
+ ❯ src/renderer/components/TaskComposer.test.tsx:215:9
+ ❯ Object.getElementError node_modules/@testing-library/dom/dist/config.js:37:19
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:76:38
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:52:17
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:95:19
+ ❯ src/renderer/components/TaskComposer.test.tsx:236:17
+ ❯ waitForWrapper node_modules/@testing-library/dom/dist/wait-for.js:163:27
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:86:33
+ ❯ src/renderer/components/TaskComposer.test.tsx:309:30
+ ❯ Proxy.waitForWrapper node_modules/@testing-library/dom/dist/wait-for.js:163:27
+ ❯ src/renderer/components/TaskComposer.test.tsx:559:9
+ ❯ Proxy.waitForWrapper node_modules/@testing-library/dom/dist/wait-for.js:163:27
+ ❯ src/renderer/components/TaskComposer.test.tsx:605:9
+ ❯ Proxy.waitForWrapper node_modules/@testing-library/dom/dist/wait-for.js:163:27
+ ❯ src/renderer/components/TaskComposer.test.tsx:659:9
+ ❯ Object.getElementError node_modules/@testing-library/dom/dist/config.js:37:19
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:76:38
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:52:17
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:95:19
+ ❯ src/renderer/components/TaskComposer.test.tsx:724:26
+ ❯ src/renderer/components/TaskComposer.test.tsx:764:18
+ ❯ src/renderer/lib/api-client.test.ts:207:135
+ ❯ src/renderer/lib/api-client.test.ts:223:68
+ ❯ src/renderer/lib/api-client.test.ts:258:81
+ ❯ src/renderer/test/shell-new-session-shortcut.test.tsx:425:26

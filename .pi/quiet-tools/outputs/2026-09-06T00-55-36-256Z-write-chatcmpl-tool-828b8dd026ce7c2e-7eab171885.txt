@@ -1,0 +1,320 @@
+Successfully wrote to backend/internal/service/systeminstall/agentplans_test.go
+
+
+--- Auto-read (hashline anchors) ---
+InM│package systeminstall
+AuN│
+vTf│import (
+geB│	"context"
+h5H│	"errors"
+5iH│	"strings"
+zX6│	"testing"
+0Y7│
+mk4│	"github.com/ercs-second-brain/agent-orchestrator/backend/internal/ports"
+kvp│)
+lwq│
+kBP│type installCapabilitiesStub struct {
+0n6│	prefix            string
+nKn│	prefixErr         error
+4MQ│	nodeVersion       string
+5q3│	npmVersion        string
+DqC│	homebrewPrefix    string
+Bg1│	homebrewErr       error
+G1S│	homebrewInstalled bool
+g8r│	writable          bool
+jJG│	calls             *int
+kr6│	probe             func(context.Context) error
+AU6│}
+BV7│
+nw2│func (s installCapabilitiesStub) Probe(ctx context.Context) (ports.InstallCapabilities, error) {
+ty1│	if s.calls != nil {
+lM7│		(*s.calls)++
+mN8│	}
+5Ex│	if s.probe != nil {
+ELr│		if err := s.probe(ctx); err != nil {
+WXM│			return ports.InstallCapabilities{}, err
+XYN│		}
+YZO│	}
+zOk│	nodeVersion := s.nodeVersion
+6OJ│	if nodeVersion == "" {
+jJm│		nodeVersion = "v22.19.0"
+kKn│	}
+Cby│	npmVersion := s.npmVersion
+EWT│	if npmVersion == "" {
+H04│		npmVersion = "10.0.0"
+I15│	}
+ZXa│	homebrewPrefix := s.homebrewPrefix
+yZ3│	if s.homebrewPrefix == "" && s.homebrewErr == nil {
+9X9│		homebrewPrefix = "/opt/homebrew"
+AZA│	}
+ZtH│	return ports.InstallCapabilities{
+QWF│		NPM: ports.NPMInstallCapabilities{
+5yu│			NodeVersion: nodeVersion, NPMVersion: npmVersion,
+1kV│			GlobalPrefix: s.prefix, PrefixWritable: s.writable, Err: s.prefixErr,
+Bwl│		},
+7tZ│		Homebrew: ports.HomebrewInstallCapabilities{
+nE7│			Prefix: homebrewPrefix, PrefixWritable: s.writable,
+2Td│			Formulae: map[string]bool{}, Casks: map[string]bool{}, Err: s.homebrewErr,
+3Ue│		},
+FIL│	}, nil
+GJM│}
+HKN│
+DwE│func TestAgentPlansSnapshotsCapabilitiesOnce(t *testing.T) {
+nGL│	calls := 0
+oWR│	s := newTestService("darwin", "npm", "sh")
+PG3│	s.installCapabilities = installCapabilitiesStub{prefix: "/Users/test/.npm", writable: true, calls: &calls}
+AcR│	if _, err := s.AgentPlans(context.Background()); err != nil {
+Vvy│		t.Fatal(err)
+Wwz│	}
+958│	if calls != 1 {
+FpN│		t.Fatalf("capability probes = %d, want one snapshot for the request", calls)
+GqO│	}
+HrP│}
+IsQ│
+bqD│func TestAgentPlansCancelsCapabilitySnapshotWithRequest(t *testing.T) {
+MnW│	started := make(chan struct{})
+NoX│	s := newTestService("darwin", "npm", "sh")
+e18│	s.installCapabilities = installCapabilitiesStub{probe: func(ctx context.Context) error {
+2Ch│		close(started)
+BxX│		<-ctx.Done()
+2co│		return ctx.Err()
+EeA│	}}
+AvU│	ctx, cancel := context.WithCancel(context.Background())
+Ud2│	done := make(chan error, 1)
+Skl│	go func() {
+Ad0│		_, err := s.AgentPlans(ctx)
+LIg│		done <- err
+AW5│	}()
+thQ│	<-started
+CoP│	cancel()
+fmA│	if err := <-done; !errors.Is(err, context.Canceled) {
+PhM│		t.Fatalf("AgentPlans error = %v, want context canceled", err)
+QiN│	}
+RjO│}
+SkP│
+ZSr│func TestAgentPlansCoverEveryHarnessOnce(t *testing.T) {
+aTs│	s := newTestService("darwin", "npm", "sh")
+zc8│	plans, err := s.AgentPlans(context.Background())
+bkW│	if err != nil {
+clX│		t.Fatal(err)
+dmY│	}
+rhc│	if len(plans) != 1 || plans[0].AgentID != string(TargetPi) {
+VoN│		t.Fatalf("got %d plans (%+v), want exactly the pi plan", len(plans), plans)
+WpO│	}
+O41│	plan := plans[0]
+FDd│	if plan.DocumentationURL == "" {
+AZo│		t.Fatalf("plan %q has no documentation URL", plan.AgentID)
+Bap│	}
+3ca│	if plan.Available && (!plan.Automatic || plan.Command == "" || plan.Method == "") {
+3ed│		t.Fatalf("available plan %q is incomplete: %+v", plan.AgentID, plan)
+4fe│	}
+5gf│}
+6hg│
+EOZ│func TestPiOfficialInstallerPlansAreAutomaticAndServerOwned(t *testing.T) {
+cGj│	tests := []struct {
+EYO│		goos        string
+RHn│		found       []string
+xkK│		wantURL     string
+gdo│		wantProgram string
+6dA│	}{
+gbT│		{"darwin", []string{"sh"}, "https://pi.dev/install.sh", "sh"},
+yFM│		{"linux", []string{"sh"}, "https://pi.dev/install.sh", "sh"},
+4Y0│		{"windows", []string{"pwsh.exe"}, "", "pwsh.exe"},
+5Z1│	}
+dcU│	for _, tt := range tests {
+w4K│		t.Run(tt.goos, func(t *testing.T) {
+G0W│			plan := newTestService(tt.goos, tt.found...).planAgent(TargetPi)
+FIn│			if plan.Method != "official-installer" || plan.Script == nil {
+hck│				t.Fatalf("plan = %+v", plan)
+idl│			}
+n1Z│			if plan.Script.URL != tt.wantURL || plan.Script.Interpreter[0] != "/usr/bin/"+tt.wantProgram {
+D7s│				t.Fatalf("script = %+v", plan.Script)
+E8t│			}
+CYU│			if len(plan.Command) != 0 {
+UWc│				t.Fatalf("remote plan exposed executable argv: %v", plan.Command)
+VXd│			}
+4Gd│		})
+5He│	}
+6If│}
+7Jg│
+Pg1│func TestAgentInstallPlansNeverUseShellEvaluationOrSudo(t *testing.T) {
+BeG│	found := []string{"npm", "bun", "uv", "pipx", "winget", "bash", "sh", "pwsh.exe", "powershell.exe"}
+qDM│	for _, goos := range []string{"darwin", "linux", "windows"} {
+hqA│		s := newTestService(goos, found...)
+ez4│		planner, err := s.newRequestPlanner(context.Background())
+f05│		if err != nil {
+g16│			t.Fatal(err)
+h27│		}
+867│		for _, target := range agentTargets {
+XzD│			for _, plan := range planner.agentMethodPlans(target, AgentOperationInstall) {
+kl4│				argv := append([]string(nil), plan.Command...)
+xeJ│				if plan.Script != nil {
+Dfh│					argv = append(argv, plan.Script.Interpreter...)
+Egi│				}
+elu│				for _, arg := range argv {
+A70│					if arg == "sudo" || arg == "-c" || arg == "-Command" || strings.Contains(arg, "|") {
+Cou│						t.Fatalf("%s/%s/%s contains shell-evaluated argument %q: %+v", goos, target, plan.Method, arg, plan)
+Dpv│					}
+Eqw│				}
+Frx│			}
+Gsy│		}
+Htz│	}
+Iu0│}
+Jv1│
+4hx│func TestOfficialInstallersRejectUnsupportedOperatingSystems(t *testing.T) {
+eYB│	plan := newTestService("freebsd", "sh", "bash", "pwsh").planAgent(TargetPi)
+2GN│	if !plan.Unsupported || plan.Script != nil {
+ELm│		t.Fatalf("pi plan = %+v, want manual unsupported plan", plan)
+FMn│	}
+GNo│}
+HOp│
+ci8│func TestNPMPlanIsPreferredWhenOfficialInstallerIsMissing(t *testing.T) {
+B5K│	s := newTestService("darwin", "npm")
+Lkk│	s.installCapabilities = installCapabilitiesStub{
+FXv│		prefix: "/Users/test/.npm", writable: true,
+GYw│	}
+q74│	plan := s.planAgent(TargetPi)
+NVR│	if plan.Method != "npm" || plan.Unsupported {
+OAi│		t.Fatalf("recommended method = %q (%+v), want npm", plan.Method, plan)
+PBj│	}
+QCk│}
+RDl│
+5n2│func TestPiOfficialInstallerRequiresHeadlessNodePrerequisites(t *testing.T) {
+nYH│	for _, tt := range []struct {
+AL3│		name        string
+BM4│		nodeVersion string
+CN5│		npmVersion  string
+iH7│		wantReason  string
+jI8│	}{
+uvi│		{name: "missing node", nodeVersion: "missing", npmVersion: "10.8.0", wantReason: "Node.js 22.19+"},
+ESP│		{name: "old node", nodeVersion: "v22.18.0", npmVersion: "10.8.0", wantReason: "Node.js 22.19+"},
+GLt│		{name: "missing npm", nodeVersion: "v22.19.0", npmVersion: "missing", wantReason: "npm"},
+HMu│	} {
+h1E│		t.Run(tt.name, func(t *testing.T) {
+1wn│			s := newTestService("darwin", "sh")
+2xo│			s.installCapabilities = installCapabilitiesStub{
+3yp│				prefix: "/Users/test/.npm", writable: true,
+PdS│				nodeVersion: tt.nodeVersion, npmVersion: tt.npmVersion,
+QeT│			}
+RfU│			planner, err := s.newRequestPlanner(context.Background())
+SgV│			if err != nil {
+ThW│				t.Fatal(err)
+UiX│			}
+C7j│			plan, err := planner.resolveAgentMethod(TargetPi, "official-installer", AgentOperationInstall)
+vGk│			if !errors.Is(err, ErrInstallMethod) || !strings.Contains(err.Error(), tt.wantReason) {
+ZCj│				t.Fatalf("Pi official installer error = %v, want unavailable reason containing %q (plan=%+v)", err, tt.wantReason, plan)
+aDk│			}
+bEl│		})
+cFm│	}
+dGn│}
+eHo│
+oEH│func TestNPMPlanUsesTargetSpecificNodeFloors(t *testing.T) {
+pFI│	for _, tt := range []struct {
+qGJ│		name        string
+Lyj│		target      Target
+Mzk│		nodeVersion string
+toy│		wantAllowed bool
+upz│		wantReason  string
+vq0│	}{
+UbJ│		{name: "pi rejects node 22.18", target: TargetPi, nodeVersion: "v22.18.0", wantReason: "Node.js 22.19+"},
+50n│		{name: "pi accepts node 22.19", target: TargetPi, nodeVersion: "v22.19.0", wantAllowed: true},
+61o│	} {
+72p│		t.Run(tt.name, func(t *testing.T) {
+83q│			s := newTestService("darwin", "npm")
+94r│			s.installCapabilities = installCapabilitiesStub{
+A5s│				prefix: "/Users/test/.npm", writable: true,
+9N6│				nodeVersion: tt.nodeVersion, npmVersion: "9.0.0",
+AO7│			}
+NJv│			plan := s.planNPM(tt.target, "package")
+juT│			if tt.wantAllowed && plan.Unsupported {
+lCK│				t.Fatalf("plan = %+v, want available", plan)
+mDL│			}
+zzN│			if !tt.wantAllowed && (!plan.Unsupported || !strings.Contains(plan.Reason, tt.wantReason)) {
+KNJ│				t.Fatalf("plan = %+v, want unavailable reason containing %q", plan, tt.wantReason)
+LOK│			}
+MPL│		})
+NQM│	}
+ORN│}
+PSO│
+LDn│func TestNPMPlanRequiresWritableGlobalPrefix(t *testing.T) {
+MEo│	tests := []struct {
+NFp│		name       string
+fqT│		caps       installCapabilitiesStub
+grU│		wantReason string
+hsV│	}{
+ktZ│		{name: "prefix lookup fails", caps: installCapabilitiesStub{prefixErr: errors.New("npm failed")}, wantReason: "could not be inspected"},
+nAD│		{name: "prefix not writable", caps: installCapabilitiesStub{prefix: "/usr/local", writable: false}, wantReason: "not writable"},
+oBE│	}
+pCF│	for _, tt := range tests {
+qDG│		t.Run(tt.name, func(t *testing.T) {
+rEH│			s := newTestService("darwin", "npm")
+H7M│			s.installCapabilities = tt.caps
+W1o│			plan := s.planNPM(TargetPi, "@earendil-works/pi-coding-agent")
+8nN│			if !plan.Unsupported || !strings.Contains(plan.Reason, tt.wantReason) {
+9oO│				t.Fatalf("plan = %+v, want unavailable reason containing %q", plan, tt.wantReason)
+ApP│			}
+BqQ│		})
+CrR│	}
+DsS│
+EtT│	s := newTestService("darwin", "npm")
+SFY│	s.installCapabilities = installCapabilitiesStub{prefix: "/Users/test/.npm", writable: true}
+TGZ│	plan := s.planNPM(TargetPi, "@earendil-works/pi-coding-agent")
+UFn│	if plan.Unsupported || plan.ExpectedDestination != "/Users/test/.npm/bin" {
+EYI│		t.Fatalf("plan = %+v, want writable npm destination", plan)
+FZJ│	}
+GaK│}
+HbL│
+SKs│func TestNPMPlanRequiresParseableNodeAndNPMVersions(t *testing.T) {
+TLt│	tests := []struct {
+UMu│		name        string
+VNv│		nodeVersion string
+WOw│		npmVersion  string
+XPx│		wantReason  string
+YQy│	}{
+979│		{name: "unparseable node", nodeVersion: "unknown", npmVersion: "10.8.0", wantReason: "could not be validated"},
+FNE│		{name: "unparseable npm", nodeVersion: "v22.19.0", npmVersion: "unknown", wantReason: "could not be validated"},
+GOF│	}
+HPG│	for _, tt := range tests {
+IQH│		t.Run(tt.name, func(t *testing.T) {
+JRI│			s := newTestService("darwin", "npm")
+KSJ│			s.installCapabilities = installCapabilitiesStub{
+LTK│				prefix: "/Users/test/.npm", writable: true,
+MUL│				nodeVersion: tt.nodeVersion, npmVersion: tt.npmVersion,
+NVM│			}
+OWN│			plan := s.planNPM(TargetPi, "@earendil-works/pi-coding-agent")
+PXO│			if !plan.Unsupported || !strings.Contains(plan.Reason, tt.wantReason) {
+QYP│				t.Fatalf("plan = %+v, want unavailable reason containing %q", plan, tt.wantReason)
+RZQ│			}
+SaR│		})
+TbS│	}
+UcT│}
+VdU│
+ppg│func TestResolveAgentMethodRejectsUnknownOrUnavailableMethod(t *testing.T) {
+WoZ│	s := newTestService("darwin")
+IEF│	if _, err := s.resolveAgentMethod(TargetPi, "official-installer"); err == nil || !strings.Contains(err.Error(), "not available") {
+rGM│		t.Fatalf("resolve official-installer error = %v, want unavailable", err)
+sHN│	}
+SmB│	if _, err := s.resolveAgentMethod(TargetPi, "made-up"); err == nil || !strings.Contains(err.Error(), "unknown install method") {
+Hqh│		t.Fatalf("resolve made-up error = %v, want unknown method", err)
+Iri│	}
+SYM│	plan, err := s.resolveAgentMethod(TargetPi, "npm")
+ghc│	if err != nil || plan.Method != "npm" {
+HSt│		t.Fatalf("resolve npm = %+v, %v", plan, err)
+ITu│	}
+JUv│}
+KVw│
+wfL│func TestAgentTargetsAreValidButPrerequisitesAreNotHarnessRows(t *testing.T) {
+xgM│	for _, target := range agentTargets {
+iXI│		if !Valid(target) || !IsAgentTarget(target) {
+FyH│			t.Fatalf("agent target %q is not accepted by both allowlists", target)
+GzI│		}
+H0J│	}
+j1w│	for _, target := range []Target{TargetTmux, TargetGH, TargetClaude} {
+PEJ│		if !Valid(target) || IsAgentTarget(target) {
+w1e│			t.Fatalf("prerequisite target %q was classified incorrectly", target)
+x2f│		}
+y3g│	}
+usK│	if !Valid(TargetCloudflared) || IsAgentTarget(TargetCloudflared) {
+0pT│		t.Fatalf("cloudflared target classified incorrectly")
+1qU│	}
+2rV│}

@@ -1,0 +1,282 @@
+		}
+		label := strings.TrimSpace(strings.TrimPrefix(line, fields[0]))
+		if label == "" {
+			label = id
+		}
+		models = append(models, ports.AgentModelInfo{ID: id, Label: label})
+	}
+	return normalize(models), nil
+}
+
+func parseGrokModels(output []byte) ([]ports.AgentModelInfo, error) {
+	return parseSectionModels(string(output), "Available models:", "")
+}
+
+func parseCursorModels(output []byte) ([]ports.AgentModelInfo, error) {
+	return parseSectionModels(string(output), "Available models", "Tip:")
+}
+
+func parseCopilotConfigModels(output []byte) ([]ports.AgentModelInfo, error) {
+	text := ansiPattern.ReplaceAllString(string(output), "")
+	inModels := false
+	var models []ports.AgentModelInfo
+	for _, rawLine := range strings.Split(text, "\n") {
+		line := strings.TrimSpace(rawLine)
+		if !inModels {
+			if strings.HasPrefix(line, "`model`:") {
+				inModels = true
+			}
+			continue
+		}
+		if strings.HasPrefix(line, "`contextTier`:") {
+			break
+		}
+		if !strings.HasPrefix(line, "-") {
+			continue
+		}
+		id := strings.TrimSpace(strings.TrimPrefix(line, "-"))
+		id = strings.Trim(id, "`\"'")
+		if looksLikeModelID(id) {
+			models = append(models, ports.AgentModelInfo{ID: id, Label: id})
+		}
+	}
+	return normalize(models), nil
+}
+
+func parseDroidHelpModels(output []byte) ([]ports.AgentModelInfo, error) {
+	text := ansiPattern.ReplaceAllString(string(output), "")
+	inModels := false
+	var models []ports.AgentModelInfo
+	for _, rawLine := range strings.Split(text, "\n") {
+		line := strings.TrimSpace(rawLine)
+		if !inModels {
+			if line == "Available Models:" {
+				inModels = true
+			}
+			continue
+		}
+		if line == "" {
+			if len(models) > 0 {
+				break
+			}
+			continue
+		}
+		fields := strings.Fields(line)
+		if len(fields) < 2 || !looksLikeModelID(fields[0]) {
+			break
+		}
+		id := fields[0]
+		label := strings.TrimSpace(strings.TrimPrefix(line, id))
+		isDefault := strings.HasSuffix(strings.ToLower(label), "(default)")
+		if isDefault {
+			label = strings.TrimSpace(label[:len(label)-len("(default)")])
+		}
+		models = append(models, ports.AgentModelInfo{ID: id, Label: label, IsDefault: isDefault})
+	}
+	return normalize(models), nil
+}
+
+func parseSectionModels(output, startMarker, stopMarker string) ([]ports.AgentModelInfo, error) {
+	output = ansiPattern.ReplaceAllString(output, "")
+	inModels := false
+	var models []ports.AgentModelInfo
+	for _, rawLine := range strings.Split(output, "\n") {
+		line := strings.TrimSpace(rawLine)
+		if !inModels {
+			if line == startMarker {
+				inModels = true
+			}
+			continue
+		}
+		if stopMarker != "" && strings.HasPrefix(line, stopMarker) {
+			break
+		}
+		line = strings.TrimSpace(strings.TrimLeft(line, "•*-✓>│├└ "))
+		fields := strings.Fields(line)
+		if len(fields) == 0 || !looksLikeModelID(fields[0]) {
+			continue
+		}
+		id := strings.Trim(fields[0], "`\"'[](),:")
+		label := id
+		if before, after, ok := strings.Cut(line, " - "); ok && strings.TrimSpace(before) == id {
+			label = strings.TrimSpace(after)
+			if suffix, _, found := strings.Cut(label, " ("); found {
+				label = strings.TrimSpace(suffix)
+			}
+		}
+		models = append(models, ports.AgentModelInfo{
+			ID:        id,
+			Label:     label,
+			IsDefault: strings.Contains(strings.ToLower(line), "(default)"),
+		})
+	}
+	return normalize(models), nil
+}
+
+func parsePiModels(output []byte) ([]ports.AgentModelInfo, error) {
+	output = []byte(ansiPattern.ReplaceAllString(string(output), ""))
+	var models []ports.AgentModelInfo
+	for _, line := range strings.Split(string(output), "\n") {
+		fields := strings.Fields(line)
+		if len(fields) < 2 || strings.EqualFold(fields[0], "provider") {
+			continue
+		}
+		provider := strings.TrimSpace(fields[0])
+		modelID := strings.TrimSpace(fields[1])
+		if !looksLikeModelID(provider) || !looksLikeModelID(modelID) {
+			continue
+		}
+		id := provider + "/" + modelID
+		models = append(models, ports.AgentModelInfo{ID: id, Label: modelID, Provider: provider})
+	}
+	return normalize(models), nil
+}
+
+func looksLikeModelID(value string) bool {
+	value = strings.Trim(value, "`\"'[](),:")
+	if value == "" {
+		return false
+	}
+	for _, r := range value {
+		switch {
+		case r >= 'a' && r <= 'z':
+		case r >= 'A' && r <= 'Z':
+		case r >= '0' && r <= '9':
+		case strings.ContainsRune("./:_-@+", r):
+		default:
+			return false
+		}
+	}
+	switch strings.ToLower(value) {
+	case "model", "models", "provider":
+		return false
+	default:
+		return true
+	}
+}
+
+func parseJSONModels(output []byte) ([]ports.AgentModelInfo, error) {
+	var root any
+	if err := json.Unmarshal(output, &root); err != nil {
+		return nil, err
+	}
+	var models []ports.AgentModelInfo
+	var walk func(any)
+	walk = func(value any) {
+		switch node := value.(type) {
+		case []any:
+			for _, item := range node {
+				walk(item)
+			}
+		case map[string]any:
+			id := firstString(node, "selector", "modelId", "model_id", "model_uid", "slug", "model")
+			if id == "" {
+				if _, isProviderContainer := node["models"]; !isProviderContainer {
+					id = firstString(node, "id")
+				}
+			}
+			if id != "" {
+				label := firstString(node, "displayName", "display_name", "model_name", "label", "name")
+				if label == "" {
+					label = id
+				}
+				models = append(models, ports.AgentModelInfo{
+					ID:        id,
+					Label:     label,
+					Provider:  firstString(node, "provider", "providerId", "provider_id"),
+					IsDefault: firstBool(node, "isDefault", "is_default", "default"),
+				})
+			}
+			for key, child := range node {
+				if key == "models" {
+					if modelMap, ok := child.(map[string]any); ok {
+						for alias, item := range modelMap {
+							if modelNode, ok := item.(map[string]any); ok && strings.TrimSpace(alias) != "" && looksLikeModelAliasRecord(modelNode) {
+								label := firstString(modelNode, "displayName", "display_name", "model_name", "label", "name")
+								if label == "" {
+									label = alias
+								}
+								models = append(models, ports.AgentModelInfo{
+									ID:        strings.TrimSpace(alias),
+									Label:     label,
+									Provider:  firstString(modelNode, "provider", "providerId", "provider_id"),
+									IsDefault: firstBool(modelNode, "isDefault", "is_default", "default"),
+								})
+								continue
+							}
+							walk(item)
+						}
+						continue
+					}
+				}
+				walk(child)
+			}
+		}
+	}
+	walk(root)
+	return normalize(models), nil
+}
+
+func looksLikeModelAliasRecord(node map[string]any) bool {
+	if _, isModelContainer := node["models"]; isModelContainer {
+		return false
+	}
+	return firstString(node,
+		"modelId", "model_id", "model_uid", "slug", "model",
+		"provider", "providerId", "provider_id",
+	) != ""
+}
+
+func firstString(node map[string]any, keys ...string) string {
+	for _, key := range keys {
+		if value, ok := node[key].(string); ok && strings.TrimSpace(value) != "" {
+			return strings.TrimSpace(value)
+		}
+	}
+	return ""
+}
+
+func firstBool(node map[string]any, keys ...string) bool {
+	for _, key := range keys {
+		if value, ok := node[key].(bool); ok {
+			return value
+		}
+	}
+	return false
+}
+
+func normalize(models []ports.AgentModelInfo) []ports.AgentModelInfo {
+	byID := make(map[string]ports.AgentModelInfo, len(models))
+	for _, item := range models {
+		item.ID = strings.TrimSpace(item.ID)
+		if item.ID == "" {
+			continue
+		}
+		if strings.TrimSpace(item.Label) == "" {
+			item.Label = item.ID
+		}
+		if previous, ok := byID[item.ID]; ok {
+			if previous.Label == previous.ID && item.Label != item.ID {
+				previous.Label = item.Label
+			}
+			if previous.Provider == "" {
+				previous.Provider = item.Provider
+			}
+			previous.IsDefault = previous.IsDefault || item.IsDefault
+			byID[item.ID] = previous
+			continue
+		}
+		byID[item.ID] = item
+	}
+	out := make([]ports.AgentModelInfo, 0, len(byID))
+	for _, item := range byID {
+		out = append(out, item)
+	}
+	sort.Slice(out, func(i, j int) bool {
+		if out[i].IsDefault != out[j].IsDefault {
+			return out[i].IsDefault
+		}
+		return strings.ToLower(out[i].Label) < strings.ToLower(out[j].Label)
+	})
+	return out
+}
