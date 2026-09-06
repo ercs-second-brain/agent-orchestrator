@@ -8,13 +8,11 @@ const {
 	getApiBaseUrlMock,
 	getMock,
 	hasTrustedApiBaseUrlMock,
-	setQueryHealthyMock,
 	subscribeApiBaseUrlMock,
 } = vi.hoisted(() => ({
 	getApiBaseUrlMock: vi.fn(() => "http://127.0.0.1:3001"),
 	getMock: vi.fn(),
 	hasTrustedApiBaseUrlMock: vi.fn(() => true),
-	setQueryHealthyMock: vi.fn(),
 	subscribeApiBaseUrlMock: vi.fn(() => () => undefined),
 }));
 
@@ -25,7 +23,6 @@ vi.mock("../lib/api-client", () => ({
 	subscribeApiBaseUrl: subscribeApiBaseUrlMock,
 }));
 
-vi.mock("../lib/agent-switch-visibility", () => ({ agentSwitchVisibility: { setQueryHealthy: setQueryHealthyMock } }));
 
 import { useWorkspaceQuery, useWorkspaceSession, useWorkspaceTraySessions, workspaceQueryKey } from "./useWorkspaceQuery";
 
@@ -51,7 +48,6 @@ beforeEach(() => {
 	getApiBaseUrlMock.mockReset().mockReturnValue("http://127.0.0.1:3001");
 	hasTrustedApiBaseUrlMock.mockReset().mockReturnValue(true);
 	subscribeApiBaseUrlMock.mockReset().mockReturnValue(() => undefined);
-	setQueryHealthyMock.mockReset();
 });
 
 describe("useWorkspaceQuery", () => {
@@ -73,7 +69,7 @@ describe("useWorkspaceQuery", () => {
 							id: "proj-1",
 							name: "my-app",
 							path: "/home/me/my-app",
-							orchestratorAgent: "codex",
+							orchestratorAgent: "pi",
 						},
 					],
 				},
@@ -100,21 +96,6 @@ describe("useWorkspaceQuery", () => {
 							autoInjectReview: false,
 							autoInjectCI: false,
 							activity: { state: "idle", lastActivityAt: "2026-06-10T15:30:00Z" },
-							activeAgentSwitch: {
-								agentHandoffStatus: "received",
-								errorCode: "delivery_unconfirmed",
-								fromHarness: "claude-code",
-								id: "switch-1",
-								privateFutureField: "must-not-leak",
-								requestedAt: "2026-06-10T15:31:00Z",
-								semanticHandoffIncluded: true,
-								sessionId: "sess-1",
-								sourceTranscriptStatus: "available",
-								state: "delivering_context",
-								targetHarness: "codex",
-								targetStartMode: "resumed",
-								updatedAt: "2026-06-10T15:32:00Z",
-							},
 							lastUserMessageAt: "2026-06-10T16:10:00Z",
 							updatedAt: "2026-06-10T16:15:04Z",
 						},
@@ -145,7 +126,7 @@ describe("useWorkspaceQuery", () => {
 			id: "proj-1",
 			name: "my-app",
 			path: "/home/me/my-app",
-			orchestratorAgent: "codex",
+			orchestratorAgent: "pi",
 		});
 		expect(workspace.sessions).toHaveLength(2);
 		expect(workspace.sessions[0]).toMatchObject({
@@ -154,8 +135,8 @@ describe("useWorkspaceQuery", () => {
 			terminalGeneration: "launch-2",
 			title: "fix-bug",
 			issueId: "github:acme/project-one#42",
-			provider: "claude-code",
-			reviewerHarness: "qwen",
+			provider: "pi",
+			reviewerHarness: undefined,
 			branch: "qa/modal-worker",
 			status: "mergeable",
 			scmStatus: "review_pending",
@@ -166,19 +147,10 @@ describe("useWorkspaceQuery", () => {
 			autoInjectReview: false,
 			autoInjectCI: false,
 		});
-		expect(workspace.sessions[0].activeAgentSwitch).toEqual({
-			agentHandoffStatus: "received",
-			errorCode: "delivery_unconfirmed",
-			fromHarness: "claude-code",
-			id: "switch-1",
-			state: "delivering_context",
-			targetHarness: "codex",
-			updatedAt: "2026-06-10T15:32:00Z",
-		});
 		expect(workspace.sessions[1]).toMatchObject({
 			id: "sess-2",
 			title: "sess-2",
-			provider: "codex",
+			provider: "pi",
 			reviewerHarness: undefined,
 			status: "unknown",
 			branch: undefined,
@@ -542,7 +514,6 @@ describe("useWorkspaceQuery", () => {
 
 		await waitFor(() => expect(result.current.isError).toBe(true), { timeout: 3_000 });
 		expect(result.current.error).toBe(failure);
-		expect(setQueryHealthyMock).toHaveBeenCalledWith("history", false, "workspaces");
 	});
 
 	it("surfaces a sessions fetch error even when projects load", async () => {

@@ -6,31 +6,15 @@ import { useUiStore } from "../stores/ui-store";
 import { TooltipProvider } from "./ui/tooltip";
 import type { UpdateStatus } from "../../main/update-settings";
 
-const { updInstall, updGetStatus, updOnStatus, workspaceData } = vi.hoisted(() => ({
+const { updInstall, updGetStatus, updOnStatus } = vi.hoisted(() => ({
 	updInstall: vi.fn(),
 	updGetStatus: vi.fn(),
 	updOnStatus: vi.fn(),
-	workspaceData: { current: [] as unknown[] },
 }));
 
 vi.mock("../lib/bridge", () => ({
 	aoBridge: { updates: { getStatus: updGetStatus, install: updInstall, onStatus: updOnStatus } },
 }));
-vi.mock("../hooks/useWorkspaceQuery", () => ({
-	useWorkspaceQuery: () => ({ data: workspaceData.current }),
-}));
-
-function session(overrides: Record<string, unknown> = {}) {
-	return {
-		id: "s1",
-		title: "Fix the updater",
-		workspaceName: "agent-orchestrator",
-		provider: "claude-code",
-		mode: "chat",
-		status: "working",
-		...overrides,
-	};
-}
 
 function renderDialog(status: UpdateStatus) {
 	updGetStatus.mockResolvedValue(status);
@@ -44,7 +28,6 @@ function renderDialog(status: UpdateStatus) {
 beforeEach(() => {
 	for (const m of [updInstall, updGetStatus, updOnStatus]) m.mockReset();
 	updOnStatus.mockReturnValue(() => undefined);
-	workspaceData.current = [];
 	useUiStore.setState({ updateInstallPromptOpen: false });
 });
 
@@ -67,30 +50,14 @@ it("shows what the build changes", async () => {
 	expect(screen.getByText("Nightly 0.12.11 · Sep 2")).toBeVisible();
 });
 
-it("names the sessions that would lose a turn and waits for confirmation", async () => {
-	workspaceData.current = [
-		{ sessions: [session(), session({ id: "s2", mode: "tui", title: "Terminal one" })] },
-	];
+it("quits only after confirmation", async () => {
 	useUiStore.setState({ updateInstallPromptOpen: true });
 	renderDialog({ state: "downloaded", version: "1.2.3" });
-
-	const warning = await screen.findByTestId("restart-sessions-warning");
-	expect(warning).toHaveTextContent("1 chat session will lose its current turn");
-	expect(warning).toHaveTextContent("agent-orchestrator · Fix the updater");
-	// The TUI session survives a quit, so naming it would be crying wolf.
-	expect(warning).not.toHaveTextContent("Terminal one");
+	await screen.findByTestId("restart-to-update-dialog");
 
 	expect(updInstall).not.toHaveBeenCalled();
 	await userEvent.click(screen.getByRole("button", { name: "Restart & install" }));
 	expect(updInstall).toHaveBeenCalledTimes(1);
-});
-
-it("stays quiet when nothing is at risk", async () => {
-	workspaceData.current = [{ sessions: [session({ mode: "tui" }), session({ id: "s3", provider: "codex" })] }];
-	useUiStore.setState({ updateInstallPromptOpen: true });
-	renderDialog({ state: "downloaded", version: "1.2.3" });
-	await screen.findByTestId("restart-to-update-dialog");
-	expect(screen.queryByTestId("restart-sessions-warning")).toBeNull();
 });
 
 it("cancelling never installs", async () => {

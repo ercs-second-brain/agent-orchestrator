@@ -549,7 +549,7 @@ export function CenterPane({
 						// open or switch to the session, the same way the task composer does.
 						// Worker input is off during an interface transition or a locked agent
 						// switch; every other target is interactive as soon as it is on screen.
-						// Without this a worker terminal was only focused mid agent-switch, so
+						// Without this a worker terminal was only focused mid session-event, so
 						// switching sessions left keystrokes going nowhere until you clicked it.
 						focusRequested={target.kind !== "worker" || !workerInputDisabled}
 						isFullscreen={isFullscreen}

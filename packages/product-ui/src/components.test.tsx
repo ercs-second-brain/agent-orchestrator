@@ -29,11 +29,11 @@ describe("portable leaf components", () => {
 	});
 
 	it("renders an injected agent logo without owning app assets", () => {
-		render(<AgentAvatar logoSources={{ "claude-code": "/logos/claude.svg" }} provider="claude-code" />);
+		render(<AgentAvatar logoSources={{ pi: "/logos/pi.svg" }} provider="pi" />);
 
-		expect(screen.getByRole("img", { name: "claude-code" })).toHaveAttribute(
+		expect(screen.getByRole("img", { name: "pi" })).toHaveAttribute(
 			"src",
-			"/logos/claude.svg",
+			"/logos/pi.svg",
 		);
 	});
 
